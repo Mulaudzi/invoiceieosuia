@@ -320,6 +320,24 @@ export const paymentService = {
   },
 };
 
+// ==================== Notification Services ====================
+
+export interface SmsResponse {
+  success: boolean;
+  delivery_id?: string;
+  message: string;
+}
+
+export const notificationService = {
+  sendSms: async (invoiceId: string | number, message: string): Promise<SmsResponse> => {
+    const response = await api.post<SmsResponse>('/notifications/send-sms', {
+      invoice_id: invoiceId,
+      message,
+    });
+    return response.data;
+  },
+};
+
 // ==================== Report Services ====================
 
 export interface DashboardStats {
