@@ -98,6 +98,19 @@ $router->get('/reports/top-clients', [ReportController::class, 'topClients'], [A
 $router->get('/reports/income-expense', [ReportController::class, 'incomeExpense'], [AuthMiddleware::class]);
 $router->get('/reports/recent-invoices', [ReportController::class, 'recentInvoices'], [AuthMiddleware::class]);
 
+// Templates
+$router->get('/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/templates', [TemplateController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/templates/{id}', [TemplateController::class, 'show'], [AuthMiddleware::class]);
+$router->put('/templates/{id}', [TemplateController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/templates/{id}', [TemplateController::class, 'destroy'], [AuthMiddleware::class]);
+$router->post('/templates/{id}/set-default', [TemplateController::class, 'setDefault'], [AuthMiddleware::class]);
+
+// Notifications
+$router->post('/invoices/{id}/send', [NotificationController::class, 'sendEmail'], [AuthMiddleware::class]);
+$router->get('/invoices/{id}/email-preview', [NotificationController::class, 'emailPreview'], [AuthMiddleware::class]);
+$router->post('/invoices/{id}/send-sms', [NotificationController::class, 'sendSms'], [AuthMiddleware::class]);
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
