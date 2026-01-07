@@ -132,6 +132,14 @@ export const authService = {
   resendVerification: async (): Promise<void> => {
     await api.post('/resend-verification');
   },
+
+  forgotPassword: async (email: string): Promise<void> => {
+    await api.post('/forgot-password', { email });
+  },
+
+  resetPassword: async (token: string, password: string): Promise<void> => {
+    await api.post('/reset-password', { token, password, password_confirmation: password });
+  },
 };
 
 // ==================== Client Services ====================

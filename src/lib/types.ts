@@ -9,6 +9,7 @@ export interface User {
   password: string;
   plan: PlanType;
   businessName?: string;
+  emailVerified: boolean;
   createdAt: string;
 }
 
