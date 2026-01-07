@@ -3,6 +3,11 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useClients } from "@/hooks/useClients";
+import { Client } from "@/lib/types";
+import { ClientModal } from "@/components/clients/ClientModal";
+import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
   Search,
@@ -20,79 +25,59 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+const ITEMS_PER_PAGE = 9;
 
 const Clients = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-const clients = [
-    {
-      id: 1,
-      name: "Acme Corp",
-      email: "billing@acme.com",
-      phone: "+27 11 123 4567",
-      company: "Acme Corporation",
-      totalInvoices: 24,
-      totalRevenue: "R813,600",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "TechStart Inc",
-      email: "finance@techstart.io",
-      phone: "+27 21 234 5678",
-      company: "TechStart Inc",
-      totalInvoices: 18,
-      totalRevenue: "R590,400",
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Global Solutions",
-      email: "ap@globalsolutions.com",
-      phone: "+27 12 345 6789",
-      company: "Global Solutions Ltd",
-      totalInvoices: 15,
-      totalRevenue: "R513,000",
-      status: "Active",
-    },
-    {
-      id: 4,
-      name: "Creative Agency",
-      email: "admin@creative.co",
-      phone: "+27 31 456 7890",
-      company: "Creative Agency Co",
-      totalInvoices: 12,
-      totalRevenue: "R340,200",
-      status: "Active",
-    },
-    {
-      id: 5,
-      name: "DataFlow Ltd",
-      email: "accounts@dataflow.io",
-      phone: "+27 41 567 8901",
-      company: "DataFlow Limited",
-      totalInvoices: 9,
-      totalRevenue: "R277,200",
-      status: "Inactive",
-    },
-    {
-      id: 6,
-      name: "StartupXYZ",
-      email: "cfo@startupxyz.com",
-      phone: "+27 51 678 9012",
-      company: "StartupXYZ Inc",
-      totalInvoices: 6,
-      totalRevenue: "R147,600",
-      status: "Active",
-    },
-  ];
+  const { data: clients = [], isLoading, error } = useClients();
 
   const filteredClients = clients.filter(
     (client) =>
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchQuery.toLowerCase())
+      client.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.company?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Pagination
+  const totalPages = Math.ceil(filteredClients.length / ITEMS_PER_PAGE);
+  const paginatedClients = filteredClients.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handleOpenCreateModal = () => {
+    setSelectedClient(null);
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (client: Client) => {
+    setSelectedClient(client);
+    setModalOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (client: Client) => {
+    setSelectedClient(client);
+    setDeleteDialogOpen(true);
+  };
+
+  const formatPhone = (phone: string | undefined) => {
+    if (!phone) return "—";
+    return phone;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,113 +93,174 @@ const clients = [
               <Input
                 placeholder="Search clients..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="pl-9"
               />
             </div>
-            <Button variant="accent">
+            <Button variant="accent" onClick={handleOpenCreateModal}>
               <Plus className="w-4 h-4" />
               Add Client
             </Button>
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-xl" />
+              ))}
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="text-center py-12">
+              <p className="text-destructive">Failed to load clients. Please try again.</p>
+            </div>
+          )}
+
           {/* Clients Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredClients.map((client) => (
-              <div
-                key={client.id}
-                className="bg-card rounded-xl border border-border p-6 shadow-soft card-hover"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-accent" />
+          {!isLoading && !error && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedClients.map((client) => (
+                <div
+                  key={client.id}
+                  className="bg-card rounded-xl border border-border p-6 shadow-soft card-hover"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-accent" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground">{client.name}</h3>
+                        <p className="text-sm text-muted-foreground">{client.company || "—"}</p>
+                      </div>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenEditModal(client)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Send Email
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleOpenDeleteDialog(client)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground truncate">{client.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{formatPhone(client.phone)}</span>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
                     <div>
-                      <h3 className="font-semibold text-foreground">{client.name}</h3>
-                      <p className="text-sm text-muted-foreground">{client.company}</p>
+                      <p className="text-xs text-muted-foreground">Address</p>
+                      <p className="text-sm text-foreground truncate max-w-[150px]">
+                        {client.address || "—"}
+                      </p>
                     </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Send Email
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Contact Info */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{client.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{client.phone}</span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                      Active
+                    </span>
                   </div>
                 </div>
-
-                {/* Stats */}
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <div>
-                    <p className="text-lg font-bold text-foreground">{client.totalRevenue}</p>
-                    <p className="text-xs text-muted-foreground">Total Revenue</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-foreground">{client.totalInvoices}</p>
-                    <p className="text-xs text-muted-foreground">Invoices</p>
-                  </div>
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      client.status === "Active"
-                        ? "bg-success/10 text-success"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {client.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Empty State */}
-          {filteredClients.length === 0 && (
+          {!isLoading && !error && filteredClients.length === 0 && (
             <div className="text-center py-12">
               <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No clients found</h3>
               <p className="text-muted-foreground mb-4">
-                Try adjusting your search or add a new client
+                {searchQuery ? "Try adjusting your search" : "Add your first client to get started"}
               </p>
-              <Button variant="accent">
+              <Button variant="accent" onClick={handleOpenCreateModal}>
                 <Plus className="w-4 h-4" />
                 Add Client
               </Button>
             </div>
           )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(i + 1)}
+                        isActive={currentPage === i + 1}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </main>
       </div>
+
+      {/* Modals */}
+      <ClientModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        client={selectedClient}
+      />
+      <DeleteClientDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        client={selectedClient}
+      />
     </div>
   );
 };
