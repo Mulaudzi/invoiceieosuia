@@ -1,10 +1,11 @@
 <?php
 
-// Include PHPMailer (assumes installed via Composer or manually in lib/)
+// Include PHPMailer (manually in lib/)
+require_once __DIR__ . '/../lib/PHPMailer/Exception.php';
 require_once __DIR__ . '/../lib/PHPMailer/PHPMailer.php';
 require_once __DIR__ . '/../lib/PHPMailer/SMTP.php';
-require_once __DIR__ . '/../lib/PHPMailer/Exception.php';
 
+// Note: PHPMailer files have namespaces defined, so we use them directly
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
