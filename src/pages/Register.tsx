@@ -1,12 +1,24 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight, User, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { PlanType } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Register = () => {
   const { toast } = useToast();
+  const { register, user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,7 +26,15 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    plan: (searchParams.get("plan") || "free") as PlanType,
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,15 +48,37 @@ const Register = () => {
       return;
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const result = await register(
+      formData.name,
+      formData.email,
+      formData.password,
+      formData.plan
+    );
 
-    toast({
-      title: "Account created!",
-      description: "Welcome to IEOSUIA. Redirecting to dashboard...",
-    });
+    if (result.success) {
+      toast({
+        title: "Account created!",
+        description: "Welcome to IEOSUIA. Redirecting to dashboard...",
+      });
+      navigate("/dashboard");
+    } else {
+      toast({
+        title: "Registration failed",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
 
     setIsLoading(false);
   };
@@ -46,6 +88,12 @@ const Register = () => {
     "No credit card required",
     "Cancel anytime",
     "24/7 support included",
+  ];
+
+  const plans = [
+    { value: "free", label: "Free - R0/month" },
+    { value: "pro", label: "Pro - R349/month" },
+    { value: "business", label: "Business - R899/month" },
   ];
 
   return (
@@ -127,6 +175,27 @@ const Register = () => {
                     className="pl-10"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="plan" className="block text-sm font-medium text-foreground mb-2">
+                  Select Plan
+                </label>
+                <Select
+                  value={formData.plan}
+                  onValueChange={(value: PlanType) => setFormData({ ...formData, plan: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.value} value={plan.value}>
+                        {plan.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -15,9 +15,12 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DashboardSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const menuItems = [
@@ -31,6 +34,11 @@ const DashboardSidebar = () => {
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
   ];
 
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
   return (
     <aside
       className={cn(
@@ -38,7 +46,6 @@ const DashboardSidebar = () => {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <Link to="/" className="flex items-center gap-2">
@@ -54,15 +61,10 @@ const DashboardSidebar = () => {
           onClick={() => setCollapsed(!collapsed)}
           className="text-sidebar-foreground hover:bg-sidebar-accent"
         >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronLeft className="w-4 h-4" />
-          )}
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-4 px-2 overflow-y-auto">
         <ul className="space-y-1">
           {menuItems.map((item) => {
@@ -87,15 +89,14 @@ const DashboardSidebar = () => {
         </ul>
       </nav>
 
-      {/* Footer */}
       <div className="p-2 border-t border-sidebar-border">
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full"
         >
           <LogOut className="w-5 h-5 shrink-0" />
           {!collapsed && <span className="font-medium">Logout</span>}
-        </Link>
+        </button>
       </div>
     </aside>
   );
