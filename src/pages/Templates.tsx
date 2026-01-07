@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Template, TemplateStyles, defaultTemplateStyles } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useTemplates, useCreateTemplate, useUpdateTemplate, useDeleteTemplate, useSetDefaultTemplate } from "@/hooks/useTemplates";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import { Plus, Palette, ArrowLeft } from "lucide-react";
 import { TemplateEditor } from "@/components/templates/TemplateEditor";
 import { TemplateCard } from "@/components/templates/TemplateCard";
@@ -15,7 +16,7 @@ const Templates = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
 
-  const { data: templates = [], isLoading, error } = useTemplates();
+  const { data: templates = [], isLoading, error, refetch } = useTemplates();
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
   const deleteTemplate = useDeleteTemplate();
@@ -126,19 +127,16 @@ const Templates = () => {
           </div>
 
           {/* Loading State */}
-          {isLoading && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-xl" />
-              ))}
-            </div>
-          )}
+          {isLoading && <PageLoadingSpinner message="Loading templates..." />}
 
           {/* Error State */}
           {error && (
-            <div className="text-center py-12">
-              <p className="text-destructive">Failed to load templates. Please try again.</p>
-            </div>
+            <ApiErrorFallback
+              error={error instanceof Error ? error : null}
+              onRetry={() => refetch()}
+              title="Failed to load templates"
+              description="There was a problem fetching your templates. Please try again."
+            />
           )}
 
           {/* Templates Grid */}

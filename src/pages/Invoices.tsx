@@ -25,6 +25,8 @@ import {
 import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useSendInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import { SendSmsDialog } from "@/components/invoices/SendSmsDialog";
 import { SendEmailDialog } from "@/components/invoices/SendEmailDialog";
 import { InvoiceModal } from "@/components/invoices/InvoiceModal";
@@ -41,7 +43,7 @@ const Invoices = () => {
   const { toast } = useToast();
   
   // API hooks
-  const { data: invoices = [], isLoading, error } = useInvoices();
+  const { data: invoices = [], isLoading, error, refetch } = useInvoices();
   const deleteInvoice = useDeleteInvoice();
   const downloadPdf = useDownloadInvoicePdf();
   const sendInvoice = useSendInvoice();
@@ -153,9 +155,26 @@ const Invoices = () => {
         <div className="ml-64 transition-all duration-300">
           <DashboardHeader title="Invoices" subtitle="Create, manage, and track your invoices" />
           <main className="p-6">
-            <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
-              Failed to load invoices. Please try again later.
-            </div>
+            <ApiErrorFallback
+              error={error instanceof Error ? error : null}
+              onRetry={() => refetch()}
+              title="Failed to load invoices"
+              description="There was a problem fetching your invoices. Please try again."
+            />
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <div className="ml-64 transition-all duration-300">
+          <DashboardHeader title="Invoices" subtitle="Create, manage, and track your invoices" />
+          <main className="p-6">
+            <PageLoadingSpinner message="Loading invoices..." />
           </main>
         </div>
       </div>
