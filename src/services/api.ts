@@ -342,8 +342,8 @@ export const notificationService = {
 
 export interface DashboardStats {
   total_revenue: number;
-  pending_amount: number;
-  overdue_amount: number;
+  outstanding: number;
+  overdue_count: number;
   total_invoices: number;
   paid_invoices: number;
   pending_invoices: number;
