@@ -116,12 +116,12 @@ export const authService = {
   },
 
   updateProfile: async (data: Partial<User>): Promise<User> => {
-    const response = await api.put<{ success: boolean; user: User }>('/user/profile', data);
+    const response = await api.put<{ success: boolean; user: User }>('/profile', data);
     return response.data.user;
   },
 
   updatePlan: async (plan: PlanType): Promise<User> => {
-    const response = await api.put<{ success: boolean; user: User }>('/user/plan', { plan });
+    const response = await api.put<{ success: boolean; user: User }>('/plan', { plan });
     return response.data.user;
   },
 };
@@ -281,7 +281,7 @@ export const templateService = {
   },
 
   setDefault: async (id: string | number): Promise<Template> => {
-    const response = await api.post<{ success: boolean; template: Template }>(`/templates/${id}/default`);
+    const response = await api.post<{ success: boolean; template: Template }>(`/templates/${id}/set-default`);
     return response.data.template;
   },
 };
@@ -330,10 +330,12 @@ export interface SmsResponse {
 
 export const notificationService = {
   sendSms: async (invoiceId: string | number, message: string): Promise<SmsResponse> => {
-    const response = await api.post<SmsResponse>('/notifications/send-sms', {
-      invoice_id: invoiceId,
-      message,
-    });
+    const response = await api.post<SmsResponse>(`/invoices/${invoiceId}/send-sms`, { message });
+    return response.data;
+  },
+
+  getEmailPreview: async (invoiceId: string | number): Promise<{ subject: string; body: string }> => {
+    const response = await api.get(`/invoices/${invoiceId}/email-preview`);
     return response.data;
   },
 };
