@@ -1,0 +1,109 @@
+<?php
+
+// Enable error reporting for development
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
+// CORS headers
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Handle preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// Load environment variables
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos($line, '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $_ENV[trim($key)] = trim($value);
+        }
+    }
+}
+
+// Autoload classes
+spl_autoload_register(function ($class) {
+    $paths = [
+        __DIR__ . '/core/',
+        __DIR__ . '/config/',
+        __DIR__ . '/models/',
+        __DIR__ . '/controllers/',
+        __DIR__ . '/middleware/',
+    ];
+    
+    foreach ($paths as $path) {
+        $file = $path . $class . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+});
+
+// Initialize router
+$router = new Router();
+
+// Public routes
+$router->post('/register', [AuthController::class, 'register']);
+$router->post('/login', [AuthController::class, 'login']);
+
+// Protected routes
+$router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class]);
+$router->get('/user', [AuthController::class, 'user'], [AuthMiddleware::class]);
+$router->put('/profile', [AuthController::class, 'updateProfile'], [AuthMiddleware::class]);
+$router->put('/plan', [AuthController::class, 'updatePlan'], [AuthMiddleware::class]);
+
+// Clients
+$router->get('/clients', [ClientController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/clients', [ClientController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/clients/{id}', [ClientController::class, 'show'], [AuthMiddleware::class]);
+$router->put('/clients/{id}', [ClientController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/clients/{id}', [ClientController::class, 'destroy'], [AuthMiddleware::class]);
+
+// Products
+$router->get('/products', [ProductController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/products/categories', [ProductController::class, 'categories'], [AuthMiddleware::class]);
+$router->post('/products', [ProductController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/products/{id}', [ProductController::class, 'show'], [AuthMiddleware::class]);
+$router->put('/products/{id}', [ProductController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/products/{id}', [ProductController::class, 'destroy'], [AuthMiddleware::class]);
+
+// Invoices
+$router->get('/invoices', [InvoiceController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/invoices', [InvoiceController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/invoices/{id}', [InvoiceController::class, 'show'], [AuthMiddleware::class]);
+$router->put('/invoices/{id}', [InvoiceController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/invoices/{id}', [InvoiceController::class, 'destroy'], [AuthMiddleware::class]);
+$router->post('/invoices/{id}/mark-paid', [InvoiceController::class, 'markPaid'], [AuthMiddleware::class]);
+
+// Payments
+$router->get('/payments', [PaymentController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/payments', [PaymentController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/payments/summary', [PaymentController::class, 'summary'], [AuthMiddleware::class]);
+$router->get('/payments/{id}', [PaymentController::class, 'show'], [AuthMiddleware::class]);
+$router->delete('/payments/{id}', [PaymentController::class, 'destroy'], [AuthMiddleware::class]);
+
+// Reports
+$router->get('/reports/dashboard', [ReportController::class, 'dashboard'], [AuthMiddleware::class]);
+$router->get('/reports/monthly-revenue', [ReportController::class, 'monthlyRevenue'], [AuthMiddleware::class]);
+$router->get('/reports/invoice-status', [ReportController::class, 'invoiceStatus'], [AuthMiddleware::class]);
+$router->get('/reports/top-clients', [ReportController::class, 'topClients'], [AuthMiddleware::class]);
+$router->get('/reports/income-expense', [ReportController::class, 'incomeExpense'], [AuthMiddleware::class]);
+$router->get('/reports/recent-invoices', [ReportController::class, 'recentInvoices'], [AuthMiddleware::class]);
+
+// Dispatch request
+$method = $_SERVER['REQUEST_METHOD'];
+$uri = $_SERVER['REQUEST_URI'];
+
+try {
+    $router->dispatch($method, $uri);
+} catch (Exception $e) {
+    Response::error($e->getMessage(), 500);
+}
