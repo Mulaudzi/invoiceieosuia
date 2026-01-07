@@ -12,6 +12,9 @@ import {
   Edit,
   Send,
   Trash2,
+  Download,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,20 +22,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useSendInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
-
-const invoices = [
-    { id: "INV-001", client: "Acme Corp", email: "billing@acme.com", amount: "R45,000.00", status: "Paid", date: "Jan 15, 2024", dueDate: "Feb 15, 2024" },
-    { id: "INV-002", client: "TechStart Inc", email: "finance@techstart.io", amount: "R32,400.00", status: "Pending", date: "Jan 14, 2024", dueDate: "Feb 14, 2024" },
-    { id: "INV-003", client: "Global Solutions", email: "ap@globalsolutions.com", amount: "R57,600.00", status: "Overdue", date: "Jan 10, 2024", dueDate: "Jan 25, 2024" },
-    { id: "INV-004", client: "Creative Agency", email: "admin@creative.co", amount: "R17,100.00", status: "Paid", date: "Jan 08, 2024", dueDate: "Feb 08, 2024" },
-    { id: "INV-005", client: "DataFlow Ltd", email: "accounts@dataflow.io", amount: "R73,800.00", status: "Pending", date: "Jan 05, 2024", dueDate: "Feb 05, 2024" },
-    { id: "INV-006", client: "StartupXYZ", email: "cfo@startupxyz.com", amount: "R22,500.00", status: "Draft", date: "Jan 04, 2024", dueDate: "Feb 04, 2024" },
-    { id: "INV-007", client: "Enterprise Co", email: "payments@enterprise.com", amount: "R153,000.00", status: "Paid", date: "Jan 02, 2024", dueDate: "Feb 02, 2024" },
-    { id: "INV-008", client: "Local Business", email: "owner@localbiz.com", amount: "R11,160.00", status: "Pending", date: "Jan 01, 2024", dueDate: "Feb 01, 2024" },
-  ];
+  const { toast } = useToast();
+  
+  // API hooks
+  const { data: invoices = [], isLoading, error } = useInvoices();
+  const deleteInvoice = useDeleteInvoice();
+  const downloadPdf = useDownloadInvoicePdf();
+  const sendInvoice = useSendInvoice();
+  const markPaid = useMarkInvoicePaid();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -49,11 +52,83 @@ const invoices = [
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-ZA', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
   const filteredInvoices = invoices.filter(
     (invoice) =>
-      invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.client.toLowerCase().includes(searchQuery.toLowerCase())
+      invoice.id.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Calculate stats from actual data
+  const stats = {
+    all: invoices.length,
+    paid: invoices.filter(i => i.status === 'Paid').length,
+    pending: invoices.filter(i => i.status === 'Pending').length,
+    overdue: invoices.filter(i => i.status === 'Overdue').length,
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteInvoice.mutateAsync(id);
+      toast({ title: "Invoice deleted successfully" });
+    } catch (error) {
+      toast({ title: "Failed to delete invoice", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadPdf = async (id: string) => {
+    try {
+      await downloadPdf.mutateAsync(id);
+      toast({ title: "PDF downloaded" });
+    } catch (error) {
+      toast({ title: "Failed to download PDF", variant: "destructive" });
+    }
+  };
+
+  const handleSend = async (id: string) => {
+    try {
+      await sendInvoice.mutateAsync(id);
+      toast({ title: "Invoice sent successfully" });
+    } catch (error) {
+      toast({ title: "Failed to send invoice", variant: "destructive" });
+    }
+  };
+
+  const handleMarkPaid = async (id: string) => {
+    try {
+      await markPaid.mutateAsync(id);
+      toast({ title: "Invoice marked as paid" });
+    } catch (error) {
+      toast({ title: "Failed to mark as paid", variant: "destructive" });
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <div className="ml-64 transition-all duration-300">
+          <DashboardHeader title="Invoices" subtitle="Create, manage, and track your invoices" />
+          <main className="p-6">
+            <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
+              Failed to load invoices. Please try again later.
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,17 +163,21 @@ const invoices = [
           {/* Stats Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
-              { label: "All Invoices", value: "256", color: "bg-foreground" },
-              { label: "Paid", value: "180", color: "bg-success" },
-              { label: "Pending", value: "52", color: "bg-warning" },
-              { label: "Overdue", value: "24", color: "bg-destructive" },
+              { label: "All Invoices", value: stats.all.toString(), color: "bg-foreground" },
+              { label: "Paid", value: stats.paid.toString(), color: "bg-success" },
+              { label: "Pending", value: stats.pending.toString(), color: "bg-warning" },
+              { label: "Overdue", value: stats.overdue.toString(), color: "bg-destructive" },
             ].map((stat) => (
               <div key={stat.label} className="bg-card rounded-lg border border-border p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <div className={`w-2 h-2 rounded-full ${stat.color}`} />
                   <span className="text-sm text-muted-foreground">{stat.label}</span>
                 </div>
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                )}
               </div>
             ))}
           </div>
@@ -120,53 +199,88 @@ const invoices = [
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((invoice) => (
-                    <tr
-                      key={invoice.id}
-                      className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors"
-                    >
-                      <td className="p-4">
-                        <span className="font-medium text-foreground">{invoice.id}</span>
-                      </td>
-                      <td className="p-4 text-foreground">{invoice.client}</td>
-                      <td className="p-4 text-muted-foreground hidden md:table-cell">{invoice.email}</td>
-                      <td className="p-4 font-medium text-foreground">{invoice.amount}</td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                          {invoice.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-muted-foreground hidden lg:table-cell">{invoice.date}</td>
-                      <td className="p-4 text-muted-foreground hidden lg:table-cell">{invoice.dueDate}</td>
-                      <td className="p-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Send className="w-4 h-4 mr-2" />
-                              Send
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {isLoading ? (
+                    // Loading skeleton
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="p-4"><Skeleton className="h-5 w-20" /></td>
+                        <td className="p-4"><Skeleton className="h-5 w-32" /></td>
+                        <td className="p-4 hidden md:table-cell"><Skeleton className="h-5 w-40" /></td>
+                        <td className="p-4"><Skeleton className="h-5 w-24" /></td>
+                        <td className="p-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                        <td className="p-4 hidden lg:table-cell"><Skeleton className="h-5 w-24" /></td>
+                        <td className="p-4 hidden lg:table-cell"><Skeleton className="h-5 w-24" /></td>
+                        <td className="p-4"><Skeleton className="h-8 w-8 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : filteredInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                        {searchQuery ? "No invoices found matching your search." : "No invoices yet. Create your first invoice!"}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredInvoices.map((invoice) => (
+                      <tr
+                        key={invoice.id}
+                        className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors"
+                      >
+                        <td className="p-4">
+                          <span className="font-medium text-foreground">{invoice.id}</span>
+                        </td>
+                        <td className="p-4 text-foreground">{invoice.clientName}</td>
+                        <td className="p-4 text-muted-foreground hidden md:table-cell">{invoice.clientEmail}</td>
+                        <td className="p-4 font-medium text-foreground">{formatCurrency(invoice.total)}</td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                            {invoice.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-muted-foreground hidden lg:table-cell">{formatDate(invoice.date)}</td>
+                        <td className="p-4 text-muted-foreground hidden lg:table-cell">{formatDate(invoice.dueDate)}</td>
+                        <td className="p-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)}>
+                                <Download className="w-4 h-4 mr-2" />
+                                Download PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSend(invoice.id)}>
+                                <Send className="w-4 h-4 mr-2" />
+                                Send
+                              </DropdownMenuItem>
+                              {invoice.status !== 'Paid' && (
+                                <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Mark as Paid
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => handleDelete(invoice.id)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
