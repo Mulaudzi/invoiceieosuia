@@ -3,9 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireVerified?: boolean;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requireVerified = true }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
@@ -19,6 +20,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check email verification if required
+  if (requireVerified && !user.emailVerified) {
+    return <Navigate to="/verify-email-reminder" replace />;
   }
 
   return <>{children}</>;

@@ -92,18 +92,9 @@ const Login = () => {
                   <label htmlFor="password" className="block text-sm font-medium text-foreground">
                     Password
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toast({
-                        title: "Password Reset",
-                        description: "In production, a reset link would be sent to your email.",
-                      });
-                    }}
-                    className="text-sm text-accent hover:underline"
-                  >
+                  <Link to="/forgot-password" className="text-sm text-accent hover:underline">
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
