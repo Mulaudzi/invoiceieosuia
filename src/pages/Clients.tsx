@@ -7,7 +7,8 @@ import { useClients } from "@/hooks/useClients";
 import { Client } from "@/lib/types";
 import { ClientModal } from "@/components/clients/ClientModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import {
   Plus,
   Search,
@@ -43,7 +44,7 @@ const Clients = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  const { data: clients = [], isLoading, error } = useClients();
+  const { data: clients = [], isLoading, error, refetch } = useClients();
 
   const filteredClients = clients.filter(
     (client) =>
@@ -107,19 +108,16 @@ const Clients = () => {
           </div>
 
           {/* Loading State */}
-          {isLoading && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-48 rounded-xl" />
-              ))}
-            </div>
-          )}
+          {isLoading && <PageLoadingSpinner message="Loading clients..." />}
 
           {/* Error State */}
           {error && (
-            <div className="text-center py-12">
-              <p className="text-destructive">Failed to load clients. Please try again.</p>
-            </div>
+            <ApiErrorFallback
+              error={error instanceof Error ? error : null}
+              onRetry={() => refetch()}
+              title="Failed to load clients"
+              description="There was a problem fetching your clients. Please try again."
+            />
           )}
 
           {/* Clients Grid */}

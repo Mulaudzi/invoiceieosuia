@@ -4,6 +4,8 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatCard from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import {
   DollarSign,
   FileText,
@@ -12,14 +14,29 @@ import {
   Plus,
   ArrowRight,
   TrendingUp,
-  AlertCircle,
 } from "lucide-react";
 import { useDashboardStats, useRecentInvoices, useTopClients } from "@/hooks/useReports";
 
 const Dashboard = () => {
-  const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useDashboardStats();
   const { data: recentInvoices = [], isLoading: invoicesLoading } = useRecentInvoices(5);
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(4);
+
+  const isLoading = statsLoading && invoicesLoading && clientsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <div className="ml-64 transition-all duration-300">
+          <DashboardHeader title="Dashboard" subtitle="Welcome back! Here's your business overview." />
+          <main className="p-6">
+            <PageLoadingSpinner message="Loading dashboard..." />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(amount);
@@ -97,10 +114,12 @@ const Dashboard = () => {
 
           {/* Error State */}
           {statsError && (
-            <div className="mb-6 bg-destructive/10 text-destructive p-4 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              Failed to load dashboard stats. Please try again.
-            </div>
+            <ApiErrorFallback
+              error={statsError instanceof Error ? statsError : null}
+              onRetry={() => refetchStats()}
+              title="Failed to load dashboard stats"
+              description="There was a problem fetching your dashboard data. Please try again."
+            />
           )}
 
           {/* Stats Grid */}

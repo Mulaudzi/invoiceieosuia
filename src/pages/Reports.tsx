@@ -2,7 +2,6 @@ import { useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,18 +11,55 @@ import {
 } from "@/components/ui/select";
 import { useDashboardStats, useMonthlyRevenue, useInvoiceStatus, useTopClients, useIncomeExpense } from "@/hooks/useReports";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 import { FileText, TrendingUp, Users, DollarSign, Download, Calendar } from "lucide-react";
 
 const Reports = () => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch } = useDashboardStats();
   const { data: monthlyRevenue = [], isLoading: revenueLoading } = useMonthlyRevenue(selectedYear);
   const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(5);
   const { data: incomeExpense, isLoading: incomeLoading } = useIncomeExpense();
+
+  const isLoading = statsLoading && revenueLoading && statusLoading && clientsLoading && incomeLoading;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <div className="ml-64 transition-all duration-300">
+          <DashboardHeader title="Reports" subtitle="Insights and analytics for your business" />
+          <main className="p-6">
+            <PageLoadingSpinner message="Loading reports..." />
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <div className="ml-64 transition-all duration-300">
+          <DashboardHeader title="Reports" subtitle="Insights and analytics for your business" />
+          <main className="p-6">
+            <ApiErrorFallback
+              error={statsError instanceof Error ? statsError : null}
+              onRetry={() => refetch()}
+              title="Failed to load reports"
+              description="There was a problem fetching your reports data. Please try again."
+            />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (amount: number) =>
     `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`;

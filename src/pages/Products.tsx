@@ -7,7 +7,8 @@ import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@/lib/types";
 import { ProductModal } from "@/components/products/ProductModal";
 import { DeleteProductDialog } from "@/components/products/DeleteProductDialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import {
   Plus,
   Search,
@@ -40,7 +41,7 @@ const Products = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const { data: products = [], isLoading, error } = useProducts();
+  const { data: products = [], isLoading, error, refetch } = useProducts();
 
   const filteredProducts = products.filter(
     (product) =>
@@ -101,21 +102,16 @@ const Products = () => {
           </div>
 
           {/* Loading State */}
-          {isLoading && (
-            <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
-              <div className="p-4 space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            </div>
-          )}
+          {isLoading && <PageLoadingSpinner message="Loading products..." />}
 
           {/* Error State */}
           {error && (
-            <div className="text-center py-12">
-              <p className="text-destructive">Failed to load products. Please try again.</p>
-            </div>
+            <ApiErrorFallback
+              error={error instanceof Error ? error : null}
+              onRetry={() => refetch()}
+              title="Failed to load products"
+              description="There was a problem fetching your products. Please try again."
+            />
           )}
 
           {/* Products Table */}

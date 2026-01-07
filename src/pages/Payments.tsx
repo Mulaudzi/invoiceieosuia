@@ -7,7 +7,8 @@ import { usePayments, usePaymentSummary } from "@/hooks/usePayments";
 import { Payment } from "@/lib/types";
 import { PaymentModal } from "@/components/payments/PaymentModal";
 import { DeletePaymentDialog } from "@/components/payments/DeletePaymentDialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
+import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import {
   Plus,
   Search,
@@ -39,7 +40,7 @@ const Payments = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
-  const { data: payments = [], isLoading, error } = usePayments();
+  const { data: payments = [], isLoading, error, refetch } = usePayments();
   const { data: summary } = usePaymentSummary();
 
   const filteredPayments = payments.filter(
@@ -121,21 +122,16 @@ const Payments = () => {
           </div>
 
           {/* Loading State */}
-          {isLoading && (
-            <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
-              <div className="p-4 space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            </div>
-          )}
+          {isLoading && <PageLoadingSpinner message="Loading payments..." />}
 
           {/* Error State */}
           {error && (
-            <div className="text-center py-12">
-              <p className="text-destructive">Failed to load payments. Please try again.</p>
-            </div>
+            <ApiErrorFallback
+              error={error instanceof Error ? error : null}
+              onRetry={() => refetch()}
+              title="Failed to load payments"
+              description="There was a problem fetching your payments. Please try again."
+            />
           )}
 
           {/* Payments Table */}
