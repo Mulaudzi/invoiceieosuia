@@ -17,6 +17,7 @@ import Reports from "./pages/Reports";
 import Payments from "./pages/Payments";
 import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
+import VerifyEmail from "./pages/VerifyEmail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
               
               {/* Protected Dashboard Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

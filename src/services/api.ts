@@ -124,6 +124,14 @@ export const authService = {
     const response = await api.put<{ success: boolean; user: User }>('/plan', { plan });
     return response.data.user;
   },
+
+  verifyEmail: async (token: string): Promise<void> => {
+    await api.post('/verify-email', { token });
+  },
+
+  resendVerification: async (): Promise<void> => {
+    await api.post('/resend-verification');
+  },
 };
 
 // ==================== Client Services ====================
