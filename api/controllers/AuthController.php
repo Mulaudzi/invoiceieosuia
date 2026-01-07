@@ -29,6 +29,9 @@ class AuthController {
         $newUser = $user->find($userId);
         unset($newUser['password']);
         
+        // Generate verification token and send email
+        $this->createAndSendVerificationEmail($userId, $newUser['email'], $newUser['name']);
+        
         $token = Auth::generateToken($userId);
         
         Response::json([
@@ -107,5 +110,159 @@ class AuthController {
         unset($user['password']);
         
         Response::json($user);
+    }
+    
+    public function verifyEmail(): void {
+        $request = new Request();
+        $token = $request->input('token');
+        
+        if (!$token) {
+            Response::error('Verification token is required', 422);
+        }
+        
+        $db = Database::getConnection();
+        $hash = hash('sha256', $token);
+        
+        // Find valid token
+        $stmt = $db->prepare("
+            SELECT user_id FROM email_verifications 
+            WHERE token = ? AND expires_at > NOW()
+        ");
+        $stmt->execute([$hash]);
+        $result = $stmt->fetch();
+        
+        if (!$result) {
+            Response::error('Invalid or expired verification token', 422);
+        }
+        
+        // Mark email as verified
+        $stmt = $db->prepare("UPDATE users SET email_verified_at = NOW() WHERE id = ?");
+        $stmt->execute([$result['user_id']]);
+        
+        // Delete used token
+        $stmt = $db->prepare("DELETE FROM email_verifications WHERE user_id = ?");
+        $stmt->execute([$result['user_id']]);
+        
+        Response::success(['message' => 'Email verified successfully']);
+    }
+    
+    public function resendVerification(): void {
+        $user = Auth::user();
+        
+        if ($user['email_verified_at']) {
+            Response::error('Email is already verified', 422);
+        }
+        
+        // Rate limit: 3 attempts per 15 minutes
+        $rateLimiter = new RateLimitMiddleware(3, 15);
+        if (!$rateLimiter->handle('resend_verification:' . $user['id'])) {
+            return;
+        }
+        $rateLimiter->hit();
+        
+        $this->createAndSendVerificationEmail($user['id'], $user['email'], $user['name']);
+        
+        Response::success(['message' => 'Verification email sent']);
+    }
+    
+    public function forgotPassword(): void {
+        $request = new Request();
+        $email = $request->input('email');
+        
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Response::error('Valid email is required', 422);
+        }
+        
+        // Rate limit: 5 attempts per 60 minutes
+        $rateLimiter = new RateLimitMiddleware(5, 60);
+        if (!$rateLimiter->handle('forgot_password:' . $email)) {
+            return;
+        }
+        $rateLimiter->hit();
+        
+        $user = User::query()->findByEmail($email);
+        
+        // Always return success to prevent email enumeration
+        if (!$user) {
+            Response::success(['message' => 'If an account exists with that email, a password reset link has been sent.']);
+            return;
+        }
+        
+        // Delete any existing reset tokens for this email
+        $db = Database::getConnection();
+        $stmt = $db->prepare("DELETE FROM password_resets WHERE email = ?");
+        $stmt->execute([$email]);
+        
+        // Create new reset token
+        $token = bin2hex(random_bytes(32));
+        $hash = hash('sha256', $token);
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+        
+        $stmt = $db->prepare("INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)");
+        $stmt->execute([$email, $hash, $expiresAt]);
+        
+        // Send reset email
+        Mailer::sendPasswordResetEmail($email, $user['name'], $token);
+        
+        Response::success(['message' => 'If an account exists with that email, a password reset link has been sent.']);
+    }
+    
+    public function resetPassword(): void {
+        $request = new Request();
+        $data = $request->validate([
+            'token' => 'required',
+            'password' => 'required|min:8',
+        ]);
+        
+        $db = Database::getConnection();
+        $hash = hash('sha256', $data['token']);
+        
+        // Find valid token
+        $stmt = $db->prepare("
+            SELECT email FROM password_resets 
+            WHERE token = ? AND expires_at > NOW()
+        ");
+        $stmt->execute([$hash]);
+        $result = $stmt->fetch();
+        
+        if (!$result) {
+            Response::error('Invalid or expired reset token', 422);
+        }
+        
+        // Update password
+        $stmt = $db->prepare("UPDATE users SET password = ? WHERE email = ?");
+        $stmt->execute([password_hash($data['password'], PASSWORD_DEFAULT), $result['email']]);
+        
+        // Delete all reset tokens for this email
+        $stmt = $db->prepare("DELETE FROM password_resets WHERE email = ?");
+        $stmt->execute([$result['email']]);
+        
+        // Revoke all existing tokens for security
+        $user = User::query()->findByEmail($result['email']);
+        if ($user) {
+            $stmt = $db->prepare("DELETE FROM api_tokens WHERE user_id = ?");
+            $stmt->execute([$user['id']]);
+        }
+        
+        Response::success(['message' => 'Password reset successfully']);
+    }
+    
+    private function createAndSendVerificationEmail(int $userId, string $email, string $name): void {
+        $db = Database::getConnection();
+        
+        // Delete existing verification tokens
+        $stmt = $db->prepare("DELETE FROM email_verifications WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        
+        // Create new token
+        $token = bin2hex(random_bytes(32));
+        $hash = hash('sha256', $token);
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        
+        $stmt = $db->prepare("INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?, ?, ?)");
+        $stmt->execute([$userId, $hash, $expiresAt]);
+        
+        // Send email
+        Mailer::sendVerificationEmail($email, $name, $token);
     }
 }
