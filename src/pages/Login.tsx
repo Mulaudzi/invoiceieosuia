@@ -68,15 +68,6 @@ const Login = () => {
               Enter your credentials to access your account
             </p>
 
-            {/* Demo credentials notice */}
-            <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-accent font-medium mb-1">Demo Credentials</p>
-              <p className="text-xs text-muted-foreground">
-                Email: <span className="font-mono">demo@ieosuia.com</span><br />
-                Password: <span className="font-mono">demo123</span>
-              </p>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
