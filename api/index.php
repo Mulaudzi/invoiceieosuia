@@ -53,12 +53,16 @@ $router = new Router();
 // Public routes
 $router->post('/register', [AuthController::class, 'register']);
 $router->post('/login', [AuthController::class, 'login']);
+$router->post('/verify-email', [AuthController::class, 'verifyEmail']);
+$router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
+$router->post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Protected routes
 $router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class]);
 $router->get('/user', [AuthController::class, 'user'], [AuthMiddleware::class]);
 $router->put('/profile', [AuthController::class, 'updateProfile'], [AuthMiddleware::class]);
 $router->put('/plan', [AuthController::class, 'updatePlan'], [AuthMiddleware::class]);
+$router->post('/resend-verification', [AuthController::class, 'resendVerification'], [AuthMiddleware::class]);
 
 // Clients
 $router->get('/clients', [ClientController::class, 'index'], [AuthMiddleware::class]);
