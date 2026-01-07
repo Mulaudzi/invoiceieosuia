@@ -1,7 +1,9 @@
+import { Link } from "react-router-dom";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatCard from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DollarSign,
   FileText,
@@ -10,54 +12,26 @@ import {
   Plus,
   ArrowRight,
   TrendingUp,
+  AlertCircle,
 } from "lucide-react";
+import { useDashboardStats, useRecentInvoices, useTopClients } from "@/hooks/useReports";
 
 const Dashboard = () => {
-const stats = [
-    {
-      title: "Total Revenue",
-      value: "R2,245,000",
-      change: "+12.5%",
-      changeType: "positive" as const,
-      icon: DollarSign,
-    },
-    {
-      title: "Total Invoices",
-      value: "256",
-      change: "+8.2%",
-      changeType: "positive" as const,
-      icon: FileText,
-    },
-    {
-      title: "Outstanding",
-      value: "R151,560",
-      change: "-5.1%",
-      changeType: "negative" as const,
-      icon: Clock,
-    },
-    {
-      title: "Active Clients",
-      value: "48",
-      change: "+3",
-      changeType: "positive" as const,
-      icon: Users,
-    },
-  ];
+  const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
+  const { data: recentInvoices = [], isLoading: invoicesLoading } = useRecentInvoices(5);
+  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(4);
 
-const recentInvoices = [
-    { id: "INV-001", client: "Acme Corp", amount: "R45,000", status: "Paid", date: "Jan 15, 2024" },
-    { id: "INV-002", client: "TechStart Inc", amount: "R32,400", status: "Pending", date: "Jan 14, 2024" },
-    { id: "INV-003", client: "Global Solutions", amount: "R57,600", status: "Overdue", date: "Jan 10, 2024" },
-    { id: "INV-004", client: "Creative Agency", amount: "R17,100", status: "Paid", date: "Jan 08, 2024" },
-    { id: "INV-005", client: "DataFlow Ltd", amount: "R73,800", status: "Pending", date: "Jan 05, 2024" },
-  ];
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(amount);
+  };
 
-const topClients = [
-    { name: "Acme Corp", revenue: "R813,600", invoices: 24 },
-    { name: "TechStart Inc", revenue: "R590,400", invoices: 18 },
-    { name: "Global Solutions", revenue: "R513,000", invoices: 15 },
-    { name: "Creative Agency", revenue: "R340,200", invoices: 12 },
-  ];
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-ZA', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -72,6 +46,37 @@ const topClients = [
     }
   };
 
+  const statCards = [
+    {
+      title: "Total Revenue",
+      value: stats ? formatCurrency(stats.total_revenue) : "R0",
+      change: "+12.5%",
+      changeType: "positive" as const,
+      icon: DollarSign,
+    },
+    {
+      title: "Total Invoices",
+      value: stats?.total_invoices?.toString() || "0",
+      change: `${stats?.paid_invoices || 0} paid`,
+      changeType: "positive" as const,
+      icon: FileText,
+    },
+    {
+      title: "Outstanding",
+      value: stats ? formatCurrency(stats.outstanding) : "R0",
+      change: `${stats?.overdue_count || 0} overdue`,
+      changeType: stats?.overdue_count ? "negative" as const : "positive" as const,
+      icon: Clock,
+    },
+    {
+      title: "Active Clients",
+      value: stats?.active_clients?.toString() || "0",
+      change: "Active",
+      changeType: "positive" as const,
+      icon: Users,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar />
@@ -82,17 +87,37 @@ const topClients = [
           {/* Quick Actions */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">Overview</h2>
-            <Button variant="accent">
-              <Plus className="w-4 h-4" />
-              New Invoice
-            </Button>
+            <Link to="/invoices">
+              <Button variant="accent">
+                <Plus className="w-4 h-4" />
+                New Invoice
+              </Button>
+            </Link>
           </div>
+
+          {/* Error State */}
+          {statsError && (
+            <div className="mb-6 bg-destructive/10 text-destructive p-4 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Failed to load dashboard stats. Please try again.
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat) => (
-              <StatCard key={stat.title} {...stat} />
-            ))}
+            {statsLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-card rounded-xl border border-border p-6">
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-8 w-32 mb-2" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))
+            ) : (
+              statCards.map((stat) => (
+                <StatCard key={stat.title} {...stat} />
+              ))
+            )}
           </div>
 
           {/* Content Grid */}
@@ -101,10 +126,12 @@ const topClients = [
             <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-soft">
               <div className="p-6 border-b border-border flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">Recent Invoices</h3>
-                <Button variant="ghost" size="sm" className="text-accent">
-                  View All
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
+                <Link to="/invoices">
+                  <Button variant="ghost" size="sm" className="text-accent">
+                    View All
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -118,19 +145,37 @@ const topClients = [
                     </tr>
                   </thead>
                   <tbody>
-                    {recentInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="p-4 text-sm font-medium text-foreground">{invoice.id}</td>
-                        <td className="p-4 text-sm text-foreground">{invoice.client}</td>
-                        <td className="p-4 text-sm font-medium text-foreground">{invoice.amount}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                            {invoice.status}
-                          </span>
+                    {invoicesLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i} className="border-b border-border/50">
+                          <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-28" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                        </tr>
+                      ))
+                    ) : recentInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                          No invoices yet. Create your first invoice!
                         </td>
-                        <td className="p-4 text-sm text-muted-foreground">{invoice.date}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      recentInvoices.map((invoice: any) => (
+                        <tr key={invoice.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="p-4 text-sm font-medium text-foreground">{invoice.invoice_number || invoice.id}</td>
+                          <td className="p-4 text-sm text-foreground">{invoice.client?.name || invoice.clientName}</td>
+                          <td className="p-4 text-sm font-medium text-foreground">{formatCurrency(invoice.total)}</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                              {invoice.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.date)}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -143,20 +188,39 @@ const topClients = [
                 <TrendingUp className="w-5 h-5 text-accent" />
               </div>
               <div className="p-4">
-                <ul className="space-y-4">
-                  {topClients.map((client, index) => (
-                    <li key={client.name} className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent font-medium">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{client.name}</p>
-                        <p className="text-sm text-muted-foreground">{client.invoices} invoices</p>
-                      </div>
-                      <p className="font-semibold text-foreground">{client.revenue}</p>
-                    </li>
-                  ))}
-                </ul>
+                {clientsLoading ? (
+                  <ul className="space-y-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <li key={i} className="flex items-center gap-4">
+                        <Skeleton className="w-10 h-10 rounded-full" />
+                        <div className="flex-1">
+                          <Skeleton className="h-4 w-24 mb-1" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                        <Skeleton className="h-5 w-20" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : topClients.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No client data yet.
+                  </p>
+                ) : (
+                  <ul className="space-y-4">
+                    {topClients.map((client: any, index: number) => (
+                      <li key={client.name} className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent font-medium">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{client.name}</p>
+                          <p className="text-sm text-muted-foreground">Top performer</p>
+                        </div>
+                        <p className="font-semibold text-foreground">{formatCurrency(client.revenue)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
