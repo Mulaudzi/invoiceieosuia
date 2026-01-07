@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Mail\InvoiceMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade\Pdf;
-
-class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
@@ -175,14 +175,51 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        // In production, send email to client
-        // Mail::to($invoice->client->email)->send(new InvoiceMail($invoice));
+        $validated = $request->validate([
+            'message' => 'sometimes|string|max:1000',
+            'subject' => 'sometimes|string|max:200',
+        ]);
 
-        $invoice->update(['status' => 'Pending']);
+        $invoice->load(['client', 'items', 'template', 'user']);
+
+        $customMessage = $validated['message'] ?? '';
+
+        try {
+            Mail::to($invoice->client->email)
+                ->send(new InvoiceMail($invoice, $customMessage));
+
+            $invoice->update(['status' => 'Pending']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invoice sent successfully to ' . $invoice->client->email,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send email. Please check your mail configuration.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    public function emailPreview(Request $request, Invoice $invoice)
+    {
+        $this->authorize('view', $invoice);
+
+        $invoice->load(['client', 'items', 'template', 'user']);
 
         return response()->json([
             'success' => true,
-            'message' => 'Invoice sent successfully',
+            'preview' => [
+                'to' => $invoice->client->email,
+                'subject' => "Invoice #{$invoice->invoice_number} from " . ($invoice->user->businessName ?? $invoice->user->name),
+                'invoice_number' => $invoice->invoice_number,
+                'client_name' => $invoice->client->name,
+                'total' => $invoice->total,
+                'due_date' => $invoice->due_date,
+                'status' => $invoice->status,
+            ],
         ]);
     }
 

@@ -65,7 +65,8 @@ export const useSendInvoice = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: string | number) => invoiceService.send(id),
+    mutationFn: ({ id, message }: { id: string | number; message?: string }) => 
+      invoiceService.send(id, message),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },

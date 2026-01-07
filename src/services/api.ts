@@ -243,8 +243,8 @@ export const invoiceService = {
     window.URL.revokeObjectURL(url);
   },
 
-  send: async (id: string | number): Promise<void> => {
-    await api.post(`/invoices/${id}/send`);
+  send: async (id: string | number, message?: string): Promise<void> => {
+    await api.post(`/invoices/${id}/send`, { message });
   },
 
   markPaid: async (id: string | number): Promise<Invoice> => {

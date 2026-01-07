@@ -26,6 +26,7 @@ import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useSendInvoice, u
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SendSmsDialog } from "@/components/invoices/SendSmsDialog";
+import { SendEmailDialog } from "@/components/invoices/SendEmailDialog";
 import { InvoiceModal } from "@/components/invoices/InvoiceModal";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { Invoice } from "@/lib/types";
@@ -33,6 +34,7 @@ import { Invoice } from "@/lib/types";
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -48,6 +50,11 @@ const Invoices = () => {
   const handleOpenSmsDialog = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setSmsDialogOpen(true);
+  };
+
+  const handleOpenEmailDialog = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setEmailDialogOpen(true);
   };
 
   const handleOpenCreateModal = () => {
@@ -128,14 +135,7 @@ const Invoices = () => {
     }
   };
 
-  const handleSend = async (id: string) => {
-    try {
-      await sendInvoice.mutateAsync(id);
-      toast({ title: "Invoice sent successfully" });
-    } catch (error) {
-      toast({ title: "Failed to send invoice", variant: "destructive" });
-    }
-  };
+  // Email sending is now handled by the SendEmailDialog
 
   const handleMarkPaid = async (id: string) => {
     try {
@@ -290,7 +290,7 @@ const Invoices = () => {
                                 <Download className="w-4 h-4 mr-2" />
                                 Download PDF
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSend(invoice.id)}>
+                              <DropdownMenuItem onClick={() => handleOpenEmailDialog(invoice)}>
                                 <Send className="w-4 h-4 mr-2" />
                                 Send Email
                               </DropdownMenuItem>
@@ -345,6 +345,15 @@ const Invoices = () => {
           invoice={selectedInvoice}
           open={smsDialogOpen}
           onOpenChange={setSmsDialogOpen}
+        />
+      )}
+
+      {/* Email Dialog */}
+      {selectedInvoice && (
+        <SendEmailDialog
+          invoice={selectedInvoice}
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
         />
       )}
 
