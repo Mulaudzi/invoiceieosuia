@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 
 const Dashboard = () => {
-  const stats = [
+const stats = [
     {
       title: "Total Revenue",
-      value: "$124,500",
+      value: "R2,245,000",
       change: "+12.5%",
       changeType: "positive" as const,
       icon: DollarSign,
@@ -30,7 +30,7 @@ const Dashboard = () => {
     },
     {
       title: "Outstanding",
-      value: "$8,420",
+      value: "R151,560",
       change: "-5.1%",
       changeType: "negative" as const,
       icon: Clock,
@@ -44,19 +44,19 @@ const Dashboard = () => {
     },
   ];
 
-  const recentInvoices = [
-    { id: "INV-001", client: "Acme Corp", amount: "$2,500", status: "Paid", date: "Jan 15, 2024" },
-    { id: "INV-002", client: "TechStart Inc", amount: "$1,800", status: "Pending", date: "Jan 14, 2024" },
-    { id: "INV-003", client: "Global Solutions", amount: "$3,200", status: "Overdue", date: "Jan 10, 2024" },
-    { id: "INV-004", client: "Creative Agency", amount: "$950", status: "Paid", date: "Jan 08, 2024" },
-    { id: "INV-005", client: "DataFlow Ltd", amount: "$4,100", status: "Pending", date: "Jan 05, 2024" },
+const recentInvoices = [
+    { id: "INV-001", client: "Acme Corp", amount: "R45,000", status: "Paid", date: "Jan 15, 2024" },
+    { id: "INV-002", client: "TechStart Inc", amount: "R32,400", status: "Pending", date: "Jan 14, 2024" },
+    { id: "INV-003", client: "Global Solutions", amount: "R57,600", status: "Overdue", date: "Jan 10, 2024" },
+    { id: "INV-004", client: "Creative Agency", amount: "R17,100", status: "Paid", date: "Jan 08, 2024" },
+    { id: "INV-005", client: "DataFlow Ltd", amount: "R73,800", status: "Pending", date: "Jan 05, 2024" },
   ];
 
-  const topClients = [
-    { name: "Acme Corp", revenue: "$45,200", invoices: 24 },
-    { name: "TechStart Inc", revenue: "$32,800", invoices: 18 },
-    { name: "Global Solutions", revenue: "$28,500", invoices: 15 },
-    { name: "Creative Agency", revenue: "$18,900", invoices: 12 },
+const topClients = [
+    { name: "Acme Corp", revenue: "R813,600", invoices: 24 },
+    { name: "TechStart Inc", revenue: "R590,400", invoices: 18 },
+    { name: "Global Solutions", revenue: "R513,000", invoices: 15 },
+    { name: "Creative Agency", revenue: "R340,200", invoices: 12 },
   ];
 
   const getStatusColor = (status: string) => {

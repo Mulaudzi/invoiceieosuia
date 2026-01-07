@@ -136,14 +136,14 @@ const Login = () => {
           <p className="text-white/80 mb-8">
             Track payments, send reminders, and grow your business with powerful insights.
           </p>
-          <div className="flex items-center justify-center gap-4">
+<div className="flex items-center justify-center gap-4">
             <div className="text-center">
               <p className="text-3xl font-bold text-accent">10K+</p>
               <p className="text-white/70 text-sm">Happy Users</p>
             </div>
             <div className="w-px h-12 bg-white/20" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-accent">$50M+</p>
+              <p className="text-3xl font-bold text-accent">R900M+</p>
               <p className="text-white/70 text-sm">Invoices Sent</p>
             </div>
             <div className="w-px h-12 bg-white/20" />

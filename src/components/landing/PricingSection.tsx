@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Check, Star } from "lucide-react";
 
 const PricingSection = () => {
-  const plans = [
+const plans = [
     {
       name: "Free",
-      price: "$0",
+      price: "R0",
       period: "forever",
       description: "Perfect for freelancers just getting started",
       features: [
@@ -22,7 +22,7 @@ const PricingSection = () => {
     },
     {
       name: "Pro",
-      price: "$19",
+      price: "R349",
       period: "per month",
       description: "For growing businesses and agencies",
       features: [
@@ -40,7 +40,7 @@ const PricingSection = () => {
     },
     {
       name: "Business",
-      price: "$49",
+      price: "R899",
       period: "per month",
       description: "For teams and enterprises",
       features: [

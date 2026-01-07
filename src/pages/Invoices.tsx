@@ -23,15 +23,15 @@ import {
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const invoices = [
-    { id: "INV-001", client: "Acme Corp", email: "billing@acme.com", amount: "$2,500.00", status: "Paid", date: "Jan 15, 2024", dueDate: "Feb 15, 2024" },
-    { id: "INV-002", client: "TechStart Inc", email: "finance@techstart.io", amount: "$1,800.00", status: "Pending", date: "Jan 14, 2024", dueDate: "Feb 14, 2024" },
-    { id: "INV-003", client: "Global Solutions", email: "ap@globalsolutions.com", amount: "$3,200.00", status: "Overdue", date: "Jan 10, 2024", dueDate: "Jan 25, 2024" },
-    { id: "INV-004", client: "Creative Agency", email: "admin@creative.co", amount: "$950.00", status: "Paid", date: "Jan 08, 2024", dueDate: "Feb 08, 2024" },
-    { id: "INV-005", client: "DataFlow Ltd", email: "accounts@dataflow.io", amount: "$4,100.00", status: "Pending", date: "Jan 05, 2024", dueDate: "Feb 05, 2024" },
-    { id: "INV-006", client: "StartupXYZ", email: "cfo@startupxyz.com", amount: "$1,250.00", status: "Draft", date: "Jan 04, 2024", dueDate: "Feb 04, 2024" },
-    { id: "INV-007", client: "Enterprise Co", email: "payments@enterprise.com", amount: "$8,500.00", status: "Paid", date: "Jan 02, 2024", dueDate: "Feb 02, 2024" },
-    { id: "INV-008", client: "Local Business", email: "owner@localbiz.com", amount: "$620.00", status: "Pending", date: "Jan 01, 2024", dueDate: "Feb 01, 2024" },
+const invoices = [
+    { id: "INV-001", client: "Acme Corp", email: "billing@acme.com", amount: "R45,000.00", status: "Paid", date: "Jan 15, 2024", dueDate: "Feb 15, 2024" },
+    { id: "INV-002", client: "TechStart Inc", email: "finance@techstart.io", amount: "R32,400.00", status: "Pending", date: "Jan 14, 2024", dueDate: "Feb 14, 2024" },
+    { id: "INV-003", client: "Global Solutions", email: "ap@globalsolutions.com", amount: "R57,600.00", status: "Overdue", date: "Jan 10, 2024", dueDate: "Jan 25, 2024" },
+    { id: "INV-004", client: "Creative Agency", email: "admin@creative.co", amount: "R17,100.00", status: "Paid", date: "Jan 08, 2024", dueDate: "Feb 08, 2024" },
+    { id: "INV-005", client: "DataFlow Ltd", email: "accounts@dataflow.io", amount: "R73,800.00", status: "Pending", date: "Jan 05, 2024", dueDate: "Feb 05, 2024" },
+    { id: "INV-006", client: "StartupXYZ", email: "cfo@startupxyz.com", amount: "R22,500.00", status: "Draft", date: "Jan 04, 2024", dueDate: "Feb 04, 2024" },
+    { id: "INV-007", client: "Enterprise Co", email: "payments@enterprise.com", amount: "R153,000.00", status: "Paid", date: "Jan 02, 2024", dueDate: "Feb 02, 2024" },
+    { id: "INV-008", client: "Local Business", email: "owner@localbiz.com", amount: "R11,160.00", status: "Pending", date: "Jan 01, 2024", dueDate: "Feb 01, 2024" },
   ];
 
   const getStatusColor = (status: string) => {
