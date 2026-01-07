@@ -111,6 +111,10 @@ $router->post('/invoices/{id}/send', [NotificationController::class, 'sendEmail'
 $router->get('/invoices/{id}/email-preview', [NotificationController::class, 'emailPreview'], [AuthMiddleware::class]);
 $router->post('/invoices/{id}/send-sms', [NotificationController::class, 'sendSms'], [AuthMiddleware::class]);
 
+// PDF Generation
+$router->get('/invoices/{id}/pdf', [PdfController::class, 'generate'], [AuthMiddleware::class]);
+$router->get('/invoices/{id}/pdf/download', [PdfController::class, 'download'], [AuthMiddleware::class]);
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
