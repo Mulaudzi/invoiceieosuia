@@ -1,12 +1,15 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const { toast } = useToast();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,19 +17,33 @@ const Login = () => {
     password: "",
   });
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const result = await login(formData.email, formData.password);
 
-    toast({
-      title: "Login successful!",
-      description: "Redirecting to dashboard...",
-    });
+    if (result.success) {
+      toast({
+        title: "Login successful!",
+        description: "Redirecting to dashboard...",
+      });
+      navigate("/dashboard");
+    } else {
+      toast({
+        title: "Login failed",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
 
-    // In production, this would redirect to dashboard
     setIsLoading(false);
   };
 
@@ -50,6 +67,15 @@ const Login = () => {
             <p className="text-muted-foreground mb-8">
               Enter your credentials to access your account
             </p>
+
+            {/* Demo credentials notice */}
+            <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 mb-6">
+              <p className="text-sm text-accent font-medium mb-1">Demo Credentials</p>
+              <p className="text-xs text-muted-foreground">
+                Email: <span className="font-mono">demo@ieosuia.com</span><br />
+                Password: <span className="font-mono">demo123</span>
+              </p>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
@@ -75,9 +101,18 @@ const Login = () => {
                   <label htmlFor="password" className="block text-sm font-medium text-foreground">
                     Password
                   </label>
-                  <Link to="/forgot-password" className="text-sm text-accent hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast({
+                        title: "Password Reset",
+                        description: "In production, a reset link would be sent to your email.",
+                      });
+                    }}
+                    className="text-sm text-accent hover:underline"
+                  >
                     Forgot password?
-                  </Link>
+                  </button>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -136,7 +171,7 @@ const Login = () => {
           <p className="text-white/80 mb-8">
             Track payments, send reminders, and grow your business with powerful insights.
           </p>
-<div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4">
             <div className="text-center">
               <p className="text-3xl font-bold text-accent">10K+</p>
               <p className="text-white/70 text-sm">Happy Users</p>
