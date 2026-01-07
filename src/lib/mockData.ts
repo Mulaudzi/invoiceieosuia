@@ -1,4 +1,4 @@
-import { User, Client, Product, Invoice, Payment, Template } from './types';
+import { User, Client, Product, Invoice, Payment, Template, defaultTemplateStyles } from './types';
 
 // Generate unique IDs
 export const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -62,9 +62,105 @@ const seedPayments: Payment[] = [
 ];
 
 const seedTemplates: Template[] = [
-  { id: 'tpl_1', userId: 'user_demo', name: 'Standard Invoice', description: 'Clean, professional invoice template', isDefault: true, createdAt: '2024-01-01T00:00:00.000Z' },
-  { id: 'tpl_2', userId: 'user_demo', name: 'Modern Blue', description: 'Blue-themed modern design', isDefault: false, createdAt: '2024-01-01T00:00:00.000Z' },
-  { id: 'tpl_3', userId: 'user_demo', name: 'Minimal', description: 'Ultra-minimal invoice layout', isDefault: false, createdAt: '2024-01-01T00:00:00.000Z' },
+  { 
+    id: 'tpl_1', 
+    userId: 'user_demo', 
+    name: 'Standard Professional', 
+    description: 'Clean, professional invoice template with blue accent', 
+    isDefault: true, 
+    styles: { ...defaultTemplateStyles },
+    createdAt: '2024-01-01T00:00:00.000Z' 
+  },
+  { 
+    id: 'tpl_2', 
+    userId: 'user_demo', 
+    name: 'Modern Blue', 
+    description: 'Bold blue header with centered layout', 
+    isDefault: false, 
+    styles: { 
+      primaryColor: '#1e40af', 
+      accentColor: '#3b82f6', 
+      fontFamily: 'poppins', 
+      headerStyle: 'center', 
+      showLogo: true, 
+      showBorder: true, 
+      showWatermark: false, 
+      tableStyle: 'bordered' 
+    },
+    createdAt: '2024-01-01T00:00:00.000Z' 
+  },
+  { 
+    id: 'tpl_3', 
+    userId: 'user_demo', 
+    name: 'Minimal Clean', 
+    description: 'Ultra-minimal black & white layout', 
+    isDefault: false, 
+    styles: { 
+      primaryColor: '#18181b', 
+      accentColor: '#71717a', 
+      fontFamily: 'inter', 
+      headerStyle: 'left', 
+      showLogo: false, 
+      showBorder: false, 
+      showWatermark: false, 
+      tableStyle: 'minimal' 
+    },
+    createdAt: '2024-01-01T00:00:00.000Z' 
+  },
+  { 
+    id: 'tpl_4', 
+    userId: 'user_demo', 
+    name: 'Corporate Green', 
+    description: 'Professional green-themed corporate style', 
+    isDefault: false, 
+    styles: { 
+      primaryColor: '#166534', 
+      accentColor: '#22c55e', 
+      fontFamily: 'roboto', 
+      headerStyle: 'right', 
+      showLogo: true, 
+      showBorder: true, 
+      showWatermark: true, 
+      tableStyle: 'striped' 
+    },
+    createdAt: '2024-01-01T00:00:00.000Z' 
+  },
+  { 
+    id: 'tpl_5', 
+    userId: 'user_demo', 
+    name: 'Elegant Purple', 
+    description: 'Sophisticated purple design with modern touches', 
+    isDefault: false, 
+    styles: { 
+      primaryColor: '#7c3aed', 
+      accentColor: '#a78bfa', 
+      fontFamily: 'lato', 
+      headerStyle: 'center', 
+      showLogo: true, 
+      showBorder: false, 
+      showWatermark: false, 
+      tableStyle: 'bordered' 
+    },
+    createdAt: '2024-01-01T00:00:00.000Z' 
+  },
+  { 
+    id: 'tpl_6', 
+    userId: 'user_demo', 
+    name: 'Bold Orange', 
+    description: 'Energetic orange theme for creative businesses', 
+    isDefault: false, 
+    styles: { 
+      primaryColor: '#ea580c', 
+      accentColor: '#fb923c', 
+      fontFamily: 'opensans', 
+      headerStyle: 'left', 
+      showLogo: true, 
+      showBorder: true, 
+      showWatermark: false, 
+      tableStyle: 'striped' 
+    },
+    createdAt: '2024-01-01T00:00:00.000Z' 
+  },
 ];
 
 // Initialize mock data

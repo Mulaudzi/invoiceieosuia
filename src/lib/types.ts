@@ -74,11 +74,34 @@ export interface Payment {
   createdAt: string;
 }
 
+export interface TemplateStyles {
+  primaryColor: string;
+  accentColor: string;
+  fontFamily: 'inter' | 'poppins' | 'roboto' | 'opensans' | 'lato';
+  headerStyle: 'left' | 'center' | 'right';
+  showLogo: boolean;
+  showBorder: boolean;
+  showWatermark: boolean;
+  tableStyle: 'striped' | 'bordered' | 'minimal';
+}
+
 export interface Template {
   id: string;
   userId: string;
   name: string;
   description: string;
   isDefault: boolean;
+  styles: TemplateStyles;
   createdAt: string;
 }
+
+export const defaultTemplateStyles: TemplateStyles = {
+  primaryColor: '#2563eb',
+  accentColor: '#10b981',
+  fontFamily: 'inter',
+  headerStyle: 'left',
+  showLogo: true,
+  showBorder: true,
+  showWatermark: false,
+  tableStyle: 'striped',
+};
