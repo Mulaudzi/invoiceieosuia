@@ -14,7 +14,6 @@ import {
   Trash2,
   Download,
   CheckCircle,
-  Loader2,
   MessageSquare,
 } from "lucide-react";
 import {
@@ -27,11 +26,15 @@ import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useSendInvoice, u
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SendSmsDialog } from "@/components/invoices/SendSmsDialog";
+import { InvoiceModal } from "@/components/invoices/InvoiceModal";
+import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { Invoice } from "@/lib/types";
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { toast } = useToast();
   
@@ -45,6 +48,33 @@ const Invoices = () => {
   const handleOpenSmsDialog = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setSmsDialogOpen(true);
+  };
+
+  const handleOpenCreateModal = () => {
+    setSelectedInvoice(null);
+    setInvoiceModalOpen(true);
+  };
+
+  const handleOpenEditModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setInvoiceModalOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedInvoice) return;
+    try {
+      await deleteInvoice.mutateAsync(selectedInvoice.id);
+      toast({ title: "Invoice deleted successfully" });
+      setDeleteDialogOpen(false);
+      setSelectedInvoice(null);
+    } catch (error) {
+      toast({ title: "Failed to delete invoice", variant: "destructive" });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -88,14 +118,6 @@ const Invoices = () => {
     overdue: invoices.filter(i => i.status === 'Overdue').length,
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteInvoice.mutateAsync(id);
-      toast({ title: "Invoice deleted successfully" });
-    } catch (error) {
-      toast({ title: "Failed to delete invoice", variant: "destructive" });
-    }
-  };
 
   const handleDownloadPdf = async (id: string) => {
     try {
@@ -164,7 +186,7 @@ const Invoices = () => {
                 Filters
               </Button>
             </div>
-            <Button variant="accent">
+            <Button variant="accent" onClick={handleOpenCreateModal}>
               <Plus className="w-4 h-4" />
               New Invoice
             </Button>
@@ -260,7 +282,7 @@ const Invoices = () => {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenEditModal(invoice)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
@@ -284,7 +306,7 @@ const Invoices = () => {
                               )}
                               <DropdownMenuItem 
                                 className="text-destructive"
-                                onClick={() => handleDelete(invoice.id)}
+                                onClick={() => handleOpenDeleteDialog(invoice)}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
@@ -323,6 +345,24 @@ const Invoices = () => {
           invoice={selectedInvoice}
           open={smsDialogOpen}
           onOpenChange={setSmsDialogOpen}
+        />
+      )}
+
+      {/* Invoice Create/Edit Modal */}
+      <InvoiceModal
+        open={invoiceModalOpen}
+        onOpenChange={setInvoiceModalOpen}
+        invoice={selectedInvoice}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      {selectedInvoice && (
+        <DeleteInvoiceDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleConfirmDelete}
+          invoiceId={selectedInvoice.id}
+          isDeleting={deleteInvoice.isPending}
         />
       )}
     </div>
