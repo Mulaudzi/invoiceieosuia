@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,4 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/income-expense', [ReportController::class, 'incomeExpense']);
         Route::get('/recent-invoices', [ReportController::class, 'recentInvoices']);
     });
+
+    // Notifications
+    Route::post('/notifications/send-sms', [NotificationController::class, 'sendSms']);
 });

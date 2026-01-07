@@ -15,6 +15,7 @@ import {
   Download,
   CheckCircle,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,9 +26,13 @@ import {
 import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useSendInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SendSmsDialog } from "@/components/invoices/SendSmsDialog";
+import { Invoice } from "@/lib/types";
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { toast } = useToast();
   
   // API hooks
@@ -36,6 +41,11 @@ const Invoices = () => {
   const downloadPdf = useDownloadInvoicePdf();
   const sendInvoice = useSendInvoice();
   const markPaid = useMarkInvoicePaid();
+
+  const handleOpenSmsDialog = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setSmsDialogOpen(true);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -260,7 +270,11 @@ const Invoices = () => {
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleSend(invoice.id)}>
                                 <Send className="w-4 h-4 mr-2" />
-                                Send
+                                Send Email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenSmsDialog(invoice)}>
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Send SMS Reminder
                               </DropdownMenuItem>
                               {invoice.status !== 'Paid' && (
                                 <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
@@ -302,6 +316,15 @@ const Invoices = () => {
           </div>
         </main>
       </div>
+
+      {/* SMS Dialog */}
+      {selectedInvoice && (
+        <SendSmsDialog
+          invoice={selectedInvoice}
+          open={smsDialogOpen}
+          onOpenChange={setSmsDialogOpen}
+        />
+      )}
     </div>
   );
 };
