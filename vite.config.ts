@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      // Proxy API requests to Laravel backend during development
+      '/api': {
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
