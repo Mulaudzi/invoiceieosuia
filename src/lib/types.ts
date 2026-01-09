@@ -9,7 +9,11 @@ export interface User {
   password: string;
   plan: PlanType;
   businessName?: string;
+  phone?: string;
+  address?: string;
+  taxNumber?: string;
   emailVerified: boolean;
+  emailVerifiedAt?: string;
   createdAt: string;
 }
 

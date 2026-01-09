@@ -143,6 +143,12 @@ class AuthController {
         $stmt = $db->prepare("DELETE FROM email_verifications WHERE user_id = ?");
         $stmt->execute([$result['user_id']]);
         
+        // Send welcome email
+        $user = User::query()->find($result['user_id']);
+        if ($user) {
+            Mailer::sendWelcomeEmail($user['email'], $user['name']);
+        }
+        
         Response::success(['message' => 'Email verified successfully']);
     }
     
