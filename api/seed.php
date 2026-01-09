@@ -5,7 +5,7 @@
  * Usage: php seed.php
  */
 
-require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/Database.php';
 
 // Load environment variables
 if (file_exists(__DIR__ . '/.env')) {
