@@ -4,7 +4,29 @@ class Auth {
     private static ?array $user = null;
     
     public static function user(): ?array {
-        return self::$user;
+        return self::formatUserForFrontend(self::$user);
+    }
+    
+    /**
+     * Format user data for frontend (snake_case to camelCase, add emailVerified boolean)
+     */
+    public static function formatUserForFrontend(?array $user): ?array {
+        if ($user === null) return null;
+        
+        return [
+            'id' => (string)$user['id'],
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'plan' => $user['plan'] ?? 'free',
+            'businessName' => $user['business_name'] ?? null,
+            'phone' => $user['phone'] ?? null,
+            'address' => $user['address'] ?? null,
+            'taxNumber' => $user['tax_number'] ?? null,
+            'avatar' => $user['avatar'] ?? null,
+            'emailVerified' => !empty($user['email_verified_at']),
+            'emailVerifiedAt' => $user['email_verified_at'] ?? null,
+            'createdAt' => $user['created_at'] ?? null,
+        ];
     }
     
     public static function id(): ?int {

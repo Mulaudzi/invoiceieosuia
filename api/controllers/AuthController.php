@@ -35,7 +35,7 @@ class AuthController {
         $token = Auth::generateToken($userId);
         
         Response::json([
-            'user' => $newUser,
+            'user' => Auth::formatUserForFrontend($newUser),
             'token' => $token
         ], 201);
     }
@@ -61,7 +61,7 @@ class AuthController {
         $token = Auth::generateToken($user['id']);
         
         Response::json([
-            'user' => $user,
+            'user' => Auth::formatUserForFrontend($user),
             'token' => $token
         ]);
     }
@@ -93,7 +93,7 @@ class AuthController {
         $user = User::query()->find(Auth::id());
         unset($user['password']);
         
-        Response::json($user);
+        Response::json(Auth::formatUserForFrontend($user));
     }
     
     public function updatePassword(): void {
