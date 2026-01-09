@@ -17,6 +17,7 @@ import Reports from "./pages/Reports";
 import Payments from "./pages/Payments";
 import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyEmailReminder from "./pages/VerifyEmailReminder";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/dashboard/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/dashboard/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
               <Route path="/dashboard/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
+              <Route path="/dashboard/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               
               {/* Catch-all */}

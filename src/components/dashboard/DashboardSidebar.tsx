@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const DashboardSidebar = () => {
     { name: "Reports", icon: BarChart3, href: "/dashboard/reports" },
     { name: "Templates", icon: Palette, href: "/dashboard/templates" },
     { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
+    { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
   ];
 

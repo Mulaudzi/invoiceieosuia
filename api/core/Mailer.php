@@ -81,6 +81,20 @@ class Mailer {
         return self::send($email, $subject, $body);
     }
     
+    public static function sendWelcomeEmail(string $email, string $name): bool {
+        $loginUrl = ($_ENV['APP_URL'] ?? 'http://localhost:5173') . "/login";
+        $dashboardUrl = ($_ENV['APP_URL'] ?? 'http://localhost:5173') . "/dashboard";
+        
+        $subject = "Welcome to IEOSUIA!";
+        $body = self::getEmailTemplate('welcome', [
+            'name' => htmlspecialchars($name),
+            'login_url' => $loginUrl,
+            'dashboard_url' => $dashboardUrl,
+        ]);
+        
+        return self::send($email, $subject, $body);
+    }
+    
     private static function getEmailTemplate(string $template, array $data): string {
         $templates = [
             'verification' => '
@@ -158,6 +172,58 @@ class Mailer {
                             <div class="warning">
                                 <strong>⚠️ Security Notice:</strong> This link will expire in {{expires}}. If you did not request a password reset, please ignore this email and your password will remain unchanged.
                             </div>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ',
+            'welcome' => '
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { background: linear-gradient(135deg, #1e3a5f, #0d1f33); padding: 30px; text-align: center; }
+                        .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                        .content { padding: 30px; }
+                        .button { display: inline-block; background: #10b981; color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+                        .button:hover { background: #059669; }
+                        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                        .feature-list { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                        .feature-list li { margin: 10px 0; }
+                        .emoji { font-size: 48px; margin-bottom: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🎉 Welcome to IEOSUIA!</h1>
+                        </div>
+                        <div class="content">
+                            <p class="emoji" style="text-align: center;">✅</p>
+                            <h2 style="text-align: center;">Your Email is Verified!</h2>
+                            <p>Hi {{name}},</p>
+                            <p>Congratulations! Your email has been successfully verified and your account is now fully activated.</p>
+                            <p>You now have access to all the features of IEOSUIA:</p>
+                            <div class="feature-list">
+                                <ul>
+                                    <li>📄 Create professional invoices in seconds</li>
+                                    <li>👥 Manage your clients and products</li>
+                                    <li>📊 Track payments and generate reports</li>
+                                    <li>📱 Send invoices via email or SMS</li>
+                                    <li>🎨 Customize your invoice templates</li>
+                                </ul>
+                            </div>
+                            <p style="text-align: center;">
+                                <a href="{{dashboard_url}}" class="button">Go to Dashboard</a>
+                            </p>
+                            <p>If you have any questions, feel free to reach out to our support team.</p>
+                            <p>Happy invoicing!<br>The IEOSUIA Team</p>
                         </div>
                         <div class="footer">
                             <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
