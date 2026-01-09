@@ -224,7 +224,13 @@ class AuthController {
         $request = new Request();
         $token = $request->input('token');
         
+        // Also check query parameter as fallback (for direct link clicks)
         if (!$token) {
+            $token = $request->query('token');
+        }
+        
+        if (!$token) {
+            error_log("verifyEmail: No token received. Body: " . json_encode($request->all()) . " Query: " . json_encode($_GET));
             Response::error('Verification token is required', 422);
         }
         
