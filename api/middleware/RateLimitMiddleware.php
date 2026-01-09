@@ -10,7 +10,7 @@ class RateLimitMiddleware {
         $this->decayMinutes = $decayMinutes;
     }
     
-    public function handle(string $key = null): bool {
+    public function handle(?string $key = null): bool {
         $this->key = $key ?? $this->getClientIdentifier();
         
         $this->cleanupExpired();
