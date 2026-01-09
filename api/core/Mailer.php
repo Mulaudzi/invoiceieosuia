@@ -26,11 +26,12 @@ class Mailer {
             self::$mailer->SMTPSecure = $_ENV['MAIL_ENCRYPTION'] ?? PHPMailer::ENCRYPTION_STARTTLS;
             self::$mailer->Port = (int)($_ENV['MAIL_PORT'] ?? 587);
             
-            // Default sender
-            self::$mailer->setFrom(
-                $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@ieosuia.com',
-                $_ENV['MAIL_FROM_NAME'] ?? 'IEOSUIA'
-            );
+            // Default sender - strip quotes from env values
+            $fromAddress = trim($_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@ieosuia.com', '"\'');
+            $fromName = str_replace('${APP_NAME}', $_ENV['APP_NAME'] ?? 'IEOSUIA', $_ENV['MAIL_FROM_NAME'] ?? 'IEOSUIA');
+            $fromName = trim($fromName, '"\'');
+            
+            self::$mailer->setFrom($fromAddress, $fromName);
             
             self::$mailer->isHTML(true);
             self::$mailer->CharSet = 'UTF-8';
