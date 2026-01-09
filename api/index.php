@@ -61,6 +61,9 @@ $router->post('/reset-password', [AuthController::class, 'resetPassword']);
 $router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class]);
 $router->get('/user', [AuthController::class, 'user'], [AuthMiddleware::class]);
 $router->put('/profile', [AuthController::class, 'updateProfile'], [AuthMiddleware::class]);
+$router->put('/password', [AuthController::class, 'updatePassword'], [AuthMiddleware::class]);
+$router->post('/avatar', [AuthController::class, 'uploadAvatar'], [AuthMiddleware::class]);
+$router->delete('/avatar', [AuthController::class, 'deleteAvatar'], [AuthMiddleware::class]);
 $router->put('/plan', [AuthController::class, 'updatePlan'], [AuthMiddleware::class]);
 $router->post('/resend-verification', [AuthController::class, 'resendVerification'], [AuthMiddleware::class]);
 

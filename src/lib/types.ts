@@ -12,6 +12,7 @@ export interface User {
   phone?: string;
   address?: string;
   taxNumber?: string;
+  avatar?: string;
   emailVerified: boolean;
   emailVerifiedAt?: string;
   createdAt: string;

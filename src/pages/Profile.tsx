@@ -10,6 +10,8 @@ import { User, Building2, Phone, MapPin, FileText, Loader2, Mail, CheckCircle, A
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import AvatarUpload from "@/components/profile/AvatarUpload";
+import PasswordChange from "@/components/profile/PasswordChange";
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -58,15 +60,6 @@ const Profile = () => {
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar />
@@ -74,12 +67,10 @@ const Profile = () => {
         <DashboardHeader title="Profile" subtitle="Manage your personal and business information" />
 
         <main className="p-6 max-w-4xl">
-          {/* Profile Header */}
+          {/* Profile Header with Avatar */}
           <div className="bg-card rounded-xl border border-border p-6 shadow-soft mb-6">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold">
-                {getInitials(user?.name || "U")}
-              </div>
+              <AvatarUpload user={user} onUpdate={updateUser} />
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-foreground">{user?.name}</h2>
                 <div className="flex items-center gap-2 mt-1">
@@ -184,14 +175,15 @@ const Profile = () => {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button variant="accent" onClick={handleSave} disabled={isSaving} size="lg">
+            <Button variant="accent" className="mt-4" onClick={handleSave} disabled={isSaving}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Profile
             </Button>
+          </div>
+
+          {/* Password Change */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
+            <PasswordChange />
           </div>
         </main>
       </div>

@@ -96,6 +96,114 @@ class AuthController {
         Response::json($user);
     }
     
+    public function updatePassword(): void {
+        $request = new Request();
+        $data = $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8',
+        ]);
+        
+        $user = User::query()->find(Auth::id());
+        
+        if (!password_verify($data['current_password'], $user['password'])) {
+            Response::error('Current password is incorrect', 422);
+        }
+        
+        User::query()->update(Auth::id(), [
+            'password' => password_hash($data['new_password'], PASSWORD_DEFAULT)
+        ]);
+        
+        Response::success(['message' => 'Password updated successfully']);
+    }
+    
+    public function uploadAvatar(): void {
+        if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+            Response::error('No file uploaded or upload error', 422);
+        }
+        
+        $file = $_FILES['avatar'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        
+        // Validate file type
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+        
+        if (!in_array($mimeType, $allowedTypes)) {
+            Response::error('Invalid file type. Allowed: JPG, PNG, GIF, WEBP', 422);
+        }
+        
+        // Max file size: 5MB
+        if ($file['size'] > 5 * 1024 * 1024) {
+            Response::error('File too large. Maximum size: 5MB', 422);
+        }
+        
+        // Create uploads directory if it doesn't exist
+        $uploadDir = __DIR__ . '/../uploads/avatars/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Generate unique filename
+        $extension = match($mimeType) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            default => 'jpg'
+        };
+        $filename = Auth::id() . '_' . time() . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+        
+        // Delete old avatar if exists
+        $user = User::query()->find(Auth::id());
+        if (!empty($user['avatar'])) {
+            $oldPath = $uploadDir . basename($user['avatar']);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+        
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            Response::error('Failed to save file', 500);
+        }
+        
+        // Update user avatar URL
+        $avatarUrl = '/api/uploads/avatars/' . $filename;
+        User::query()->update(Auth::id(), ['avatar' => $avatarUrl]);
+        
+        $updatedUser = User::query()->find(Auth::id());
+        unset($updatedUser['password']);
+        
+        Response::json([
+            'message' => 'Avatar uploaded successfully',
+            'avatar' => $avatarUrl,
+            'user' => $updatedUser
+        ]);
+    }
+    
+    public function deleteAvatar(): void {
+        $user = User::query()->find(Auth::id());
+        
+        if (!empty($user['avatar'])) {
+            $uploadDir = __DIR__ . '/../uploads/avatars/';
+            $oldPath = $uploadDir . basename($user['avatar']);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+        
+        User::query()->update(Auth::id(), ['avatar' => null]);
+        
+        $updatedUser = User::query()->find(Auth::id());
+        unset($updatedUser['password']);
+        
+        Response::json([
+            'message' => 'Avatar deleted successfully',
+            'user' => $updatedUser
+        ]);
+    }
+
     public function updatePlan(): void {
         $request = new Request();
         $plan = $request->input('plan');

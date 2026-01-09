@@ -120,6 +120,24 @@ export const authService = {
     return response.data.user;
   },
 
+  updatePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await api.put('/password', { current_password: currentPassword, new_password: newPassword });
+  },
+
+  uploadAvatar: async (file: File): Promise<{ avatar: string; user: User }> => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const response = await api.post<{ message: string; avatar: string; user: User }>('/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { avatar: response.data.avatar, user: response.data.user };
+  },
+
+  deleteAvatar: async (): Promise<User> => {
+    const response = await api.delete<{ message: string; user: User }>('/avatar');
+    return response.data.user;
+  },
+
   updatePlan: async (plan: PlanType): Promise<User> => {
     const response = await api.put<{ success: boolean; user: User }>('/plan', { plan });
     return response.data.user;
