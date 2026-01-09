@@ -23,8 +23,24 @@ class Mailer {
             self::$mailer->SMTPAuth = true;
             self::$mailer->Username = $_ENV['MAIL_USERNAME'] ?? '';
             self::$mailer->Password = $_ENV['MAIL_PASSWORD'] ?? '';
-            self::$mailer->SMTPSecure = $_ENV['MAIL_ENCRYPTION'] ?? PHPMailer::ENCRYPTION_STARTTLS;
+            
+            // Handle encryption - convert string to PHPMailer constant
+            $encryption = strtolower($_ENV['MAIL_ENCRYPTION'] ?? 'tls');
+            if ($encryption === 'ssl') {
+                self::$mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } elseif ($encryption === 'tls') {
+                self::$mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            } else {
+                self::$mailer->SMTPSecure = false; // No encryption
+            }
+            
             self::$mailer->Port = (int)($_ENV['MAIL_PORT'] ?? 587);
+            
+            // Enable debug output to error_log for troubleshooting
+            self::$mailer->SMTPDebug = SMTP::DEBUG_OFF; // Set to SMTP::DEBUG_SERVER to debug
+            self::$mailer->Debugoutput = function($str, $level) {
+                error_log("PHPMailer [$level]: $str");
+            };
             
             // Default sender - strip quotes from env values
             $fromAddress = trim($_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@ieosuia.com', '"\'');
