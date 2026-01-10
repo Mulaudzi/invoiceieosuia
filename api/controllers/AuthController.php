@@ -9,6 +9,15 @@ class AuthController {
             'password' => 'required|min:8',
         ]);
         
+        // Verify reCAPTCHA (if enabled)
+        $recaptchaToken = $request->input('recaptcha_token');
+        if (Recaptcha::isEnabled()) {
+            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'register');
+            if (!$recaptchaResult['success']) {
+                Response::error($recaptchaResult['error'], 422);
+            }
+        }
+        
         // Rate limit signup: 3 attempts per hour per IP
         $rateLimiter = new RateLimitMiddleware(3, 60);
         if (!$rateLimiter->handle('signup:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))) {
@@ -69,6 +78,15 @@ class AuthController {
             'email' => 'required|email',
             'password' => 'required',
         ]);
+        
+        // Verify reCAPTCHA (if enabled)
+        $recaptchaToken = $request->input('recaptcha_token');
+        if (Recaptcha::isEnabled()) {
+            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'login');
+            if (!$recaptchaResult['success']) {
+                Response::error($recaptchaResult['error'], 422);
+            }
+        }
         
         $email = strtolower(trim($data['email']));
         

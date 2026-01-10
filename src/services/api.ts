@@ -79,8 +79,12 @@ interface PaginatedResponse<T> {
 // ==================== Auth Services ====================
 
 export const authService = {
-  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    const response = await api.post<AuthResponse>('/login', { email, password });
+  login: async (email: string, password: string, recaptchaToken?: string): Promise<{ user: User; token: string }> => {
+    const response = await api.post<AuthResponse>('/login', { 
+      email, 
+      password,
+      recaptcha_token: recaptchaToken 
+    });
     setToken(response.data.token);
     return { user: response.data.user, token: response.data.token };
   },
@@ -89,7 +93,8 @@ export const authService = {
     name: string,
     email: string,
     password: string,
-    plan: PlanType = 'free'
+    plan: PlanType = 'free',
+    recaptchaToken?: string
   ): Promise<{ user: User; token: string }> => {
     const response = await api.post<AuthResponse>('/register', {
       name,
@@ -97,6 +102,7 @@ export const authService = {
       password,
       password_confirmation: password,
       plan,
+      recaptcha_token: recaptchaToken,
     });
     setToken(response.data.token);
     return { user: response.data.user, token: response.data.token };

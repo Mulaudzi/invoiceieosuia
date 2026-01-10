@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 
 const Login = () => {
   const { toast } = useToast();
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,7 +30,22 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await login(formData.email, formData.password);
+    // Execute reCAPTCHA
+    let recaptchaToken: string | null = null;
+    if (recaptchaLoaded) {
+      recaptchaToken = await executeRecaptcha('login');
+      if (!recaptchaToken) {
+        toast({
+          title: "Security check failed",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const result = await login(formData.email, formData.password, recaptchaToken || undefined);
 
     if (result.success) {
       toast({
@@ -127,6 +144,12 @@ const Login = () => {
                   </>
                 )}
               </Button>
+
+              {/* reCAPTCHA notice */}
+              <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                <Shield className="w-3 h-3" />
+                Protected by reCAPTCHA
+              </p>
             </form>
 
             <div className="mt-6 text-center">

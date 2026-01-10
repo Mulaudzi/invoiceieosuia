@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Core includes
 require_once __DIR__ . '/core/EmailValidator.php';
+require_once __DIR__ . '/core/Recaptcha.php';
 
 // Load environment variables
 $envFile = __DIR__ . '/.env';

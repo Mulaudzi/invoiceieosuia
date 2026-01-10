@@ -5,8 +5,8 @@ import { authService, getToken, removeToken } from '@/services/api';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, plan?: PlanType) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, recaptchaToken?: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, plan?: PlanType, recaptchaToken?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
 }
@@ -36,9 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string, recaptchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { user: loggedInUser } = await authService.login(email, password);
+      const { user: loggedInUser } = await authService.login(email, password, recaptchaToken);
       setUser(loggedInUser);
       return { success: true };
     } catch (error) {
@@ -51,10 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     password: string,
-    plan: PlanType = 'free'
+    plan: PlanType = 'free',
+    recaptchaToken?: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { user: newUser } = await authService.register(name, email, password, plan);
+      const { user: newUser } = await authService.register(name, email, password, plan, recaptchaToken);
       setUser(newUser);
       return { success: true };
     } catch (error) {
