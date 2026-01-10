@@ -269,11 +269,12 @@ class AuthController {
     public function resendVerification(): void {
         $user = Auth::user();
         
-        if ($user['email_verified_at']) {
+        // Check using camelCase key from formatUserForFrontend
+        if ($user['emailVerified']) {
             Response::error('Email is already verified', 422);
         }
         
-        // Rate limit: 3 attempts per 15 minutes
+        // Rate limit: 3 attempts per 15 minutes per user
         $rateLimiter = new RateLimitMiddleware(3, 15);
         if (!$rateLimiter->handle('resend_verification:' . $user['id'])) {
             return;
