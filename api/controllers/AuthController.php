@@ -9,6 +9,18 @@ class AuthController {
             'password' => 'required|min:8',
         ]);
         
+        // Rate limit signup: 3 attempts per hour per IP
+        $rateLimiter = new RateLimitMiddleware(3, 60);
+        if (!$rateLimiter->handle('signup:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))) {
+            return;
+        }
+        
+        // Comprehensive email validation (disposable, role-based, MX check)
+        $emailValidation = EmailValidator::validate($data['email']);
+        if (!$emailValidation['valid']) {
+            Response::error($emailValidation['error'], 422);
+        }
+        
         $user = User::query();
         
         // Check if email exists
@@ -16,11 +28,19 @@ class AuthController {
             Response::error('Email already registered', 422);
         }
         
-        // Create user
+        // Password strength validation
+        $passwordCheck = $this->validatePasswordStrength($data['password']);
+        if (!$passwordCheck['valid']) {
+            Response::error($passwordCheck['error'], 422);
+        }
+        
+        $rateLimiter->hit();
+        
+        // Create user with Argon2ID (more secure than bcrypt)
         $userId = $user->create([
             'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+            'email' => strtolower(trim($data['email'])),
+            'password' => password_hash($data['password'], PASSWORD_ARGON2ID),
             'plan' => $request->input('plan', 'free'),
             'business_name' => $request->input('business_name'),
             'status' => 'active'
@@ -33,6 +53,9 @@ class AuthController {
         $this->createAndSendVerificationEmail($userId, $newUser['email'], $newUser['name']);
         
         $token = Auth::generateToken($userId);
+        
+        // Log successful registration
+        error_log("New user registered: {$newUser['email']} (ID: $userId)");
         
         Response::json([
             'user' => Auth::formatUserForFrontend($newUser),
@@ -47,9 +70,20 @@ class AuthController {
             'password' => 'required',
         ]);
         
-        $user = User::query()->findByEmail($data['email']);
+        $email = strtolower(trim($data['email']));
+        
+        // Rate limit login: 5 attempts per 15 minutes per email
+        $rateLimiter = new RateLimitMiddleware(5, 15);
+        if (!$rateLimiter->handle('login:' . $email)) {
+            return;
+        }
+        
+        $user = User::query()->findByEmail($email);
         
         if (!$user || !password_verify($data['password'], $user['password'])) {
+            $rateLimiter->hit();
+            // Log failed attempt
+            error_log("Failed login attempt for: $email from IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
             Response::error('Invalid credentials', 401);
         }
         
@@ -57,8 +91,14 @@ class AuthController {
             Response::error('Account is inactive', 403);
         }
         
+        // Clear rate limit on successful login
+        $rateLimiter->clear();
+        
         unset($user['password']);
         $token = Auth::generateToken($user['id']);
+        
+        // Log successful login
+        error_log("Successful login: {$user['email']} (ID: {$user['id']})");
         
         Response::json([
             'user' => Auth::formatUserForFrontend($user),
@@ -385,5 +425,42 @@ class AuthController {
         
         // Send email
         Mailer::sendVerificationEmail($email, $name, $token);
+    }
+    
+    /**
+     * Validate password strength
+     * Requirements: min 8 chars, mixed case, numbers, special chars
+     */
+    private function validatePasswordStrength(string $password): array {
+        $errors = [];
+        
+        if (strlen($password) < 8) {
+            $errors[] = 'at least 8 characters';
+        }
+        
+        if (!preg_match('/[a-z]/', $password)) {
+            $errors[] = 'a lowercase letter';
+        }
+        
+        if (!preg_match('/[A-Z]/', $password)) {
+            $errors[] = 'an uppercase letter';
+        }
+        
+        if (!preg_match('/[0-9]/', $password)) {
+            $errors[] = 'a number';
+        }
+        
+        if (!preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $password)) {
+            $errors[] = 'a special character';
+        }
+        
+        if (empty($errors)) {
+            return ['valid' => true, 'error' => null];
+        }
+        
+        return [
+            'valid' => false,
+            'error' => 'Password must contain ' . implode(', ', $errors)
+        ];
     }
 }
