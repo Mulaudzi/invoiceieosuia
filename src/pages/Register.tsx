@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight, User, CheckCircle2 } from "lucide-react";
+import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight, User, CheckCircle2, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { PlanType } from "@/lib/types";
 import {
   Select,
@@ -19,6 +20,7 @@ const Register = () => {
   const { register, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,11 +61,27 @@ const Register = () => {
 
     setIsLoading(true);
 
+    // Execute reCAPTCHA
+    let recaptchaToken: string | null = null;
+    if (recaptchaLoaded) {
+      recaptchaToken = await executeRecaptcha('register');
+      if (!recaptchaToken) {
+        toast({
+          title: "Security check failed",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const result = await register(
       formData.name,
       formData.email,
       formData.password,
-      formData.plan
+      formData.plan,
+      recaptchaToken || undefined
     );
 
     if (result.success) {
@@ -253,9 +271,10 @@ const Register = () => {
               </Button>
             </form>
 
-            <p className="mt-4 text-xs text-muted-foreground text-center">
-              By creating an account, you agree to our{" "}
-              <a href="#" className="text-accent hover:underline">Terms of Service</a>
+            <p className="mt-4 text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+              <Shield className="w-3 h-3" />
+              Protected by reCAPTCHA · By creating an account, you agree to our{" "}
+              <a href="#" className="text-accent hover:underline">Terms</a>
               {" "}and{" "}
               <a href="#" className="text-accent hover:underline">Privacy Policy</a>
             </p>
