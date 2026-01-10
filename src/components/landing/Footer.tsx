@@ -17,14 +17,14 @@ const Footer = () => {
     ],
     Resources: [
       { name: "Documentation", href: "#" },
-      { name: "Help Center", href: "#" },
+      { name: "Support", href: "/support", isRoute: true },
       { name: "API Reference", href: "#" },
       { name: "Status", href: "#" },
     ],
     Legal: [
-      { name: "Privacy Policy", href: "#" },
-      { name: "Terms of Service", href: "#" },
-      { name: "Cookie Policy", href: "#" },
+      { name: "Privacy Policy", href: "/privacy-policy", isRoute: true },
+      { name: "Terms of Service", href: "/terms-of-service", isRoute: true },
+      { name: "Cookie Policy", href: "/cookie-policy", isRoute: true },
       { name: "GDPR", href: "#" },
     ],
   };
@@ -76,12 +76,21 @@ const Footer = () => {
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link.name}>
-                    <a
-                      href={link.href}
-                      className="text-primary-foreground/70 hover:text-accent transition-colors text-sm"
-                    >
-                      {link.name}
-                    </a>
+                    {link.isRoute ? (
+                      <Link
+                        to={link.href}
+                        className="text-primary-foreground/70 hover:text-accent transition-colors text-sm"
+                      >
+                        {link.name}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-primary-foreground/70 hover:text-accent transition-colors text-sm"
+                      >
+                        {link.name}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -95,15 +104,15 @@ const Footer = () => {
             © {new Date().getFullYear()} IEOSUIA Invoices & Books. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-primary-foreground/60 hover:text-accent text-sm transition-colors">
+            <Link to="/privacy-policy" className="text-primary-foreground/60 hover:text-accent text-sm transition-colors">
               Privacy
-            </a>
-            <a href="#" className="text-primary-foreground/60 hover:text-accent text-sm transition-colors">
+            </Link>
+            <Link to="/terms-of-service" className="text-primary-foreground/60 hover:text-accent text-sm transition-colors">
               Terms
-            </a>
-            <a href="#" className="text-primary-foreground/60 hover:text-accent text-sm transition-colors">
+            </Link>
+            <Link to="/cookie-policy" className="text-primary-foreground/60 hover:text-accent text-sm transition-colors">
               Cookies
-            </a>
+            </Link>
           </div>
         </div>
       </div>
