@@ -20,19 +20,22 @@ class PayfastController {
         $request = new Request();
         $plan = $request->input('plan');
         
-        if (!in_array($plan, ['pro', 'business'])) {
-            Response::error('Invalid plan. Use pro or business.', 422);
+        if (!in_array($plan, ['solo', 'pro', 'business'])) {
+            Response::error('Invalid plan. Use solo, pro, or business.', 422);
         }
         
         $user = User::query()->find(Auth::id());
         
         // Define plan prices (in ZAR cents for PayFast)
+        // Prices: Solo R149, Pro R299, Business R599
         $prices = [
-            'pro' => 34900, // R349.00
-            'business' => 89900, // R899.00
+            'solo' => 14900, // R149.00
+            'pro' => 29900, // R299.00
+            'business' => 59900, // R599.00
         ];
         
         $planNames = [
+            'solo' => 'IEOSUIA Solo Plan',
             'pro' => 'IEOSUIA Pro Plan',
             'business' => 'IEOSUIA Business Plan',
         ];
@@ -122,7 +125,7 @@ class PayfastController {
         $stmt->execute([$paymentStatus, $pfData['pf_payment_id'] ?? null, $paymentId]);
         
         // If payment is complete, update user plan
-        if ($paymentStatus === 'COMPLETE' && in_array($plan, ['pro', 'business'])) {
+        if ($paymentStatus === 'COMPLETE' && in_array($plan, ['solo', 'pro', 'business'])) {
             User::query()->update($userId, ['plan' => $plan]);
             error_log("User $userId upgraded to $plan plan via PayFast");
         }
