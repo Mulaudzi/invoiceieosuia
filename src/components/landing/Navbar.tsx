@@ -1,10 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, FileText } from "lucide-react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Get hero section height (approximately viewport height)
+      const heroHeight = window.innerHeight * 0.85;
+      setIsScrolled(window.scrollY > heroHeight);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const navLinks = [
     { name: "Features", href: "#features" },
@@ -14,15 +26,25 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
+    <nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? "bg-white/95 backdrop-blur-lg border-b border-border shadow-sm" 
+          : "bg-transparent border-b border-white/10"
+      }`}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg hero-gradient flex items-center justify-center">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${
+              isScrolled ? "bg-primary" : "hero-gradient"
+            }`}>
               <FileText className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground">
+            <span className={`text-xl font-bold transition-colors duration-300 ${
+              isScrolled ? "text-foreground" : "text-white"
+            }`}>
               IEOSUIA<span className="text-accent">.</span>
             </span>
           </Link>
@@ -33,7 +55,11 @@ const Navbar = () => {
               <a
                 key={link.name}
                 href={link.href}
-                className="text-muted-foreground hover:text-foreground transition-colors animated-underline"
+                className={`transition-colors animated-underline ${
+                  isScrolled 
+                    ? "text-muted-foreground hover:text-foreground" 
+                    : "text-white/80 hover:text-white"
+                }`}
               >
                 {link.name}
               </a>
@@ -43,16 +69,23 @@ const Navbar = () => {
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login">
-              <Button variant="ghost">Login</Button>
+              <Button 
+                variant={isScrolled ? "ghost" : "ghost"} 
+                className={isScrolled ? "" : "text-white hover:bg-white/10"}
+              >
+                Login
+              </Button>
             </Link>
             <Link to="/register">
-              <Button variant="accent">Get Started Free</Button>
+              <Button variant="accent" className="shadow-glow">
+                Get Started Free
+              </Button>
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-foreground"
+            className={`md:hidden p-2 transition-colors ${isScrolled ? "text-foreground" : "text-white"}`}
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -61,13 +94,19 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-fade-in">
+          <div className={`md:hidden py-4 border-t animate-fade-in ${
+            isScrolled ? "border-border bg-white" : "border-white/10 bg-primary/95 backdrop-blur-lg"
+          }`}>
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+                  className={`transition-colors px-2 py-1 ${
+                    isScrolled 
+                      ? "text-muted-foreground hover:text-foreground" 
+                      : "text-white/80 hover:text-white"
+                  }`}
                   onClick={() => setIsOpen(false)}
                 >
                   {link.name}
@@ -75,7 +114,9 @@ const Navbar = () => {
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 <Link to="/login">
-                  <Button variant="ghost" className="w-full">Login</Button>
+                  <Button variant="ghost" className={`w-full ${isScrolled ? "" : "text-white"}`}>
+                    Login
+                  </Button>
                 </Link>
                 <Link to="/register">
                   <Button variant="accent" className="w-full">Get Started Free</Button>

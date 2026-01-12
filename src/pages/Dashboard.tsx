@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatCard from "@/components/dashboard/StatCard";
+import { CreditsWidget } from "@/components/credits/CreditsWidget";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
@@ -137,6 +138,11 @@ const Dashboard = () => {
                 <StatCard key={stat.title} {...stat} />
               ))
             )}
+          </div>
+
+          {/* Credits Widget */}
+          <div className="mb-8">
+            <CreditsWidget />
           </div>
 
           {/* Content Grid */}

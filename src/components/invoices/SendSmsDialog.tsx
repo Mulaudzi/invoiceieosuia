@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { MessageSquare, Loader2, AlertCircle } from "lucide-react";
 import { useSendSms } from "@/hooks/useSendSms";
 import { useToast } from "@/hooks/use-toast";
+import { useCreditCheck } from "@/hooks/useCreditCheck";
 import { useAuth } from "@/contexts/AuthContext";
 import { Invoice } from "@/lib/types";
 
@@ -26,6 +27,7 @@ export function SendSmsDialog({ invoice, open, onOpenChange }: SendSmsDialogProp
   const { user } = useAuth();
   const { toast } = useToast();
   const sendSms = useSendSms();
+  const { credits, checkSmsCredits, smsRemaining } = useCreditCheck();
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount);
@@ -35,9 +37,24 @@ export function SendSmsDialog({ invoice, open, onOpenChange }: SendSmsDialogProp
   
   const [message, setMessage] = useState(defaultMessage);
 
-  const isPlanAllowed = user?.plan === 'pro' || user?.plan === 'business';
+  const isPlanAllowed = user?.plan && ['solo', 'pro', 'business'].includes(user.plan);
+  const hasInsufficientCredits = smsRemaining < 1;
+
+  const getSmsPrice = () => {
+    switch (credits?.plan) {
+      case 'solo': return 'R0.25';
+      case 'pro': return 'R0.24';
+      case 'business': return 'R0.23';
+      default: return 'R0.25';
+    }
+  };
 
   const handleSend = async () => {
+    // Check credits before sending
+    if (!checkSmsCredits(1)) {
+      return;
+    }
+
     try {
       const result = await sendSms.mutateAsync({ 
         invoiceId: invoice.id, 
@@ -78,16 +95,40 @@ export function SendSmsDialog({ invoice, open, onOpenChange }: SendSmsDialogProp
             <div className="text-center">
               <p className="font-medium text-foreground">Upgrade Required</p>
               <p className="text-sm text-muted-foreground mt-1">
-                SMS reminders are available on Pro and Business plans.
+                SMS reminders are available on Solo, Pro, and Business plans.
               </p>
             </div>
             <Button variant="accent" onClick={() => onOpenChange(false)}>
-              Upgrade to Pro
+              Upgrade to Solo
+            </Button>
+          </div>
+        ) : hasInsufficientCredits ? (
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-foreground">Insufficient SMS Credits</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                You have {smsRemaining} SMS credits remaining. Upgrade your plan for more.
+              </p>
+            </div>
+            <Button variant="accent" onClick={() => onOpenChange(false)}>
+              Upgrade Plan
             </Button>
           </div>
         ) : (
           <>
             <div className="space-y-4 py-4">
+              {/* Credits indicator */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                <div className="flex items-center gap-2 text-sm">
+                  <MessageSquare className="w-4 h-4 text-accent" />
+                  <span className="text-muted-foreground">SMS credits remaining:</span>
+                </div>
+                <span className="font-semibold text-foreground">{smsRemaining}</span>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
                 <Textarea
@@ -98,9 +139,10 @@ export function SendSmsDialog({ invoice, open, onOpenChange }: SendSmsDialogProp
                   rows={4}
                   maxLength={500}
                 />
-                <p className="text-xs text-muted-foreground text-right">
-                  {message.length}/500 characters
-                </p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{message.length}/500 characters</span>
+                  <span>Cost: {getSmsPrice()} per SMS</span>
+                </div>
               </div>
             </div>
 
@@ -120,7 +162,7 @@ export function SendSmsDialog({ invoice, open, onOpenChange }: SendSmsDialogProp
                 ) : (
                   <>
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    Send SMS
+                    Send SMS (1 credit)
                   </>
                 )}
               </Button>

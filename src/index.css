@@ -6,108 +6,108 @@
 
 @layer base {
   :root {
-    /* IEOSUIA Brand Colors - Professional Finance Theme */
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    /* IEOSUIA Brand Colors - Modern Finance Theme */
+    --background: 210 25% 98%;
+    --foreground: 220 40% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 40% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 40% 13%;
 
-    /* Deep Slate Primary */
-    --primary: 222 47% 15%;
+    /* Deep Navy Primary */
+    --primary: 220 60% 18%;
     --primary-foreground: 210 40% 98%;
 
-    /* Soft Gray Secondary */
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 222 47% 15%;
+    /* Cool Gray Secondary */
+    --secondary: 215 25% 96%;
+    --secondary-foreground: 220 40% 18%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 215 25% 93%;
+    --muted-foreground: 215 20% 45%;
 
-    /* Vibrant Teal Accent */
-    --accent: 173 80% 40%;
+    /* Vibrant Emerald Accent */
+    --accent: 160 84% 39%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 173 80% 40%;
+    --ring: 160 84% 39%;
 
     --radius: 0.75rem;
 
     /* Custom Brand Colors */
-    --brand-teal: 173 80% 40%;
-    --brand-teal-light: 173 80% 95%;
-    --brand-slate: 222 47% 15%;
-    --brand-slate-light: 222 30% 25%;
+    --brand-emerald: 160 84% 39%;
+    --brand-emerald-light: 160 80% 95%;
+    --brand-navy: 220 60% 18%;
+    --brand-navy-light: 220 45% 28%;
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 15%) 0%, hsl(222 30% 25%) 50%, hsl(173 80% 30%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(173 80% 40%) 0%, hsl(173 80% 50%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(220 60% 15%) 0%, hsl(220 50% 22%) 40%, hsl(160 70% 25%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(160 84% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 25% 98%) 100%);
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.08), 0 2px 4px -2px hsl(222 47% 11% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.08), 0 4px 6px -4px hsl(222 47% 11% / 0.04);
-    --shadow-xl: 0 20px 25px -5px hsl(222 47% 11% / 0.1), 0 8px 10px -6px hsl(222 47% 11% / 0.06);
-    --shadow-glow: 0 0 40px hsl(173 80% 40% / 0.15);
+    --shadow-sm: 0 1px 2px 0 hsl(220 40% 13% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 40% 13% / 0.08), 0 2px 4px -2px hsl(220 40% 13% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(220 40% 13% / 0.08), 0 4px 6px -4px hsl(220 40% 13% / 0.04);
+    --shadow-xl: 0 20px 25px -5px hsl(220 40% 13% / 0.1), 0 8px 10px -6px hsl(220 40% 13% / 0.06);
+    --shadow-glow: 0 0 40px hsl(160 84% 39% / 0.2);
 
     /* Sidebar */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 173 80% 40%;
+    --sidebar-background: 220 60% 12%;
+    --sidebar-foreground: 210 25% 92%;
+    --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 18%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 222 30% 20%;
-    --sidebar-ring: 173 80% 40%;
+    --sidebar-accent: 220 50% 18%;
+    --sidebar-accent-foreground: 210 25% 98%;
+    --sidebar-border: 220 45% 20%;
+    --sidebar-ring: 160 84% 39%;
   }
 
   .dark {
-    --background: 222 47% 8%;
+    --background: 220 50% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 11%;
+    --card: 220 50% 10%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 11%;
+    --popover: 220 50% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 173 80% 40%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 220 50% 10%;
 
-    --secondary: 222 30% 18%;
+    --secondary: 220 40% 16%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 222 30% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 40% 16%;
+    --muted-foreground: 215 25% 65%;
 
-    --accent: 173 80% 40%;
+    --accent: 160 84% 39%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 222 30% 20%;
-    --input: 222 30% 20%;
-    --ring: 173 80% 40%;
+    --border: 220 40% 18%;
+    --input: 220 40% 18%;
+    --ring: 160 84% 39%;
 
-    --sidebar-background: 222 47% 6%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 173 80% 40%;
+    --sidebar-background: 220 55% 6%;
+    --sidebar-foreground: 210 25% 92%;
+    --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 12%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 222 30% 15%;
+    --sidebar-accent: 220 45% 12%;
+    --sidebar-accent-foreground: 210 25% 98%;
+    --sidebar-border: 220 45% 14%;
   }
 }
 
