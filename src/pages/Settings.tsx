@@ -199,16 +199,22 @@ const Settings = () => {
       features: ["30 invoices/month", "3 templates", "IEOSUIA branding"],
     },
     {
+      value: "solo",
+      label: "Solo",
+      price: "R149",
+      features: ["Unlimited invoices", "Custom templates", "10 SMS/month", "Remove branding"],
+    },
+    {
       value: "pro",
       label: "Pro",
-      price: "R349",
-      features: ["Unlimited invoices", "Custom templates", "SMS reminders", "Remove branding"],
+      price: "R299",
+      features: ["Everything in Solo", "Auto reminders", "25 SMS/month", "Priority support"],
     },
     {
       value: "business",
       label: "Business",
-      price: "R899",
-      features: ["Everything in Pro", "Multi-user access", "Advanced reports", "Priority support"],
+      price: "R599",
+      features: ["Everything in Pro", "Multi-user access", "50 SMS/month", "Dedicated manager"],
     },
   ];
 

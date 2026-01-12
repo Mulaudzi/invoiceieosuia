@@ -15,6 +15,8 @@ import {
   Bell,
   RefreshCw,
   Mail,
+  FileEdit,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,9 +37,11 @@ const DashboardSidebar = () => {
     { name: "Products", icon: Package, href: "/dashboard/products" },
     { name: "Reports", icon: BarChart3, href: "/dashboard/reports" },
     { name: "Templates", icon: Palette, href: "/dashboard/templates" },
+    { name: "Email Templates", icon: FileEdit, href: "/dashboard/email-templates" },
     { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
     { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
     { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
+    { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },
     { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
   ];
