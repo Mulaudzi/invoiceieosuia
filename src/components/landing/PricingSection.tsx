@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Star } from "lucide-react";
+import { Check, Star, Zap, Crown, Mail, MessageSquare, FileText, ArrowRight } from "lucide-react";
 
 const PricingSection = () => {
   const plans = [
@@ -10,96 +10,135 @@ const PricingSection = () => {
       period: "forever",
       description: "Perfect for freelancers just getting started",
       features: [
-        "Up to 30 invoices/month",
-        "3 invoice templates",
-        "Basic payment tracking",
-        "Email support",
-        "IEOSUIA branding on invoices",
+        { text: "20 emails/month", icon: Mail },
+        { text: "0 SMS/month", icon: MessageSquare },
+        { text: "Up to 30 invoices/month", icon: FileText },
+        { text: "3 invoice templates" },
+        { text: "Basic payment tracking" },
+        { text: "Email support" },
+        { text: "IEOSUIA branding on invoices" },
       ],
       cta: "Get Started Free",
       href: "/register",
       variant: "outline" as const,
       popular: false,
+      icon: null,
+    },
+    {
+      name: "Solo",
+      price: "R149",
+      period: "per month",
+      description: "For solo entrepreneurs and consultants",
+      features: [
+        { text: "50 emails/month", icon: Mail },
+        { text: "10 SMS/month", icon: MessageSquare },
+        { text: "Unlimited invoices", icon: FileText },
+        { text: "Custom templates & branding" },
+        { text: "Manual reminders" },
+        { text: "Basic reports" },
+        { text: "Remove IEOSUIA branding" },
+      ],
+      cta: "Start Free Trial",
+      href: "/register?plan=solo",
+      variant: "default" as const,
+      popular: false,
+      icon: Zap,
     },
     {
       name: "Pro",
-      price: "R349",
+      price: "R299",
       period: "per month",
       description: "For growing businesses and agencies",
       features: [
-        "Unlimited invoices",
-        "All templates + custom branding",
-        "Automated payment reminders",
-        "SMS & email notifications",
-        "Advanced reports & analytics",
-        "Priority support",
-        "Remove IEOSUIA branding",
+        { text: "100 emails/month", icon: Mail },
+        { text: "25 SMS/month", icon: MessageSquare },
+        { text: "Unlimited invoices", icon: FileText },
+        { text: "All templates + custom branding" },
+        { text: "Automated payment reminders" },
+        { text: "Advanced reports & analytics" },
+        { text: "Priority support" },
+        { text: "Recurring invoices" },
       ],
-      cta: "Start 14-Day Trial",
+      cta: "Start Free Trial",
       href: "/register?plan=pro",
       variant: "accent" as const,
       popular: true,
+      icon: Star,
     },
     {
       name: "Business",
-      price: "R899",
+      price: "R599",
       period: "per month",
       description: "For teams and enterprises",
       features: [
-        "Everything in Pro",
-        "Multi-user access (up to 10)",
-        "Role-based permissions",
-        "Multi-business support",
-        "Full ledger & bookkeeping",
-        "White-label solution",
-        "Dedicated account manager",
+        { text: "200 emails/month", icon: Mail },
+        { text: "50 SMS/month", icon: MessageSquare },
+        { text: "Unlimited invoices", icon: FileText },
+        { text: "Everything in Pro" },
+        { text: "Multi-user access (up to 10)" },
+        { text: "Role-based permissions" },
+        { text: "Multi-business support" },
+        { text: "Full ledger & bookkeeping" },
+        { text: "White-label solution" },
+        { text: "Dedicated account manager" },
       ],
       cta: "Contact Sales",
       href: "mailto:info@ieosuia.com?subject=Business Plan Inquiry",
       variant: "default" as const,
       popular: false,
       isExternal: true,
+      icon: Crown,
     },
   ];
 
   return (
-    <section id="pricing" className="py-24 bg-background">
-      <div className="container mx-auto px-4">
+    <section id="pricing" className="py-24 bg-secondary/30 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/5 rounded-full blur-3xl" />
+      
+      <div className="container mx-auto px-4 relative">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="inline-block px-4 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
             Pricing
           </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
             Simple, Transparent <span className="text-accent">Pricing</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Start free and scale as you grow. No hidden fees, no surprises.
+            Start free and scale as you grow. No hidden fees, no surprises. Cancel anytime.
           </p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => (
             <div
               key={plan.name}
-              className={`relative rounded-2xl p-8 animate-fade-in ${
+              className={`relative rounded-2xl p-6 flex flex-col animate-fade-in ${
                 plan.popular
-                  ? "bg-primary text-primary-foreground border-2 border-accent shadow-glow scale-105"
+                  ? "bg-primary text-primary-foreground border-2 border-accent shadow-glow lg:scale-105 lg:-my-4"
                   : "bg-card text-card-foreground border border-border shadow-soft"
               }`}
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-accent text-accent-foreground text-sm font-medium flex items-center gap-1">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-medium flex items-center gap-1.5 shadow-lg">
                   <Star className="w-4 h-4 fill-current" />
                   Most Popular
                 </div>
               )}
 
               {/* Plan Header */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-6 pt-2">
+                {plan.icon && (
+                  <div className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
+                    plan.popular ? "bg-accent/20" : "bg-accent/10"
+                  }`}>
+                    <plan.icon className={`w-6 h-6 ${plan.popular ? "text-accent" : "text-accent"}`} />
+                  </div>
+                )}
                 <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-4xl font-bold">{plan.price}</span>
@@ -113,12 +152,16 @@ const PricingSection = () => {
               </div>
 
               {/* Features */}
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <Check className={`w-5 h-5 shrink-0 ${plan.popular ? "text-accent" : "text-accent"}`} />
+              <ul className="space-y-3 mb-6 flex-1">
+                {plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    {typeof feature === 'object' && feature.icon ? (
+                      <feature.icon className={`w-5 h-5 shrink-0 ${plan.popular ? "text-accent" : "text-accent"}`} />
+                    ) : (
+                      <Check className={`w-5 h-5 shrink-0 ${plan.popular ? "text-accent" : "text-accent"}`} />
+                    )}
                     <span className={`text-sm ${plan.popular ? "text-primary-foreground/90" : "text-foreground"}`}>
-                      {feature}
+                      {typeof feature === 'object' ? feature.text : feature}
                     </span>
                   </li>
                 ))}
@@ -130,9 +173,10 @@ const PricingSection = () => {
                   <Button
                     variant={plan.variant}
                     size="lg"
-                    className="w-full"
+                    className="w-full group"
                   >
                     {plan.cta}
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </a>
               ) : (
@@ -140,14 +184,27 @@ const PricingSection = () => {
                   <Button
                     variant={plan.popular ? "accent" : plan.variant}
                     size="lg"
-                    className="w-full"
+                    className="w-full group"
                   >
                     {plan.cta}
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               )}
             </div>
           ))}
+        </div>
+
+        {/* Enterprise CTA */}
+        <div className="mt-16 text-center">
+          <p className="text-muted-foreground mb-4">
+            Need a custom solution for your enterprise?
+          </p>
+          <a href="mailto:info@ieosuia.com?subject=Enterprise Inquiry">
+            <Button variant="outline" size="lg">
+              Contact us for Enterprise pricing
+            </Button>
+          </a>
         </div>
       </div>
     </section>
