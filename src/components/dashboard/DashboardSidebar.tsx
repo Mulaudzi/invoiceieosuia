@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCircle,
+  Bell,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,11 +29,13 @@ const DashboardSidebar = () => {
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
     { name: "Invoices", icon: FileText, href: "/dashboard/invoices" },
+    { name: "Recurring", icon: RefreshCw, href: "/dashboard/recurring" },
     { name: "Clients", icon: Users, href: "/dashboard/clients" },
     { name: "Products", icon: Package, href: "/dashboard/products" },
     { name: "Reports", icon: BarChart3, href: "/dashboard/reports" },
     { name: "Templates", icon: Palette, href: "/dashboard/templates" },
     { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
+    { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
     { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
   ];

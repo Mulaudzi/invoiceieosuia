@@ -156,6 +156,16 @@ $router->get('/reminders/settings', [ReminderController::class, 'getSettings'], 
 $router->put('/reminders/settings', [ReminderController::class, 'updateSettings'], [AuthMiddleware::class]);
 $router->post('/reminders/process', [ReminderController::class, 'processPending']); // For cron job
 
+// Recurring Invoice Routes
+$router->get('/recurring-invoices', [RecurringInvoiceController::class, 'getAll'], [AuthMiddleware::class]);
+$router->get('/recurring-invoices/{id}', [RecurringInvoiceController::class, 'getById'], [AuthMiddleware::class]);
+$router->post('/recurring-invoices', [RecurringInvoiceController::class, 'create'], [AuthMiddleware::class]);
+$router->put('/recurring-invoices/{id}', [RecurringInvoiceController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/recurring-invoices/{id}', [RecurringInvoiceController::class, 'delete'], [AuthMiddleware::class]);
+$router->patch('/recurring-invoices/{id}/status', [RecurringInvoiceController::class, 'updateStatus'], [AuthMiddleware::class]);
+$router->post('/recurring-invoices/{id}/generate', [RecurringInvoiceController::class, 'generate'], [AuthMiddleware::class]);
+$router->post('/recurring-invoices/process', [RecurringInvoiceController::class, 'processDue']); // For cron job
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
