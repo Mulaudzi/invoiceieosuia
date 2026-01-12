@@ -19,6 +19,7 @@ import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
 import Reminders from "./pages/Reminders";
 import RecurringInvoices from "./pages/RecurringInvoices";
+import NotificationHistory from "./pages/NotificationHistory";
 import Profile from "./pages/Profile";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyEmailReminder from "./pages/VerifyEmailReminder";
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/dashboard/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
               <Route path="/dashboard/recurring" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
+              <Route path="/dashboard/notifications" element={<ProtectedRoute><NotificationHistory /></ProtectedRoute>} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

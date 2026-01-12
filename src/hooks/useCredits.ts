@@ -93,6 +93,7 @@ export const useNotificationLogs = (type?: 'email' | 'sms') => {
       const response = await api.get<{ data: NotificationLog[] }>(`/credits/logs${params}`);
       return response.data.data;
     },
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -115,6 +116,7 @@ export const useConsumeCredits = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-logs'] });
     },
   });
 };

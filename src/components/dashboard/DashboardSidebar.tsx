@@ -14,6 +14,7 @@ import {
   UserCircle,
   Bell,
   RefreshCw,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const DashboardSidebar = () => {
     { name: "Templates", icon: Palette, href: "/dashboard/templates" },
     { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
     { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
+    { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
     { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
   ];
