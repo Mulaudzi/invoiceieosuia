@@ -481,4 +481,96 @@ class AuthController {
             'error' => 'Password must contain ' . implode(', ', $errors)
         ];
     }
+    
+    public function uploadLogo(): void {
+        if (!isset($_FILES['logo'])) {
+            Response::error('No logo file uploaded', 422);
+        }
+        
+        $file = $_FILES['logo'];
+        
+        // Validate file
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            Response::error('File upload failed', 422);
+        }
+        
+        // Check file size (max 2MB)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            Response::error('Logo must be smaller than 2MB', 422);
+        }
+        
+        // Check mime type
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        $mimeType = mime_content_type($file['tmp_name']);
+        if (!in_array($mimeType, $allowedTypes)) {
+            Response::error('Invalid file type. Allowed: PNG, JPG, GIF, WEBP, SVG', 422);
+        }
+        
+        // Create uploads directory if not exists
+        $uploadDir = __DIR__ . '/../uploads/logos/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Generate unique filename
+        $extension = match($mimeType) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'image/svg+xml' => 'svg',
+            default => 'png'
+        };
+        $filename = Auth::id() . '_logo_' . time() . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+        
+        // Delete old logo if exists
+        $user = User::query()->find(Auth::id());
+        if (!empty($user['logo_path'])) {
+            $oldPath = $uploadDir . basename($user['logo_path']);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+        
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            Response::error('Failed to save file', 500);
+        }
+        
+        // Update user logo URL
+        $logoUrl = '/api/uploads/logos/' . $filename;
+        User::query()->update(Auth::id(), ['logo_path' => $logoUrl]);
+        
+        $updatedUser = User::query()->find(Auth::id());
+        unset($updatedUser['password']);
+        
+        Response::json([
+            'message' => 'Logo uploaded successfully',
+            'logo_path' => $logoUrl,
+            'user' => $this->formatUserForFrontend($updatedUser)
+        ]);
+    }
+    
+    public function deleteLogo(): void {
+        $user = User::query()->find(Auth::id());
+        
+        if (!empty($user['logo_path'])) {
+            $uploadDir = __DIR__ . '/../uploads/logos/';
+            $oldPath = $uploadDir . basename($user['logo_path']);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+        
+        User::query()->update(Auth::id(), ['logo_path' => null]);
+        
+        $updatedUser = User::query()->find(Auth::id());
+        unset($updatedUser['password']);
+        
+        Response::json([
+            'message' => 'Logo deleted successfully',
+            'user' => $this->formatUserForFrontend($updatedUser)
+        ]);
+    }
 }

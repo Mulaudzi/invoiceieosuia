@@ -75,6 +75,8 @@ $router->post('/avatar', [AuthController::class, 'uploadAvatar'], [AuthMiddlewar
 $router->delete('/avatar', [AuthController::class, 'deleteAvatar'], [AuthMiddleware::class]);
 $router->put('/plan', [AuthController::class, 'updatePlan'], [AuthMiddleware::class]);
 $router->post('/resend-verification', [AuthController::class, 'resendVerification'], [AuthMiddleware::class]);
+$router->post('/upload-logo', [AuthController::class, 'uploadLogo'], [AuthMiddleware::class]);
+$router->delete('/logo', [AuthController::class, 'deleteLogo'], [AuthMiddleware::class]);
 
 // Clients
 $router->get('/clients', [ClientController::class, 'index'], [AuthMiddleware::class]);

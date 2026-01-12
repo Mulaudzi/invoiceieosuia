@@ -10,6 +10,7 @@ import { authService } from "@/services/api";
 import { User, Building2, CreditCard, LogOut, Loader2, Check, Download, Trash2, AlertTriangle, Shield } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { PlanType } from "@/lib/types";
+import { LogoUpload } from "@/components/profile/LogoUpload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -261,8 +262,11 @@ const Settings = () => {
             </Button>
           </div>
 
+          {/* Logo Upload Section */}
+          <LogoUpload />
+
           {/* Plan Section */}
-          <div className="bg-card rounded-xl border border-border p-6 shadow-soft mb-6">
+          <div className="bg-card rounded-xl border border-border p-6 shadow-soft mb-6 mt-6">
             <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
               Subscription Plan

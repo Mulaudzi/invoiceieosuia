@@ -38,7 +38,8 @@ import { useProducts } from "@/hooks/useProducts";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useCreateInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
 import { useToast } from "@/hooks/use-toast";
-import { Invoice } from "@/lib/types";
+import { Invoice, Product } from "@/lib/types";
+import { InlineProductForm } from "./InlineProductForm";
 
 const invoiceItemSchema = z.object({
   product_id: z.string().optional(),
@@ -325,17 +326,32 @@ export function InvoiceModal({ open, onOpenChange, invoice }: InvoiceModalProps)
 
             {/* Line Items */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <FormLabel className="text-base">Line Items *</FormLabel>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => append({ name: "", description: "", quantity: 1, price: 0, tax_rate: 15 })}
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Item
-                </Button>
+                <div className="flex gap-2">
+                  <InlineProductForm 
+                    onProductCreated={(product: Product) => {
+                      // Auto-add the newly created product as a line item
+                      append({
+                        product_id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        quantity: 1,
+                        price: product.price,
+                        tax_rate: product.taxRate,
+                      });
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ name: "", description: "", quantity: 1, price: 0, tax_rate: 15 })}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Item
+                  </Button>
+                </div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">
