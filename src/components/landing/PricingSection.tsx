@@ -10,7 +10,7 @@ const PricingSection = () => {
       period: "forever",
       description: "Perfect for freelancers just getting started",
       features: [
-        { text: "20 emails/month", icon: Mail },
+        { text: "20 emails/month (Free)", icon: Mail, highlight: true },
         { text: "0 SMS/month", icon: MessageSquare },
         { text: "Up to 30 invoices/month", icon: FileText },
         { text: "3 invoice templates" },
@@ -30,8 +30,8 @@ const PricingSection = () => {
       period: "per month",
       description: "For solo entrepreneurs and consultants",
       features: [
-        { text: "50 emails/month", icon: Mail },
-        { text: "10 SMS/month", icon: MessageSquare },
+        { text: "50 emails/month @ R0.10 each", icon: Mail, highlight: true },
+        { text: "10 SMS/month @ R0.25 each", icon: MessageSquare, highlight: true },
         { text: "Unlimited invoices", icon: FileText },
         { text: "Custom templates & branding" },
         { text: "Manual reminders" },
@@ -50,8 +50,8 @@ const PricingSection = () => {
       period: "per month",
       description: "For growing businesses and agencies",
       features: [
-        { text: "100 emails/month", icon: Mail },
-        { text: "25 SMS/month", icon: MessageSquare },
+        { text: "100 emails/month @ R0.10 each", icon: Mail, highlight: true },
+        { text: "25 SMS/month @ R0.24 each", icon: MessageSquare, highlight: true },
         { text: "Unlimited invoices", icon: FileText },
         { text: "All templates + custom branding" },
         { text: "Automated payment reminders" },
@@ -71,8 +71,8 @@ const PricingSection = () => {
       period: "per month",
       description: "For teams and enterprises",
       features: [
-        { text: "200 emails/month", icon: Mail },
-        { text: "50 SMS/month", icon: MessageSquare },
+        { text: "200 emails/month @ R0.10 each", icon: Mail, highlight: true },
+        { text: "50 SMS/month @ R0.23 each", icon: MessageSquare, highlight: true },
         { text: "Unlimited invoices", icon: FileText },
         { text: "Everything in Pro" },
         { text: "Multi-user access (up to 10)" },
@@ -92,7 +92,7 @@ const PricingSection = () => {
   ];
 
   return (
-    <section id="pricing" className="py-24 bg-secondary/30 relative overflow-hidden">
+    <section id="pricing" className="py-24 bg-gradient-to-b from-background to-secondary/30 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/5 rounded-full blur-3xl" />
       
@@ -118,7 +118,7 @@ const PricingSection = () => {
               className={`relative rounded-2xl p-6 flex flex-col animate-fade-in ${
                 plan.popular
                   ? "bg-primary text-primary-foreground border-2 border-accent shadow-glow lg:scale-105 lg:-my-4"
-                  : "bg-card text-card-foreground border border-border shadow-soft"
+                  : "bg-card text-card-foreground border border-border shadow-soft hover:shadow-lg transition-shadow"
               }`}
               style={{ animationDelay: `${index * 0.1}s` }}
             >
@@ -156,11 +156,19 @@ const PricingSection = () => {
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     {typeof feature === 'object' && feature.icon ? (
-                      <feature.icon className={`w-5 h-5 shrink-0 ${plan.popular ? "text-accent" : "text-accent"}`} />
+                      <feature.icon className={`w-5 h-5 shrink-0 ${
+                        feature.highlight 
+                          ? plan.popular ? "text-accent" : "text-accent" 
+                          : plan.popular ? "text-accent" : "text-accent"
+                      }`} />
                     ) : (
                       <Check className={`w-5 h-5 shrink-0 ${plan.popular ? "text-accent" : "text-accent"}`} />
                     )}
-                    <span className={`text-sm ${plan.popular ? "text-primary-foreground/90" : "text-foreground"}`}>
+                    <span className={`text-sm ${
+                      typeof feature === 'object' && feature.highlight 
+                        ? "font-medium" 
+                        : ""
+                    } ${plan.popular ? "text-primary-foreground/90" : "text-foreground"}`}>
                       {typeof feature === 'object' ? feature.text : feature}
                     </span>
                   </li>
@@ -195,8 +203,25 @@ const PricingSection = () => {
           ))}
         </div>
 
+        {/* Per-unit pricing note */}
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-6 px-6 py-3 rounded-full bg-muted/50 border border-border">
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="w-4 h-4 text-accent" />
+              <span className="text-muted-foreground">Emails:</span>
+              <span className="font-semibold text-foreground">R0.10 each</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <MessageSquare className="w-4 h-4 text-accent" />
+              <span className="text-muted-foreground">SMS:</span>
+              <span className="font-semibold text-foreground">From R0.23</span>
+            </div>
+          </div>
+        </div>
+
         {/* Enterprise CTA */}
-        <div className="mt-16 text-center">
+        <div className="mt-12 text-center">
           <p className="text-muted-foreground mb-4">
             Need a custom solution for your enterprise?
           </p>

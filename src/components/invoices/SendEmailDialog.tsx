@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useSendInvoice } from "@/hooks/useInvoices";
+import { useCreditCheck } from "@/hooks/useCreditCheck";
 import { Invoice } from "@/lib/types";
-import { Loader2, Mail, FileText, Calendar, DollarSign, User, Send, CheckCircle } from "lucide-react";
+import { Loader2, Mail, FileText, Calendar, DollarSign, User, Send, CheckCircle, AlertCircle } from "lucide-react";
 
 interface SendEmailDialogProps {
   invoice: Invoice;
@@ -24,6 +25,7 @@ interface SendEmailDialogProps {
 export function SendEmailDialog({ invoice, open, onOpenChange }: SendEmailDialogProps) {
   const { toast } = useToast();
   const sendInvoice = useSendInvoice();
+  const { credits, checkEmailCredits, emailRemaining } = useCreditCheck();
   const [message, setMessage] = useState("");
   const [isSent, setIsSent] = useState(false);
 
@@ -50,6 +52,11 @@ export function SendEmailDialog({ invoice, open, onOpenChange }: SendEmailDialog
   };
 
   const handleSend = async () => {
+    // Check credits before sending
+    if (!checkEmailCredits(1)) {
+      return;
+    }
+
     try {
       await sendInvoice.mutateAsync({
         id: invoice.id,
@@ -68,6 +75,8 @@ export function SendEmailDialog({ invoice, open, onOpenChange }: SendEmailDialog
       });
     }
   };
+
+  const hasInsufficientCredits = emailRemaining < 1;
 
   if (isSent) {
     return (
@@ -100,86 +109,114 @@ export function SendEmailDialog({ invoice, open, onOpenChange }: SendEmailDialog
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Email Preview Card */}
-          <div className="bg-muted/30 rounded-lg border border-border p-4 space-y-3">
-            <div className="flex items-center gap-3 pb-3 border-b border-border">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-accent" />
+        {hasInsufficientCredits ? (
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-foreground">Insufficient Email Credits</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                You have {emailRemaining} email credits remaining. Upgrade your plan for more.
+              </p>
+            </div>
+            <Button variant="accent" onClick={() => onOpenChange(false)}>
+              Upgrade Plan
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              {/* Credits indicator */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="w-4 h-4 text-accent" />
+                  <span className="text-muted-foreground">Email credits remaining:</span>
+                </div>
+                <span className="font-semibold text-foreground">{emailRemaining}</span>
               </div>
+
+              {/* Email Preview Card */}
+              <div className="bg-muted/30 rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center gap-3 pb-3 border-b border-border">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-accent" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Invoice #{invoice.id}</p>
+                    <p className="text-sm text-muted-foreground">PDF will be attached</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">To:</span>
+                    <span className="text-foreground font-medium">{invoice.clientName}</span>
+                    <span className="text-muted-foreground">({invoice.clientEmail})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="text-foreground font-semibold">{formatCurrency(invoice.total)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Due:</span>
+                    <span className="text-foreground">{formatDate(invoice.dueDate)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Message */}
               <div>
-                <p className="font-semibold text-foreground">Invoice #{invoice.id}</p>
-                <p className="text-sm text-muted-foreground">PDF will be attached</p>
+                <Label htmlFor="message">Personal Message (Optional)</Label>
+                <Textarea
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Add a personal note to your client..."
+                  rows={3}
+                  className="mt-1"
+                  maxLength={1000}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {message.length}/1000 characters
+                </p>
+              </div>
+
+              {/* Email Content Preview */}
+              <div className="bg-card border border-border rounded-lg p-4">
+                <p className="text-xs text-muted-foreground mb-2">Email will include:</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Professional invoice summary</li>
+                  <li>• Your custom message (if provided)</li>
+                  <li>• Invoice PDF attachment</li>
+                  <li>• Payment details and due date</li>
+                </ul>
               </div>
             </div>
 
-            <div className="grid gap-2 text-sm">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">To:</span>
-                <span className="text-foreground font-medium">{invoice.clientName}</span>
-                <span className="text-muted-foreground">({invoice.clientEmail})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Amount:</span>
-                <span className="text-foreground font-semibold">{formatCurrency(invoice.total)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Due:</span>
-                <span className="text-foreground">{formatDate(invoice.dueDate)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Custom Message */}
-          <div>
-            <Label htmlFor="message">Personal Message (Optional)</Label>
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Add a personal note to your client..."
-              rows={3}
-              className="mt-1"
-              maxLength={1000}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {message.length}/1000 characters
-            </p>
-          </div>
-
-          {/* Email Content Preview */}
-          <div className="bg-card border border-border rounded-lg p-4">
-            <p className="text-xs text-muted-foreground mb-2">Email will include:</p>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Professional invoice summary</li>
-              <li>• Your custom message (if provided)</li>
-              <li>• Invoice PDF attachment</li>
-              <li>• Payment details and due date</li>
-            </ul>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button variant="accent" onClick={handleSend} disabled={sendInvoice.isPending}>
-            {sendInvoice.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Send Invoice
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button variant="accent" onClick={handleSend} disabled={sendInvoice.isPending}>
+                {sendInvoice.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Invoice (1 credit)
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
