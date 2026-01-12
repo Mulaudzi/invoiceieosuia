@@ -141,6 +141,21 @@ $router->delete('/gdpr/delete', [GdprController::class, 'delete'], [AuthMiddlewa
 $router->post('/payfast/checkout', [PayfastController::class, 'checkout'], [AuthMiddleware::class]);
 $router->post('/payfast/webhook', [PayfastController::class, 'webhook']);
 
+// Currency Routes
+$router->get('/currencies', [CurrencyController::class, 'index']);
+$router->get('/currencies/rates', [CurrencyController::class, 'rates']);
+$router->post('/currencies/convert', [CurrencyController::class, 'convert']);
+$router->post('/currencies/update-rates', [CurrencyController::class, 'updateRates'], [AuthMiddleware::class]);
+
+// Reminder Routes
+$router->get('/reminders', [ReminderController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/reminders', [ReminderController::class, 'store'], [AuthMiddleware::class]);
+$router->delete('/reminders/{id}', [ReminderController::class, 'destroy'], [AuthMiddleware::class]);
+$router->post('/invoices/{id}/reminders', [ReminderController::class, 'scheduleForInvoice'], [AuthMiddleware::class]);
+$router->get('/reminders/settings', [ReminderController::class, 'getSettings'], [AuthMiddleware::class]);
+$router->put('/reminders/settings', [ReminderController::class, 'updateSettings'], [AuthMiddleware::class]);
+$router->post('/reminders/process', [ReminderController::class, 'processPending']); // For cron job
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
