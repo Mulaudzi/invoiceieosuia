@@ -166,6 +166,14 @@ $router->patch('/recurring-invoices/{id}/status', [RecurringInvoiceController::c
 $router->post('/recurring-invoices/{id}/generate', [RecurringInvoiceController::class, 'generate'], [AuthMiddleware::class]);
 $router->post('/recurring-invoices/process', [RecurringInvoiceController::class, 'processDue']); // For cron job
 
+// Credits Routes
+$router->get('/credits/usage', [CreditsController::class, 'getUsage'], [AuthMiddleware::class]);
+$router->get('/credits/check', [CreditsController::class, 'checkCredits'], [AuthMiddleware::class]);
+$router->post('/credits/use', [CreditsController::class, 'useCredits'], [AuthMiddleware::class]);
+$router->get('/credits/logs', [CreditsController::class, 'getNotificationLogs'], [AuthMiddleware::class]);
+$router->get('/credits/plans', [CreditsController::class, 'getPlans']);
+$router->post('/credits/reset', [CreditsController::class, 'resetMonthlyCredits']); // For cron job
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
