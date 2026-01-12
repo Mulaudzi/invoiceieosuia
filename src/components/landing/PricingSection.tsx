@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Star } from "lucide-react";
 
 const PricingSection = () => {
-const plans = [
+  const plans = [
     {
       name: "Free",
       price: "R0",
@@ -17,6 +17,7 @@ const plans = [
         "IEOSUIA branding on invoices",
       ],
       cta: "Get Started Free",
+      href: "/register",
       variant: "outline" as const,
       popular: false,
     },
@@ -35,6 +36,7 @@ const plans = [
         "Remove IEOSUIA branding",
       ],
       cta: "Start 14-Day Trial",
+      href: "/register?plan=pro",
       variant: "accent" as const,
       popular: true,
     },
@@ -49,13 +51,14 @@ const plans = [
         "Role-based permissions",
         "Multi-business support",
         "Full ledger & bookkeeping",
-        "API access",
         "White-label solution",
         "Dedicated account manager",
       ],
       cta: "Contact Sales",
+      href: "mailto:info@ieosuia.com?subject=Business Plan Inquiry",
       variant: "default" as const,
       popular: false,
+      isExternal: true,
     },
   ];
 
@@ -122,15 +125,27 @@ const plans = [
               </ul>
 
               {/* CTA */}
-              <Link to="/register">
-                <Button
-                  variant={plan.popular ? "accent" : plan.variant}
-                  size="lg"
-                  className="w-full"
-                >
-                  {plan.cta}
-                </Button>
-              </Link>
+              {plan.isExternal ? (
+                <a href={plan.href}>
+                  <Button
+                    variant={plan.variant}
+                    size="lg"
+                    className="w-full"
+                  >
+                    {plan.cta}
+                  </Button>
+                </a>
+              ) : (
+                <Link to={plan.href}>
+                  <Button
+                    variant={plan.popular ? "accent" : plan.variant}
+                    size="lg"
+                    className="w-full"
+                  >
+                    {plan.cta}
+                  </Button>
+                </Link>
+              )}
             </div>
           ))}
         </div>

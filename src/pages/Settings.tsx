@@ -7,9 +7,19 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
-import { User, Building2, Mail, CreditCard, LogOut, Loader2, Check } from "lucide-react";
+import { User, Building2, CreditCard, LogOut, Loader2, Check, Download, Trash2, AlertTriangle, Shield } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { PlanType } from "@/lib/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Settings = () => {
   const { user, updateUser, logout } = useAuth();
@@ -17,6 +27,10 @@ const Settings = () => {
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -54,22 +68,116 @@ const Settings = () => {
   };
 
   const handleUpgrade = async (plan: PlanType) => {
-    setIsUpgrading(plan);
+    if (plan === 'free') {
+      // Downgrade to free
+      setIsUpgrading(plan);
+      try {
+        const updatedUser = await authService.updatePlan(plan);
+        updateUser(updatedUser);
+        toast({
+          title: "Plan updated!",
+          description: "You are now on the Free plan.",
+        });
+      } catch (error) {
+        toast({
+          title: "Failed to update plan",
+          description: error instanceof Error ? error.message : "An error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUpgrading(null);
+      }
+    } else {
+      // Redirect to PayFast for Pro/Business
+      setIsUpgrading(plan);
+      try {
+        const response = await authService.initiatePayment(plan);
+        if (response.payment_url) {
+          window.location.href = response.payment_url;
+        } else {
+          throw new Error('No payment URL received');
+        }
+      } catch (error) {
+        // Fallback: update plan directly (for demo purposes)
+        try {
+          const updatedUser = await authService.updatePlan(plan);
+          updateUser(updatedUser);
+          toast({
+            title: "Plan updated!",
+            description: `You are now on the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.`,
+          });
+        } catch (updateError) {
+          toast({
+            title: "Payment gateway unavailable",
+            description: "Please try again later or contact support.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        setIsUpgrading(null);
+      }
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
     try {
-      const updatedUser = await authService.updatePlan(plan);
-      updateUser(updatedUser);
-      toast({
-        title: "Plan updated!",
-        description: `You are now on the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.`,
+      const data = await authService.exportUserData();
+      
+      // Create and download JSON file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ieosuia-data-export-${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast({ 
+        title: "Data exported successfully",
+        description: "Your personal data has been downloaded."
       });
     } catch (error) {
       toast({
-        title: "Failed to update plan",
+        title: "Failed to export data",
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     } finally {
-      setIsUpgrading(null);
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE") {
+      toast({
+        title: "Confirmation required",
+        description: "Please type DELETE to confirm account deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await authService.deleteAccount();
+      toast({ 
+        title: "Account deleted",
+        description: "Your account and all data have been permanently deleted."
+      });
+      await logout();
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Failed to delete account",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -99,7 +207,7 @@ const Settings = () => {
       value: "business",
       label: "Business",
       price: "R899",
-      features: ["Everything in Pro", "Multi-user access", "Advanced reports", "API access", "Priority support"],
+      features: ["Everything in Pro", "Multi-user access", "Advanced reports", "Priority support"],
     },
   ];
 
@@ -218,6 +326,57 @@ const Settings = () => {
             </div>
           </div>
 
+          {/* GDPR Data Export/Deletion */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-soft mb-6">
+            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Data Privacy (GDPR)
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              You have the right to access and delete your personal data at any time.
+            </p>
+            
+            <div className="space-y-4">
+              {/* Data Export */}
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  Export Your Data
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Download a copy of all your personal data including your profile, invoices, clients, and more.
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={handleExportData}
+                  disabled={isExporting}
+                >
+                  {isExporting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  <Download className="w-4 h-4 mr-2" />
+                  Export All Data
+                </Button>
+              </div>
+
+              {/* Data Deletion */}
+              <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+                <h4 className="font-medium text-destructive mb-2 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Delete Your Account
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </p>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Danger Zone */}
           <div className="bg-card rounded-xl border border-destructive/30 p-6 shadow-soft">
             <h3 className="font-semibold text-destructive mb-4 flex items-center gap-2">
@@ -234,6 +393,59 @@ const Settings = () => {
           </div>
         </main>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Account Permanently?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This will permanently delete your account and all associated data including:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Your profile information</li>
+                <li>All invoices and invoice history</li>
+                <li>All clients and their data</li>
+                <li>All products and services</li>
+                <li>All payment records</li>
+                <li>All templates</li>
+              </ul>
+              <p className="font-medium text-destructive">
+                This action cannot be undone!
+              </p>
+              <div className="pt-2">
+                <Label htmlFor="deleteConfirm" className="text-foreground">
+                  Type <span className="font-bold">DELETE</span> to confirm:
+                </Label>
+                <Input
+                  id="deleteConfirm"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="DELETE"
+                  className="mt-2"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteConfirmation("")}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmation !== "DELETE" || isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete My Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

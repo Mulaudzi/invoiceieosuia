@@ -34,24 +34,24 @@ const ContactSection = () => {
     {
       icon: Mail,
       label: "Email",
-      value: "support@ieosuia.com",
-      href: "mailto:support@ieosuia.com",
+      value: "info@ieosuia.com",
+      href: "mailto:info@ieosuia.com",
     },
     {
       icon: Phone,
       label: "Phone",
-      value: "+1 (555) 123-4567",
-      href: "tel:+15551234567",
+      value: "+27 63 808 2493",
+      href: "tel:+27638082493",
     },
     {
       icon: MapPin,
       label: "Address",
-      value: "123 Business Ave, Suite 100",
-      href: "#",
+      value: "3116 Rock Alder, Extension 15, Naturena, Johannesburg South, Gauteng, 2095, South Africa",
+      href: "https://maps.google.com/?q=3116+Rock+Alder+Extension+15+Naturena+Johannesburg+South+Gauteng+2095+South+Africa",
     },
   ];
 
-  const whatsappNumber = "15551234567";
+  const whatsappNumber = "27638082493";
 
   return (
     <section id="contact" className="py-24 bg-secondary/30">
@@ -137,14 +137,16 @@ const ContactSection = () => {
                   <a
                     key={item.label}
                     href={item.href}
-                    className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group"
+                    target={item.label === "Address" ? "_blank" : undefined}
+                    rel={item.label === "Address" ? "noopener noreferrer" : undefined}
+                    className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group"
                   >
-                    <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all">
+                    <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all shrink-0">
                       <item.icon className="w-5 h-5 text-accent group-hover:text-accent-foreground" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm text-muted-foreground">{item.label}</p>
-                      <p className="font-medium text-foreground">{item.value}</p>
+                      <p className="font-medium text-foreground break-words">{item.value}</p>
                     </div>
                   </a>
                 ))}
