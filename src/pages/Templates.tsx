@@ -10,6 +10,7 @@ import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import { Plus, Palette, ArrowLeft } from "lucide-react";
 import { TemplateEditor } from "@/components/templates/TemplateEditor";
 import { TemplateCard } from "@/components/templates/TemplateCard";
+import { TemplatePresets } from "@/components/templates/TemplatePresets";
 
 const Templates = () => {
   const { toast } = useToast();
@@ -154,14 +155,21 @@ const Templates = () => {
             </div>
           )}
 
+          {/* Template Presets Section */}
+          {!isLoading && !error && (
+            <div className="mt-8 pt-8 border-t border-border">
+              <TemplatePresets onTemplateCreated={() => refetch()} />
+            </div>
+          )}
+
           {!isLoading && !error && templates.length === 0 && (
             <div className="text-center py-12">
               <Palette className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No templates yet</h3>
-              <p className="text-muted-foreground mb-4">Create your first invoice template</p>
+              <p className="text-muted-foreground mb-4">Create your first invoice template or choose from presets above</p>
               <Button variant="accent" onClick={() => openEditor()}>
                 <Plus className="w-4 h-4" />
-                Create Template
+                Create Custom Template
               </Button>
             </div>
           )}
