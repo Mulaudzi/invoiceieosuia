@@ -14,6 +14,7 @@ import Invoices from "./pages/Invoices";
 import Clients from "./pages/Clients";
 import Products from "./pages/Products";
 import Reports from "./pages/Reports";
+import Analytics from "./pages/Analytics";
 import Payments from "./pages/Payments";
 import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/dashboard/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
               <Route path="/dashboard/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
               <Route path="/dashboard/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+              <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/dashboard/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
               <Route path="/dashboard/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
               <Route path="/dashboard/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
