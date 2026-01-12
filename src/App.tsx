@@ -20,6 +20,8 @@ import Settings from "./pages/Settings";
 import Reminders from "./pages/Reminders";
 import RecurringInvoices from "./pages/RecurringInvoices";
 import NotificationHistory from "./pages/NotificationHistory";
+import EmailTemplates from "./pages/EmailTemplates";
+import Subscription from "./pages/Subscription";
 import Profile from "./pages/Profile";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyEmailReminder from "./pages/VerifyEmailReminder";
@@ -78,6 +80,8 @@ const App = () => (
               <Route path="/dashboard/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
               <Route path="/dashboard/recurring" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
               <Route path="/dashboard/notifications" element={<ProtectedRoute><NotificationHistory /></ProtectedRoute>} />
+              <Route path="/dashboard/email-templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
+              <Route path="/dashboard/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
