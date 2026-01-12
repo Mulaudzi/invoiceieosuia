@@ -1,48 +1,40 @@
 import { Link } from "react-router-dom";
-import { FileText, Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
+import { FileText, Mail, Phone, MapPin } from "lucide-react";
 
 const Footer = () => {
   const footerLinks = {
-    Product: [
+    "Quick Links": [
+      { name: "Home", href: "/", isRoute: true },
       { name: "Features", href: "#features" },
       { name: "Pricing", href: "#pricing" },
-      { name: "Templates", href: "#" },
-      { name: "Integrations", href: "#" },
-    ],
-    Company: [
-      { name: "About Us", href: "#" },
-      { name: "Careers", href: "#" },
-      { name: "Blog", href: "#" },
-      { name: "Press", href: "#" },
+      { name: "Contact", href: "#contact" },
+      { name: "Login", href: "/login", isRoute: true },
     ],
     Resources: [
-      { name: "Documentation", href: "#" },
       { name: "Support", href: "/support", isRoute: true },
-      { name: "API Reference", href: "#" },
-      { name: "Status", href: "#" },
+      { name: "FAQ", href: "/support", isRoute: true },
+      { name: "Documentation", href: "#" },
     ],
     Legal: [
       { name: "Privacy Policy", href: "/privacy-policy", isRoute: true },
       { name: "Terms of Service", href: "/terms-of-service", isRoute: true },
       { name: "Cookie Policy", href: "/cookie-policy", isRoute: true },
-      { name: "GDPR", href: "#" },
     ],
   };
 
-  const socialLinks = [
-    { icon: Facebook, href: "#", label: "Facebook" },
-    { icon: Twitter, href: "#", label: "Twitter" },
-    { icon: Linkedin, href: "#", label: "LinkedIn" },
-    { icon: Instagram, href: "#", label: "Instagram" },
-  ];
+  const contactInfo = {
+    email: "info@ieosuia.com",
+    phone: "+27 63 808 2493",
+    address: "3116 Rock Alder, Extension 15, Naturena, Johannesburg South, Gauteng, 2095",
+  };
 
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="container mx-auto px-4">
         {/* Main Footer */}
-        <div className="py-16 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+        <div className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Column */}
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
                 <FileText className="w-5 h-5 text-accent-foreground" />
@@ -52,20 +44,29 @@ const Footer = () => {
               </span>
             </Link>
             <p className="text-primary-foreground/70 text-sm mb-6 max-w-xs">
-              Professional invoicing and smart bookkeeping made simple. Trusted by thousands of businesses worldwide.
+              Professional invoicing and smart bookkeeping made simple for South African businesses.
             </p>
-            {/* Social Links */}
-            <div className="flex gap-3">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  aria-label={social.label}
-                  className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  <social.icon className="w-5 h-5" />
-                </a>
-              ))}
+            
+            {/* Contact Info */}
+            <div className="space-y-3">
+              <a 
+                href={`mailto:${contactInfo.email}`}
+                className="flex items-center gap-2 text-sm text-primary-foreground/70 hover:text-accent transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                {contactInfo.email}
+              </a>
+              <a 
+                href={`tel:${contactInfo.phone.replace(/\s/g, '')}`}
+                className="flex items-center gap-2 text-sm text-primary-foreground/70 hover:text-accent transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                {contactInfo.phone}
+              </a>
+              <div className="flex items-start gap-2 text-sm text-primary-foreground/70">
+                <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{contactInfo.address}</span>
+              </div>
             </div>
           </div>
 

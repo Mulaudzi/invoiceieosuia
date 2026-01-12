@@ -76,6 +76,16 @@ interface PaginatedResponse<T> {
   total: number;
 }
 
+interface UserDataExport {
+  user: User;
+  clients: Client[];
+  products: Product[];
+  invoices: Invoice[];
+  payments: Payment[];
+  templates: Template[];
+  exported_at: string;
+}
+
 // ==================== Auth Services ====================
 
 export const authService = {
@@ -149,6 +159,12 @@ export const authService = {
     return response.data.user;
   },
 
+  // PayFast integration
+  initiatePayment: async (plan: PlanType): Promise<{ payment_url: string }> => {
+    const response = await api.post<{ success: boolean; payment_url: string }>('/payfast/checkout', { plan });
+    return { payment_url: response.data.payment_url };
+  },
+
   verifyEmail: async (token: string): Promise<void> => {
     await api.post('/verify-email', { token });
   },
@@ -163,6 +179,18 @@ export const authService = {
 
   resetPassword: async (token: string, password: string): Promise<void> => {
     await api.post('/reset-password', { token, password, password_confirmation: password });
+  },
+
+  // GDPR: Export user data
+  exportUserData: async (): Promise<UserDataExport> => {
+    const response = await api.get<UserDataExport>('/gdpr/export');
+    return response.data;
+  },
+
+  // GDPR: Delete account
+  deleteAccount: async (): Promise<void> => {
+    await api.delete('/gdpr/delete');
+    removeToken();
   },
 };
 
@@ -434,6 +462,21 @@ export const reportService = {
   getRecentInvoices: async (limit?: number): Promise<Invoice[]> => {
     const response = await api.get('/reports/recent-invoices', { params: { limit } });
     return response.data;
+  },
+
+  exportReport: async (type: 'pdf' | 'excel', reportType: string): Promise<void> => {
+    const response = await api.get(`/reports/export`, { 
+      params: { type, report: reportType },
+      responseType: 'blob' 
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `report-${reportType}-${new Date().toISOString().split('T')[0]}.${type === 'pdf' ? 'pdf' : 'xlsx'}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   },
 };
 

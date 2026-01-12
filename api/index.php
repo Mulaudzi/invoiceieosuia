@@ -131,6 +131,14 @@ $router->post('/invoices/{id}/send-sms', [NotificationController::class, 'sendSm
 $router->get('/invoices/{id}/pdf', [PdfController::class, 'generate'], [AuthMiddleware::class]);
 $router->get('/invoices/{id}/pdf/download', [PdfController::class, 'download'], [AuthMiddleware::class]);
 
+// GDPR Routes
+$router->get('/gdpr/export', [GdprController::class, 'export'], [AuthMiddleware::class]);
+$router->delete('/gdpr/delete', [GdprController::class, 'delete'], [AuthMiddleware::class]);
+
+// PayFast Routes
+$router->post('/payfast/checkout', [PayfastController::class, 'checkout'], [AuthMiddleware::class]);
+$router->post('/payfast/webhook', [PayfastController::class, 'webhook']);
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
