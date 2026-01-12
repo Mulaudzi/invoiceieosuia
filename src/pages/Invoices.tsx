@@ -32,6 +32,9 @@ import { SendEmailDialog } from "@/components/invoices/SendEmailDialog";
 import { InvoiceModal } from "@/components/invoices/InvoiceModal";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { Invoice } from "@/lib/types";
+import { ExportDropdown } from "@/components/exports/ExportDropdown";
+import { useExport } from "@/hooks/useExport";
+import { invoiceColumns, formatCurrencyForExport, formatDateForExport } from "@/lib/exportUtils";
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,6 +44,7 @@ const Invoices = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { toast } = useToast();
+  const { exportToCsv, exportToText } = useExport();
   
   // API hooks
   const { data: invoices = [], isLoading, error, refetch } = useInvoices();
@@ -204,6 +208,43 @@ const Invoices = () => {
                 <Filter className="w-4 h-4" />
                 Filters
               </Button>
+              <ExportDropdown
+                label="Export"
+                onExportCsv={() => {
+                  const exportData = invoices.map(inv => ({
+                    id: inv.id,
+                    clientName: inv.clientName,
+                    clientEmail: inv.clientEmail,
+                    total: formatCurrencyForExport(inv.total),
+                    status: inv.status,
+                    date: formatDateForExport(inv.date),
+                    dueDate: formatDateForExport(inv.dueDate),
+                  }));
+                  exportToCsv({
+                    title: 'Invoices Export',
+                    filename: `invoices-${new Date().toISOString().split('T')[0]}`,
+                    columns: invoiceColumns,
+                    data: exportData,
+                  });
+                }}
+                onExportText={() => {
+                  const exportData = invoices.map(inv => ({
+                    id: inv.id,
+                    clientName: inv.clientName,
+                    clientEmail: inv.clientEmail,
+                    total: formatCurrencyForExport(inv.total),
+                    status: inv.status,
+                    date: formatDateForExport(inv.date),
+                    dueDate: formatDateForExport(inv.dueDate),
+                  }));
+                  exportToText({
+                    title: 'Invoices Report',
+                    filename: `invoices-${new Date().toISOString().split('T')[0]}`,
+                    columns: invoiceColumns,
+                    data: exportData,
+                  });
+                }}
+              />
             </div>
             <Button variant="accent" onClick={handleOpenCreateModal}>
               <Plus className="w-4 h-4" />
