@@ -1,7 +1,6 @@
 import { useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -14,7 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
 import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { FileText, TrendingUp, Users, DollarSign, Download, Calendar } from "lucide-react";
+import { FileText, TrendingUp, Users, DollarSign, Calendar } from "lucide-react";
+import { ExportDropdown } from "@/components/exports/ExportDropdown";
+import { useExport } from "@/hooks/useExport";
+import { reportColumns } from "@/lib/exportUtils";
 
 const Reports = () => {
   const currentYear = new Date().getFullYear();
@@ -25,6 +27,7 @@ const Reports = () => {
   const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(5);
   const { data: incomeExpense, isLoading: incomeLoading } = useIncomeExpense();
+  const { exportToCsv, exportToText, exportToPdf } = useExport();
 
   const isLoading = statsLoading && revenueLoading && statusLoading && clientsLoading && incomeLoading;
 
@@ -118,10 +121,34 @@ const Reports = () => {
                 </Select>
               </div>
             </div>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
-            </Button>
+            <ExportDropdown
+              label="Export Report"
+              onExportCsv={() => {
+                const revenueData = monthlyRevenue.map((m: any) => ({
+                  month: m.month,
+                  revenue: formatCurrency(m.revenue || 0),
+                }));
+                exportToCsv({
+                  title: `Revenue Report - ${selectedYear}`,
+                  filename: `revenue-report-${selectedYear}`,
+                  columns: reportColumns.revenue,
+                  data: revenueData,
+                });
+              }}
+              onExportPdf={() => exportToPdf('revenue')}
+              onExportText={() => {
+                const revenueData = monthlyRevenue.map((m: any) => ({
+                  month: m.month,
+                  revenue: formatCurrency(m.revenue || 0),
+                }));
+                exportToText({
+                  title: `Revenue Report - ${selectedYear}`,
+                  filename: `revenue-report-${selectedYear}`,
+                  columns: reportColumns.revenue,
+                  data: revenueData,
+                });
+              }}
+            />
           </div>
 
           {/* Summary Cards */}

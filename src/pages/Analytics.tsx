@@ -1,7 +1,6 @@
 import { useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -23,7 +22,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
   Area,
   LineChart,
   Line,
@@ -35,8 +33,6 @@ import {
   TrendingUp,
   Users,
   DollarSign,
-  Download,
-  Calendar,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -53,6 +49,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ExportDropdown } from "@/components/exports/ExportDropdown";
+import { useExport } from "@/hooks/useExport";
+import { reportColumns } from "@/lib/exportUtils";
 
 const Analytics = () => {
   const currentYear = new Date().getFullYear();
@@ -64,6 +63,7 @@ const Analytics = () => {
   const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(10);
   const { data: credits } = useCredits();
+  const { exportToCsv, exportToText, exportToPdf, formatCurrencyForExport } = useExport();
 
   const formatCurrency = (amount: number) =>
     `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`;
@@ -148,10 +148,34 @@ const Analytics = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Analytics
-            </Button>
+            <ExportDropdown
+              label="Export Analytics"
+              onExportCsv={() => {
+                const analyticsData = monthlyRevenue.map((m: any) => ({
+                  month: m.month,
+                  revenue: formatCurrencyForExport(m.revenue || 0),
+                }));
+                exportToCsv({
+                  title: `Analytics Report - ${selectedYear}`,
+                  filename: `analytics-${selectedYear}`,
+                  columns: reportColumns.revenue,
+                  data: analyticsData,
+                });
+              }}
+              onExportPdf={() => exportToPdf('analytics')}
+              onExportText={() => {
+                const analyticsData = monthlyRevenue.map((m: any) => ({
+                  month: m.month,
+                  revenue: formatCurrencyForExport(m.revenue || 0),
+                }));
+                exportToText({
+                  title: `Analytics Report - ${selectedYear}`,
+                  filename: `analytics-${selectedYear}`,
+                  columns: reportColumns.revenue,
+                  data: analyticsData,
+                });
+              }}
+            />
           </div>
 
           {/* Key Metrics */}
