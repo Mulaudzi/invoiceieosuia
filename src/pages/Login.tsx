@@ -33,6 +33,12 @@ const Login = () => {
     password_3: "",
   });
   const [checkingAdmin, setCheckingAdmin] = useState(false);
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    remaining: number;
+    max: number;
+    locked: boolean;
+    retry_after_minutes?: number;
+  } | null>(null);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -53,6 +59,7 @@ const Login = () => {
   const checkAdminEmail = useCallback(async (email: string) => {
     if (!email || !email.includes('@')) {
       setIsAdminEmail(false);
+      setRateLimitInfo(null);
       return;
     }
     
@@ -60,8 +67,12 @@ const Login = () => {
     try {
       const response = await api.post('/admin/check-email', { email });
       setIsAdminEmail(response.data.is_admin === true);
+      if (response.data.rate_limit) {
+        setRateLimitInfo(response.data.rate_limit);
+      }
     } catch {
       setIsAdminEmail(false);
+      setRateLimitInfo(null);
     } finally {
       setCheckingAdmin(false);
     }
@@ -138,6 +149,17 @@ const Login = () => {
 
     // Admin batch login - all 3 passwords at once
     if (isAdminEmail) {
+      // Check if locked out before attempting
+      if (rateLimitInfo?.locked) {
+        toast({
+          title: "Account Locked",
+          description: `Too many failed attempts. Try again in ${rateLimitInfo.retry_after_minutes || 15} minutes.`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await api.post('/admin/login/batch', {
           email: formData.email,
@@ -151,18 +173,40 @@ const Login = () => {
         
         if (data.success && data.admin_token) {
           setAdminToken(data.admin_token);
+          setRateLimitInfo(null);
           toast({
             title: "Admin login successful!",
             description: "Redirecting to admin dashboard...",
           });
           navigate("/admin");
         }
-      } catch {
-        toast({
-          title: "Authentication failed",
-          description: "Invalid credentials. Please try again.",
-          variant: "destructive",
-        });
+      } catch (error: any) {
+        const errorData = error.response?.data;
+        
+        // Update rate limit info from response
+        if (errorData?.rate_limit) {
+          setRateLimitInfo(errorData.rate_limit);
+          
+          if (errorData.rate_limit.locked) {
+            toast({
+              title: "Account Locked",
+              description: `Too many failed attempts. Try again in ${errorData.rate_limit.retry_after_minutes || 15} minutes.`,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Authentication failed",
+              description: `Invalid credentials. ${errorData.rate_limit.remaining} attempts remaining.`,
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Authentication failed",
+            description: "Invalid credentials. Please try again.",
+            variant: "destructive",
+          });
+        }
         // Clear passwords on failure
         setAdminPasswords({ password_1: "", password_2: "", password_3: "" });
       }
@@ -280,6 +324,24 @@ const Login = () => {
               {/* Admin 3-password fields */}
               {isAdminEmail && (
                 <div className="space-y-4 p-4 bg-accent/5 rounded-lg border border-accent/20">
+                  {/* Rate Limit Warning */}
+                  {rateLimitInfo && (
+                    <div className={`flex items-center gap-2 p-3 rounded-md text-sm ${
+                      rateLimitInfo.locked 
+                        ? 'bg-destructive/10 text-destructive border border-destructive/20' 
+                        : rateLimitInfo.remaining <= 2
+                          ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
+                          : 'bg-muted text-muted-foreground'
+                    }`}>
+                      <Shield className="w-4 h-4 flex-shrink-0" />
+                      {rateLimitInfo.locked ? (
+                        <span>Account locked. Try again in {rateLimitInfo.retry_after_minutes || 15} minutes.</span>
+                      ) : (
+                        <span>{rateLimitInfo.remaining} of {rateLimitInfo.max} attempts remaining</span>
+                      )}
+                    </div>
+                  )}
+                  
                   <div>
                     <label htmlFor="password_1" className="block text-sm font-medium text-foreground mb-2">
                       Password 1
@@ -293,6 +355,7 @@ const Login = () => {
                         value={adminPasswords.password_1}
                         onChange={(e) => setAdminPasswords({ ...adminPasswords, password_1: e.target.value })}
                         required
+                        disabled={rateLimitInfo?.locked}
                         className="pl-10"
                         autoComplete="off"
                       />
@@ -311,6 +374,7 @@ const Login = () => {
                         value={adminPasswords.password_2}
                         onChange={(e) => setAdminPasswords({ ...adminPasswords, password_2: e.target.value })}
                         required
+                        disabled={rateLimitInfo?.locked}
                         className="pl-10"
                         autoComplete="off"
                       />
@@ -329,6 +393,7 @@ const Login = () => {
                         value={adminPasswords.password_3}
                         onChange={(e) => setAdminPasswords({ ...adminPasswords, password_3: e.target.value })}
                         required
+                        disabled={rateLimitInfo?.locked}
                         className="pl-10 pr-10"
                         autoComplete="off"
                       />
