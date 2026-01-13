@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, PlanType } from '@/lib/types';
-import { authService, getToken, removeToken } from '@/services/api';
+import { authService, getToken, removeToken, setToken } from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +10,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
+  setUserFromOAuth: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -84,17 +85,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshUser = async (): Promise<void> => {
+  const refreshUser = useCallback(async (): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      console.log('No token found, cannot refresh user');
+      return;
+    }
+    
     try {
+      console.log('Refreshing user data...');
       const currentUser = await authService.getCurrentUser();
+      console.log('User refreshed:', currentUser?.email);
       setUser(currentUser);
     } catch (error) {
       console.error('Failed to refresh user:', error);
+      // If token is invalid, clear it
+      removeToken();
+      setUser(null);
     }
-  };
+  }, []);
+
+  // Direct setter for OAuth flow (avoids race conditions)
+  const setUserFromOAuth = useCallback((oauthUser: User): void => {
+    console.log('Setting user from OAuth:', oauthUser?.email);
+    setUser(oauthUser);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser, refreshUser, setUserFromOAuth }}>
       {children}
     </AuthContext.Provider>
   );
