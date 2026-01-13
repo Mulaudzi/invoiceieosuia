@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { 
-  LayoutDashboard, 
-  Inbox, 
   Mail, 
-  BarChart3, 
-  LogOut, 
   RefreshCw,
   Search,
   Filter,
@@ -18,7 +14,6 @@ import {
   Send,
   Download,
   FileText,
-  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface EmailLog {
   id: number;
@@ -361,77 +357,45 @@ const AdminEmailLogs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 py-4">
+    <AdminLayout>
+      {/* Page Header */}
+      <div className="border-b border-border bg-card">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <LayoutDashboard className="w-6 h-6" />
-              <h1 className="text-xl font-bold">Admin Dashboard</h1>
+            <div>
+              <h1 className="text-2xl font-bold">Email Logs</h1>
+              <p className="text-muted-foreground text-sm">Track all outgoing email activity</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => fetchLogs(currentPage)}
-                className="text-primary-foreground hover:bg-white/10"
-              >
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={exportToCSV}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPDF}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={() => fetchLogs(currentPage)}>
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-primary-foreground hover:bg-white/10"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
             </div>
           </div>
         </div>
-      </header>
-
-      {/* Navigation */}
-      <nav className="bg-card border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-6 py-3">
-            <Link 
-              to="/admin/dashboard" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Overview
-            </Link>
-            <Link 
-              to="/admin/submissions" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Inbox className="w-4 h-4" />
-              Submissions
-            </Link>
-            <Link 
-              to="/admin/email-logs" 
-              className="flex items-center gap-2 text-accent font-medium"
-            >
-              <Mail className="w-4 h-4" />
-              Email Logs
-            </Link>
-            <Link 
-              to="/admin/settings" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </Link>
-          </div>
-        </div>
-      </nav>
+      </div>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-6 py-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -616,7 +580,7 @@ const AdminEmailLogs = () => {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </AdminLayout>
   );
 };
 
