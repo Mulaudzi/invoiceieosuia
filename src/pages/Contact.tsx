@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { Mail, Phone, MapPin, MessageCircle, Clock, Send, ChevronDown } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle, Clock, Send, ChevronDown, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,7 @@ import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import PageHeader from "@/components/landing/PageHeader";
 import { contactService } from "@/services/api";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { z } from "zod";
 
 // Validation schema
@@ -49,6 +50,7 @@ const Contact = () => {
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
+  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
   
   // Get purpose from URL params or default to general
   const initialPurpose = searchParams.get("purpose") as "general" | "support" | "sales" || "general";
@@ -105,6 +107,9 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
+      // Get reCAPTCHA token
+      const recaptchaToken = await executeRecaptcha('contact');
+      
       // Call the API to send the email
       const response = await contactService.submit({
         name: formData.name,
@@ -112,6 +117,7 @@ const Contact = () => {
         message: formData.message,
         purpose: formData.purpose,
         origin: originUrl,
+        recaptcha_token: recaptchaToken || undefined,
       });
 
       toast({
@@ -432,6 +438,10 @@ const Contact = () => {
                     )}
                   </Button>
 
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Shield className="w-3 h-3" />
+                    <span>Protected by reCAPTCHA</span>
+                  </div>
                   <p className="text-xs text-muted-foreground text-center">
                     Your message will be sent to the appropriate team and CC'd to info@ieosuia.com for tracking.
                   </p>

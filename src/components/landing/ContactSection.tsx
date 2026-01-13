@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, Send, MessageCircle, ChevronDown } from "lucide-react";
+import { Mail, Phone, MapPin, Send, MessageCircle, ChevronDown, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { contactService } from "@/services/api";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { z } from "zod";
 
 // Validation schema
@@ -26,6 +27,7 @@ const purposeOptions = [
 
 const ContactSection = () => {
   const { toast } = useToast();
+  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
   const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
@@ -69,6 +71,9 @@ const ContactSection = () => {
     setIsSubmitting(true);
 
     try {
+      // Get reCAPTCHA token
+      const recaptchaToken = await executeRecaptcha('contact');
+      
       // Get origin URL
       const originUrl = typeof window !== "undefined" ? window.location.href : "Landing Page";
       
@@ -79,6 +84,7 @@ const ContactSection = () => {
         message: formData.message,
         purpose: formData.purpose,
         origin: originUrl,
+        recaptcha_token: recaptchaToken || undefined,
       });
 
       toast({
@@ -219,9 +225,10 @@ const ContactSection = () => {
                 />
                 {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Your message will be sent to the appropriate team and CC'd to info@ieosuia.com.
-              </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Shield className="w-3 h-3" />
+                <span>Protected by reCAPTCHA • Message CC'd to info@ieosuia.com</span>
+              </div>
               <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   "Sending..."

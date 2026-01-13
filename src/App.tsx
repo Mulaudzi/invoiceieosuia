@@ -39,6 +39,10 @@ import Documentation from "./pages/Documentation";
 import Careers from "./pages/Careers";
 import FAQ from "./pages/FAQ";
 import CookieConsent from "./components/CookieConsent";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminSubmissions from "./pages/admin/AdminSubmissions";
+import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +78,13 @@ const App = () => (
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/faq" element={<FAQ />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/submissions" element={<AdminSubmissions />} />
+              <Route path="/admin/submissions/:id" element={<AdminSubmissions />} />
+              <Route path="/admin/email-logs" element={<AdminEmailLogs />} />
               
               {/* Email Verification Reminder (requires auth but not verification) */}
               <Route path="/verify-email-reminder" element={<ProtectedRoute requireVerified={false}><VerifyEmailReminder /></ProtectedRoute>} />

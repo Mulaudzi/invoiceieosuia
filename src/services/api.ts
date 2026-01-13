@@ -521,6 +521,7 @@ export interface ContactFormData {
   message: string;
   purpose: 'general' | 'support' | 'sales';
   origin: string;
+  recaptcha_token?: string;
 }
 
 export interface ContactFormResponse {
