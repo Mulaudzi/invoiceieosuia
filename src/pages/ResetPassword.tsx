@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
+import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
 
 const ResetPassword = () => {
   const { toast } = useToast();
@@ -89,13 +90,12 @@ const ResetPassword = () => {
     <div className="min-h-screen flex items-center justify-center p-8 bg-background">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-lg hero-gradient flex items-center justify-center">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-foreground">
-            IEOSUIA<span className="text-accent">.</span>
-          </span>
+        <Link to="/" className="flex items-center gap-3 mb-8">
+          <img 
+            src={ieosuiaLogo} 
+            alt="IEOSUIA Invoices Logo" 
+            className="h-12 w-auto"
+          />
         </Link>
 
         <div className="animate-fade-in">

@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { authService } from "@/services/api";
-import ieosuiaLogo from "@/assets/ieosuia-logo.png";
+import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
+import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
 const Login = () => {
   const { toast } = useToast();
@@ -120,17 +121,9 @@ const Login = () => {
           <Link to="/" className="flex items-center gap-3 mb-8">
             <img 
               src={ieosuiaLogo} 
-              alt="IEOSUIA Logo" 
-              className="h-10 w-auto"
+              alt="IEOSUIA Invoices Logo" 
+              className="h-12 w-auto"
             />
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground leading-tight">
-                IEOSUIA<span className="text-accent">.</span>
-              </span>
-              <span className="text-xs text-muted-foreground leading-tight">
-                Invoices & Books
-              </span>
-            </div>
           </Link>
 
           <div className="animate-fade-in">
@@ -268,9 +261,9 @@ const Login = () => {
       <div className="hidden lg:flex flex-1 hero-gradient items-center justify-center p-12">
         <div className="max-w-lg text-center">
           <img 
-            src={ieosuiaLogo} 
+            src={ieosuiaLogoWhite} 
             alt="IEOSUIA Logo" 
-            className="w-20 h-20 mx-auto mb-8 animate-float"
+            className="h-16 mx-auto mb-8 animate-float"
           />
           <h2 className="text-3xl font-bold text-white mb-4">
             Manage your invoices with ease

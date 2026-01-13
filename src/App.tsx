@@ -32,6 +32,8 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
+import PopiaCompliance from "./pages/PopiaCompliance";
+import Contact from "./pages/Contact";
 import Support from "./pages/Support";
 import Documentation from "./pages/Documentation";
 import Careers from "./pages/Careers";
@@ -65,6 +67,8 @@ const App = () => (
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
+              <Route path="/popia-compliance" element={<PopiaCompliance />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/support" element={<Support />} />
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/careers" element={<Careers />} />

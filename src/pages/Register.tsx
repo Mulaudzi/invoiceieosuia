@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight, User, CheckCircle2, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User, CheckCircle2, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
+import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
 const Register = () => {
   const { toast } = useToast();
@@ -164,9 +166,11 @@ const Register = () => {
       {/* Left Panel - Visual */}
       <div className="hidden lg:flex flex-1 hero-gradient items-center justify-center p-12">
         <div className="max-w-lg">
-          <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-8 animate-float">
-            <FileText className="w-10 h-10 text-white" />
-          </div>
+          <img 
+            src={ieosuiaLogoWhite} 
+            alt="IEOSUIA Logo" 
+            className="h-16 mb-8 animate-float"
+          />
           <h2 className="text-3xl font-bold text-white mb-4">
             Start your invoicing journey today
           </h2>
@@ -188,13 +192,12 @@ const Register = () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-lg hero-gradient flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">
-              IEOSUIA<span className="text-accent">.</span>
-            </span>
+          <Link to="/" className="flex items-center gap-3 mb-8">
+            <img 
+              src={ieosuiaLogo} 
+              alt="IEOSUIA Invoices Logo" 
+              className="h-12 w-auto"
+            />
           </Link>
 
           <div className="animate-fade-in">
@@ -365,9 +368,9 @@ const Register = () => {
             <p className="mt-4 text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
               <Shield className="w-3 h-3" />
               Protected by reCAPTCHA · By creating an account, you agree to our{" "}
-              <a href="#" className="text-accent hover:underline">Terms</a>
+              <Link to="/terms-of-service" className="text-accent hover:underline">Terms</Link>
               {" "}and{" "}
-              <a href="#" className="text-accent hover:underline">Privacy Policy</a>
+              <Link to="/privacy-policy" className="text-accent hover:underline">Privacy Policy</Link>
             </p>
 
             <div className="mt-6 text-center">
