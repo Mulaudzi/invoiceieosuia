@@ -72,13 +72,22 @@ class AuthController {
         ], 201);
     }
     
-    // Admin email constant
-    private const ADMIN_EMAIL = 'godtheson@ieosuia.com';
-    private const ADMIN_PASSWORDS = [
-        1 => 'billionaires',
-        2 => 'Mu1@udz!',
-        3 => '7211018830'
-    ];
+    /**
+     * Get admin user from database by email
+     */
+    private function getAdminUser(string $email): ?array {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("SELECT * FROM admin_users WHERE email = ? AND status = 'active'");
+        $stmt->execute([$email]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    
+    /**
+     * Check if email belongs to an admin user
+     */
+    private function isAdminEmail(string $email): bool {
+        return $this->getAdminUser($email) !== null;
+    }
     
     public function login(): void {
         $request = new Request();
@@ -99,8 +108,8 @@ class AuthController {
         $email = strtolower(trim($data['email']));
         
         // Check if this is an admin login attempt
-        if ($email === self::ADMIN_EMAIL) {
-            $this->handleAdminLogin($data['password']);
+        if ($this->isAdminEmail($email)) {
+            $this->handleAdminLogin($email, $data['password']);
             return;
         }
         
@@ -141,7 +150,7 @@ class AuthController {
     /**
      * Handle multi-step admin login from the regular login page
      */
-    private function handleAdminLogin(string $password): void {
+    private function handleAdminLogin(string $email, string $password): void {
         $request = new Request();
         $step = (int) $request->input('admin_step', 1);
         $sessionToken = $request->input('admin_session_token');
@@ -157,6 +166,13 @@ class AuthController {
         
         $db = Database::getConnection();
         
+        // Get admin user from database
+        $adminUser = $this->getAdminUser($email);
+        if (!$adminUser) {
+            Response::error('Invalid credentials', 401);
+            return;
+        }
+        
         // Clean up expired sessions (including inactive sessions older than 5 minutes)
         $stmt = $db->prepare("DELETE FROM admin_sessions WHERE expires_at < NOW()");
         $stmt->execute();
@@ -167,7 +183,7 @@ class AuthController {
         
         // Step 1: First password
         if ($step === 1) {
-            if ($password !== self::ADMIN_PASSWORDS[1]) {
+            if (!password_verify($password, $adminUser['password_1'])) {
                 $rateLimiter->hit();
                 error_log("Admin login step 1 failed from IP: $ip");
                 $this->sendAdminLoginAlert(1, $ip, 'Wrong first password');
@@ -180,10 +196,10 @@ class AuthController {
             $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes'));
             
             $stmt = $db->prepare("
-                INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity) 
-                VALUES (?, ?, 2, ?, NOW())
+                INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity, admin_user_id) 
+                VALUES (?, ?, 2, ?, NOW(), ?)
             ");
-            $stmt->execute([hash('sha256', $token), $ip, $expiresAt]);
+            $stmt->execute([hash('sha256', $token), $ip, $expiresAt, $adminUser['id']]);
             
             Response::json([
                 'admin_login' => true,
@@ -232,8 +248,9 @@ class AuthController {
         $stmt = $db->prepare("UPDATE admin_sessions SET last_activity = NOW() WHERE session_token = ?");
         $stmt->execute([hash('sha256', $sessionToken)]);
         
-        // Validate password for current step
-        if ($password !== self::ADMIN_PASSWORDS[$step]) {
+        // Validate password for current step using database hashes
+        $passwordField = 'password_' . $step;
+        if (!password_verify($password, $adminUser[$passwordField])) {
             $rateLimiter->hit();
             error_log("Admin login step $step failed from IP: $ip");
             
@@ -271,17 +288,22 @@ class AuthController {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
         
         $stmt = $db->prepare("
-            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity) 
-            VALUES (?, ?, 99, ?, NOW())
+            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity, admin_user_id) 
+            VALUES (?, ?, 99, ?, NOW(), ?)
         ");
-        $stmt->execute([hash('sha256', $adminToken), $ip, $expiresAt]);
+        $stmt->execute([hash('sha256', $adminToken), $ip, $expiresAt, $adminUser['id']]);
         
-        error_log("Admin login successful from IP: $ip");
+        // Update last login
+        $stmt = $db->prepare("UPDATE admin_users SET last_login_at = NOW() WHERE id = ?");
+        $stmt->execute([$adminUser['id']]);
+        
+        error_log("Admin login successful for {$adminUser['email']} from IP: $ip");
         
         Response::json([
             'admin_login' => true,
             'success' => true,
             'admin_token' => $adminToken,
+            'admin_name' => $adminUser['name'],
             'message' => 'Admin login successful'
         ]);
     }
@@ -758,5 +780,83 @@ class AuthController {
             'message' => 'Logo deleted successfully',
             'user' => $this->formatUserForFrontend($updatedUser)
         ]);
+    }
+    
+    /**
+     * Create a new admin user (temporary setup endpoint)
+     * This should be disabled or protected after initial setup
+     */
+    public function createAdmin(): void {
+        $request = new Request();
+        $data = $request->validate([
+            'email' => 'required|email|max:255',
+            'name' => 'required|max:255',
+            'password_1' => 'required|min:6',
+            'password_2' => 'required|min:6',
+            'password_3' => 'required|min:6',
+            'setup_key' => 'required',
+        ]);
+        
+        // Validate setup key (temporary security measure)
+        $setupKey = getenv('ADMIN_SETUP_KEY') ?: 'ieosuia_admin_setup_2025';
+        if ($data['setup_key'] !== $setupKey) {
+            Response::error('Invalid setup key', 403);
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Check if email already exists
+        $stmt = $db->prepare("SELECT id FROM admin_users WHERE email = ?");
+        $stmt->execute([strtolower(trim($data['email']))]);
+        if ($stmt->fetch()) {
+            Response::error('Admin with this email already exists', 422);
+            return;
+        }
+        
+        // Hash passwords using Argon2ID (same as regular users)
+        $hashedPassword1 = password_hash($data['password_1'], PASSWORD_ARGON2ID);
+        $hashedPassword2 = password_hash($data['password_2'], PASSWORD_ARGON2ID);
+        $hashedPassword3 = password_hash($data['password_3'], PASSWORD_ARGON2ID);
+        
+        // Insert admin user
+        $stmt = $db->prepare("
+            INSERT INTO admin_users (email, name, password_1, password_2, password_3, status)
+            VALUES (?, ?, ?, ?, ?, 'active')
+        ");
+        $stmt->execute([
+            strtolower(trim($data['email'])),
+            $data['name'],
+            $hashedPassword1,
+            $hashedPassword2,
+            $hashedPassword3
+        ]);
+        
+        $adminId = $db->lastInsertId();
+        
+        error_log("New admin user created: {$data['email']} (ID: $adminId)");
+        
+        Response::json([
+            'success' => true,
+            'message' => 'Admin user created successfully',
+            'admin_id' => $adminId
+        ], 201);
+    }
+    
+    /**
+     * Get list of admin users (for admin management)
+     */
+    public function getAdminUsers(): void {
+        $db = Database::getConnection();
+        
+        $stmt = $db->prepare("
+            SELECT id, email, name, status, last_login_at, created_at 
+            FROM admin_users 
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute();
+        $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        Response::json(['data' => $admins]);
     }
 }
