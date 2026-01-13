@@ -513,4 +513,34 @@ export const reportService = {
   },
 };
 
+// ==================== Contact Form Service ====================
+
+export interface ContactFormData {
+  name: string;
+  email: string;
+  message: string;
+  purpose: 'general' | 'support' | 'sales';
+  origin: string;
+}
+
+export interface ContactFormResponse {
+  success: boolean;
+  message: string;
+  recipient?: string;
+}
+
+export const contactService = {
+  submit: async (data: ContactFormData): Promise<ContactFormResponse> => {
+    try {
+      const response = await api.post<ContactFormResponse>('/contact', data);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+};
+
 export default api;

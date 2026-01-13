@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Send, MessageCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { contactService } from "@/services/api";
 import { z } from "zod";
 
 // Validation schema
@@ -67,18 +68,34 @@ const ContactSection = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Get origin URL
+      const originUrl = typeof window !== "undefined" ? window.location.href : "Landing Page";
+      
+      // Call the API to send the email
+      const response = await contactService.submit({
+        name: formData.name,
+        email: formData.email,
+        message: formData.message,
+        purpose: formData.purpose,
+        origin: originUrl,
+      });
 
-    const purposeOption = purposeOptions.find(p => p.value === formData.purpose);
+      toast({
+        title: "Message sent!",
+        description: response.message || "We'll respond within 24 hours.",
+      });
 
-    toast({
-      title: "Message sent!",
-      description: `Your message has been sent to ${purposeOption?.email}. We'll respond within 24 hours.`,
-    });
-
-    setFormData({ name: "", email: "", message: "", purpose: "general" });
-    setIsSubmitting(false);
+      setFormData({ name: "", email: "", message: "", purpose: "general" });
+    } catch (error) {
+      toast({
+        title: "Failed to send message",
+        description: error instanceof Error ? error.message : "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [

@@ -182,6 +182,9 @@ $router->get('/credits/logs', [CreditsController::class, 'getNotificationLogs'],
 $router->get('/credits/plans', [CreditsController::class, 'getPlans']);
 $router->post('/credits/reset', [CreditsController::class, 'resetMonthlyCredits']); // For cron job
 
+// Contact Form Route (public)
+$router->post('/contact', [ContactController::class, 'submit']);
+
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
