@@ -200,7 +200,10 @@ $router->delete('/admin/submissions/{id}', [AdminController::class, 'deleteSubmi
 $router->post('/admin/submissions/{id}/read', [AdminController::class, 'markAsRead']);
 $router->get('/admin/email-logs', [AdminController::class, 'getEmailLogs']);
 
-// Dispatch request
+// Webhook Routes (public - called by email providers)
+$router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);
+$router->post('/webhooks/email-delivery', [WebhookController::class, 'handleDelivery']);
+$router->post('/webhooks/email-complaint', [WebhookController::class, 'handleComplaint']);
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
 

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS email_logs (
     recipient_email VARCHAR(255) NOT NULL,
     cc_emails TEXT,
     subject VARCHAR(500) NOT NULL,
-    email_type ENUM('contact_notification', 'contact_confirmation', 'invoice', 'reminder', 'verification', 'password_reset', 'welcome', 'other') NOT NULL DEFAULT 'other',
+    email_type ENUM('contact_notification', 'contact_confirmation', 'admin_notification', 'invoice', 'reminder', 'verification', 'password_reset', 'welcome', 'other') NOT NULL DEFAULT 'other',
     status ENUM('pending', 'sent', 'failed', 'bounced') NOT NULL DEFAULT 'pending',
     error_message TEXT,
     sent_at TIMESTAMP NULL,
