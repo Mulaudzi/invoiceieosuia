@@ -19,11 +19,13 @@ import {
   Crown,
   TrendingUp,
   FlaskConical,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import logoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
 const DashboardSidebar = () => {
   const location = useLocation();
@@ -42,6 +44,7 @@ const DashboardSidebar = () => {
     { name: "Templates", icon: Palette, href: "/dashboard/templates" },
     { name: "Message Templates", icon: FileEdit, href: "/dashboard/email-templates" },
     { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
+    { name: "Payment History", icon: History, href: "/dashboard/payment-history" },
     { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
     { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
     { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },
@@ -65,10 +68,11 @@ const DashboardSidebar = () => {
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <FileText className="w-4 h-4 text-sidebar-primary-foreground" />
-            </div>
-            <span className="font-bold text-sidebar-foreground">IEOSUIA</span>
+            <img 
+              src={logoWhite} 
+              alt="IEOSUIA Invoices" 
+              className="h-8 w-auto"
+            />
           </Link>
         )}
         <Button
