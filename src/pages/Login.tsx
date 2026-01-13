@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { authService } from "@/services/api";
+import ieosuiaLogo from "@/assets/ieosuia-logo.png";
 
 const Login = () => {
   const { toast } = useToast();
@@ -116,13 +117,20 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-lg hero-gradient flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
+          <Link to="/" className="flex items-center gap-3 mb-8">
+            <img 
+              src={ieosuiaLogo} 
+              alt="IEOSUIA Logo" 
+              className="h-10 w-auto"
+            />
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-foreground leading-tight">
+                IEOSUIA<span className="text-accent">.</span>
+              </span>
+              <span className="text-xs text-muted-foreground leading-tight">
+                Invoices & Books
+              </span>
             </div>
-            <span className="text-xl font-bold text-foreground">
-              IEOSUIA<span className="text-accent">.</span>
-            </span>
           </Link>
 
           <div className="animate-fade-in">
@@ -259,9 +267,11 @@ const Login = () => {
       {/* Right Panel - Visual */}
       <div className="hidden lg:flex flex-1 hero-gradient items-center justify-center p-12">
         <div className="max-w-lg text-center">
-          <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-8 animate-float">
-            <FileText className="w-10 h-10 text-white" />
-          </div>
+          <img 
+            src={ieosuiaLogo} 
+            alt="IEOSUIA Logo" 
+            className="w-20 h-20 mx-auto mb-8 animate-float"
+          />
           <h2 className="text-3xl font-bold text-white mb-4">
             Manage your invoices with ease
           </h2>
@@ -270,13 +280,13 @@ const Login = () => {
           </p>
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">
-              <p className="text-3xl font-bold text-accent">10K+</p>
-              <p className="text-white/70 text-sm">Happy Users</p>
+              <p className="text-3xl font-bold text-accent">ZAR</p>
+              <p className="text-white/70 text-sm">& Multi-Currency</p>
             </div>
             <div className="w-px h-12 bg-white/20" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-accent">R900M+</p>
-              <p className="text-white/70 text-sm">Invoices Sent</p>
+              <p className="text-3xl font-bold text-accent">POPIA</p>
+              <p className="text-white/70 text-sm">Compliant</p>
             </div>
             <div className="w-px h-12 bg-white/20" />
             <div className="text-center">

@@ -33,6 +33,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import Support from "./pages/Support";
+import Documentation from "./pages/Documentation";
+import Careers from "./pages/Careers";
 import CookieConsent from "./components/CookieConsent";
 
 const queryClient = new QueryClient({
@@ -64,6 +66,8 @@ const App = () => (
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/support" element={<Support />} />
+              <Route path="/documentation" element={<Documentation />} />
+              <Route path="/careers" element={<Careers />} />
               
               {/* Email Verification Reminder (requires auth but not verification) */}
               <Route path="/verify-email-reminder" element={<ProtectedRoute requireVerified={false}><VerifyEmailReminder /></ProtectedRoute>} />

@@ -14,7 +14,7 @@ const CookiePolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. What Are Cookies</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Cookies are small text files that are stored on your device when you visit a website. They help websites remember your preferences, keep you logged in, and provide a better user experience.
+                Cookies are small text files that are stored on your device when you visit a website. They help websites remember your preferences, keep you logged in, and provide a better user experience. This policy explains how IEOSUIA Invoices & Books uses cookies in compliance with South African law and the Protection of Personal Information Act (POPIA).
               </p>
             </section>
 
@@ -29,9 +29,10 @@ const CookiePolicy = () => {
                 These cookies are necessary for the website to function and cannot be switched off. They include:
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2 mb-4">
-                <li>Authentication cookies to keep you logged in</li>
-                <li>Security cookies to protect against fraud</li>
-                <li>Session cookies to maintain your preferences</li>
+                <li>Authentication cookies to keep you logged in securely</li>
+                <li>Security cookies to protect against fraud and unauthorized access</li>
+                <li>Session cookies to maintain your preferences and settings</li>
+                <li>Cookie consent cookies to remember your cookie preferences</li>
               </ul>
 
               <h3 className="text-xl font-medium mb-3">2.2 Analytics Cookies</h3>
@@ -41,7 +42,8 @@ const CookiePolicy = () => {
               <ul className="list-disc list-inside text-muted-foreground space-y-2 mb-4">
                 <li>Track page views and user journeys</li>
                 <li>Identify popular features and content</li>
-                <li>Measure website performance</li>
+                <li>Measure website performance and load times</li>
+                <li>Understand which features are most useful</li>
               </ul>
 
               <h3 className="text-xl font-medium mb-3">2.3 Functional Cookies</h3>
@@ -49,9 +51,10 @@ const CookiePolicy = () => {
                 These cookies enable enhanced functionality:
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                <li>Remember your language preferences</li>
-                <li>Remember your display settings</li>
+                <li>Remember your language and currency preferences</li>
+                <li>Remember your display and theme settings</li>
                 <li>Store your consent preferences</li>
+                <li>Remember recently viewed pages</li>
               </ul>
             </section>
 
@@ -62,9 +65,12 @@ const CookiePolicy = () => {
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li><strong>Google reCAPTCHA</strong> - For security and spam prevention</li>
-                <li><strong>Google Analytics</strong> - For website analytics</li>
+                <li><strong>Google Analytics</strong> - For website analytics (anonymized)</li>
                 <li><strong>Payment Processors</strong> - For secure payment processing</li>
               </ul>
+              <p className="text-muted-foreground leading-relaxed mt-4">
+                These third parties have their own privacy policies regarding how they use such information.
+              </p>
             </section>
 
             <section>
@@ -73,12 +79,12 @@ const CookiePolicy = () => {
                 You can control and manage cookies in several ways:
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                <li><strong>Browser Settings:</strong> Most browsers allow you to view, manage, delete, and block cookies</li>
-                <li><strong>Our Cookie Banner:</strong> Use our cookie consent banner to manage your preferences</li>
-                <li><strong>Opt-Out Links:</strong> Third-party services often provide opt-out mechanisms</li>
+                <li><strong>Browser Settings:</strong> Most browsers allow you to view, manage, delete, and block cookies through their settings</li>
+                <li><strong>Our Cookie Banner:</strong> Use our cookie consent banner when you first visit to manage your preferences</li>
+                <li><strong>Opt-Out Links:</strong> Third-party services often provide opt-out mechanisms on their websites</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-4">
-                Note: Disabling certain cookies may affect the functionality of our website.
+                <strong>Note:</strong> Disabling essential cookies may affect the functionality of our website. You may not be able to log in or use certain features.
               </p>
             </section>
 
@@ -89,26 +95,41 @@ const CookiePolicy = () => {
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2 mt-2">
                 <li><strong>Session Cookies:</strong> Deleted when you close your browser</li>
-                <li><strong>Persistent Cookies:</strong> Remain until they expire or you delete them</li>
-                <li><strong>Authentication Cookies:</strong> Typically last for 30 days or until logout</li>
+                <li><strong>Persistent Cookies:</strong> Remain until they expire (typically 30 days to 1 year) or you delete them</li>
+                <li><strong>Authentication Cookies:</strong> Typically last for 30 days or until you log out</li>
+                <li><strong>Consent Cookies:</strong> Last for 12 months</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">6. Updates to This Policy</h2>
+              <h2 className="text-2xl font-semibold mb-4">6. Your Rights</h2>
               <p className="text-muted-foreground leading-relaxed">
-                We may update this Cookie Policy from time to time. We will notify you of any significant changes by posting a notice on our website.
+                Under POPIA and applicable data protection laws, you have the right to:
+              </p>
+              <ul className="list-disc list-inside text-muted-foreground space-y-2 mt-2">
+                <li>Know what cookies we use and why</li>
+                <li>Opt out of non-essential cookies</li>
+                <li>Delete cookies that have been set</li>
+                <li>Change your consent preferences at any time</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">7. Updates to This Policy</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                We may update this Cookie Policy from time to time to reflect changes in our practices or applicable laws. We will notify you of any significant changes by posting a notice on our website and updating the "Last updated" date.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">7. Contact Us</h2>
+              <h2 className="text-2xl font-semibold mb-4">8. Contact Us</h2>
               <p className="text-muted-foreground leading-relaxed">
                 If you have any questions about our use of cookies, please contact us at:
               </p>
               <ul className="list-none text-muted-foreground space-y-2 mt-2">
-                <li>Email: privacy@ieosuia.com</li>
-                <li>Address: 123 Business Street, Suite 100, City, Country</li>
+                <li>Email: hello@ieosuia.com</li>
+                <li>Support: support@ieosuia.com</li>
+                <li>Address: 26 Rock Alder, Extension 15, Naturena, Johannesburg, 2095</li>
               </ul>
             </section>
           </div>
