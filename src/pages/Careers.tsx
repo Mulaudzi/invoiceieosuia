@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
@@ -60,15 +61,15 @@ const Careers = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Want to be notified when positions open?
                   </p>
-                  <a href="mailto:careers@ieosuia.com?subject=Career Interest at IEOSUIA">
+                  <Link to="/contact?purpose=general">
                     <Button variant="accent" size="lg" className="w-full">
                       <Mail className="w-4 h-4 mr-2" />
                       Register Your Interest
                     </Button>
-                  </a>
+                  </Link>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Email us at <a href="mailto:careers@ieosuia.com" className="text-accent hover:underline">careers@ieosuia.com</a>
+                  Send us a message through our <Link to="/contact?purpose=general" className="text-accent hover:underline">contact form</Link>
                 </p>
               </CardContent>
             </Card>
