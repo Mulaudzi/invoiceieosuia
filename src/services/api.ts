@@ -90,11 +90,30 @@ interface UserDataExport {
 
 export const authService = {
   login: async (email: string, password: string, recaptchaToken?: string): Promise<{ user: User; token: string }> => {
-    const response = await api.post<AuthResponse>('/login', { 
-      email, 
-      password,
-      recaptcha_token: recaptchaToken 
-    });
+    try {
+      const response = await api.post<AuthResponse>('/login', { 
+        email, 
+        password,
+        recaptcha_token: recaptchaToken 
+      });
+      setToken(response.data.token);
+      return { user: response.data.user, token: response.data.token };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+
+  // Google OAuth
+  getGoogleAuthUrl: async (): Promise<string> => {
+    const response = await api.get<{ url: string }>('/auth/google');
+    return response.data.url;
+  },
+
+  googleCallback: async (code: string): Promise<{ user: User; token: string }> => {
+    const response = await api.post<AuthResponse>('/auth/google/callback', { code });
     setToken(response.data.token);
     return { user: response.data.user, token: response.data.token };
   },
@@ -174,11 +193,25 @@ export const authService = {
   },
 
   forgotPassword: async (email: string): Promise<void> => {
-    await api.post('/forgot-password', { email });
+    try {
+      await api.post('/forgot-password', { email });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
   },
 
   resetPassword: async (token: string, password: string): Promise<void> => {
-    await api.post('/reset-password', { token, password, password_confirmation: password });
+    try {
+      await api.post('/reset-password', { token, password, password_confirmation: password });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
   },
 
   // GDPR: Export user data

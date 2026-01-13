@@ -66,6 +66,10 @@ $router->post('/verify-email', [AuthController::class, 'verifyEmail']);
 $router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
 $router->post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Google OAuth routes
+$router->get('/auth/google', [GoogleAuthController::class, 'getAuthUrl']);
+$router->post('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+
 // Protected routes
 $router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class]);
 $router->get('/user', [AuthController::class, 'user'], [AuthMiddleware::class]);
