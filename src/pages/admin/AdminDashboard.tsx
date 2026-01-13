@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface DashboardStats {
   submissions: {
@@ -237,89 +238,29 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 py-4">
+    <AdminLayout>
+      {/* Page Header */}
+      <div className="border-b border-border bg-card">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <LayoutDashboard className="w-6 h-6" />
-              <h1 className="text-xl font-bold">Admin Dashboard</h1>
+            <div>
+              <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+              <p className="text-muted-foreground text-sm">Monitor your system's performance and activity</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchDashboard}
-                className="text-primary-foreground hover:bg-white/10"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-primary-foreground hover:bg-white/10"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { fetchDashboard(); fetchSessions(); }}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
           </div>
         </div>
-      </header>
-
-      {/* Navigation */}
-      <nav className="bg-card border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-6 py-3">
-            <Link 
-              to="/admin/dashboard" 
-              className="flex items-center gap-2 text-accent font-medium"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Overview
-            </Link>
-            <Link 
-              to="/admin/submissions" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Inbox className="w-4 h-4" />
-              Submissions
-              {stats && stats.submissions.new > 0 && (
-                <span className="bg-accent text-accent-foreground text-xs px-2 py-0.5 rounded-full">
-                  {stats.submissions.new}
-                </span>
-              )}
-            </Link>
-            <Link 
-              to="/admin/email-logs" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Mail className="w-4 h-4" />
-              Email Logs
-            </Link>
-            <Link 
-              to="/admin/settings" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </Link>
-            <Link 
-              to="/admin/qa" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Bug className="w-4 h-4" />
-              QA Console
-            </Link>
-          </div>
-        </div>
-      </nav>
+      </div>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-6 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -881,7 +822,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </AdminLayout>
   );
 };
 
