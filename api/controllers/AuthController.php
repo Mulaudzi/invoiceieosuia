@@ -859,4 +859,167 @@ class AuthController {
         
         Response::json(['data' => $admins]);
     }
+    
+    /**
+     * Update admin user details
+     */
+    public function updateAdminUser(array $params): void {
+        $id = $params['id'] ?? null;
+        if (!$id) {
+            Response::error('Admin ID required', 400);
+            return;
+        }
+        
+        $request = new Request();
+        $db = Database::getConnection();
+        
+        // Check if admin exists
+        $stmt = $db->prepare("SELECT * FROM admin_users WHERE id = ?");
+        $stmt->execute([$id]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$admin) {
+            Response::error('Admin user not found', 404);
+            return;
+        }
+        
+        $updates = [];
+        $params_arr = [];
+        
+        // Update name if provided
+        $name = $request->input('name');
+        if ($name) {
+            $updates[] = "name = ?";
+            $params_arr[] = $name;
+        }
+        
+        // Update email if provided
+        $email = $request->input('email');
+        if ($email) {
+            // Check if email is already taken by another admin
+            $stmt = $db->prepare("SELECT id FROM admin_users WHERE email = ? AND id != ?");
+            $stmt->execute([strtolower(trim($email)), $id]);
+            if ($stmt->fetch()) {
+                Response::error('Email already in use by another admin', 422);
+                return;
+            }
+            $updates[] = "email = ?";
+            $params_arr[] = strtolower(trim($email));
+        }
+        
+        // Update status if provided
+        $status = $request->input('status');
+        if ($status && in_array($status, ['active', 'inactive'])) {
+            $updates[] = "status = ?";
+            $params_arr[] = $status;
+        }
+        
+        // Update passwords if provided (all three must be provided together)
+        $password_1 = $request->input('password_1');
+        $password_2 = $request->input('password_2');
+        $password_3 = $request->input('password_3');
+        
+        if ($password_1 && $password_2 && $password_3) {
+            $updates[] = "password_1 = ?";
+            $params_arr[] = password_hash($password_1, PASSWORD_ARGON2ID);
+            $updates[] = "password_2 = ?";
+            $params_arr[] = password_hash($password_2, PASSWORD_ARGON2ID);
+            $updates[] = "password_3 = ?";
+            $params_arr[] = password_hash($password_3, PASSWORD_ARGON2ID);
+        }
+        
+        if (empty($updates)) {
+            Response::error('No fields to update', 400);
+            return;
+        }
+        
+        $params_arr[] = $id;
+        $sql = "UPDATE admin_users SET " . implode(", ", $updates) . " WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params_arr);
+        
+        error_log("Admin user updated: ID $id");
+        
+        Response::json([
+            'success' => true,
+            'message' => 'Admin user updated successfully'
+        ]);
+    }
+    
+    /**
+     * Toggle admin user status (activate/deactivate)
+     */
+    public function toggleAdminStatus(array $params): void {
+        $id = $params['id'] ?? null;
+        if (!$id) {
+            Response::error('Admin ID required', 400);
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Get current status
+        $stmt = $db->prepare("SELECT status FROM admin_users WHERE id = ?");
+        $stmt->execute([$id]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$admin) {
+            Response::error('Admin user not found', 404);
+            return;
+        }
+        
+        $newStatus = $admin['status'] === 'active' ? 'inactive' : 'active';
+        
+        $stmt = $db->prepare("UPDATE admin_users SET status = ? WHERE id = ?");
+        $stmt->execute([$newStatus, $id]);
+        
+        error_log("Admin user status changed: ID $id -> $newStatus");
+        
+        Response::json([
+            'success' => true,
+            'message' => "Admin user " . ($newStatus === 'active' ? 'activated' : 'deactivated'),
+            'status' => $newStatus
+        ]);
+    }
+    
+    /**
+     * Delete admin user
+     */
+    public function deleteAdminUser(array $params): void {
+        $id = $params['id'] ?? null;
+        if (!$id) {
+            Response::error('Admin ID required', 400);
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Check if admin exists
+        $stmt = $db->prepare("SELECT id FROM admin_users WHERE id = ?");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            Response::error('Admin user not found', 404);
+            return;
+        }
+        
+        // Count remaining active admins
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM admin_users WHERE status = 'active' AND id != ?");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result['count'] < 1) {
+            Response::error('Cannot delete the last active admin user', 400);
+            return;
+        }
+        
+        $stmt = $db->prepare("DELETE FROM admin_users WHERE id = ?");
+        $stmt->execute([$id]);
+        
+        error_log("Admin user deleted: ID $id");
+        
+        Response::json([
+            'success' => true,
+            'message' => 'Admin user deleted successfully'
+        ]);
+    }
 }
