@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface DashboardStats {
   submissions: {
@@ -342,6 +343,85 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* 30-Day Submission Trends Chart */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Submission Trends (Last 30 Days)
+            </CardTitle>
+            <CardDescription>Daily contact form submissions over the past month</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stats?.submissions.daily_trend && stats.submissions.daily_trend.length > 0 ? (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={stats.submissions.daily_trend}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorSubmissions" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+                      }}
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                      minTickGap={30}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      labelFormatter={(value) => {
+                        const date = new Date(value);
+                        return date.toLocaleDateString('en-ZA', { 
+                          weekday: 'short',
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric' 
+                        });
+                      }}
+                      formatter={(value: number) => [`${value} submissions`, 'Total']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorSubmissions)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No submission data available yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Time-Based Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
