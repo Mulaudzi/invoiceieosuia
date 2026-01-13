@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Shield, Lock, Eye, UserCheck, FileText, Server, Bell, Trash2, Download, MapPin, Mail, Phone } from "lucide-react";
+import { Shield, Lock, Eye, UserCheck, FileText, Server, Bell, Trash2, Download, MapPin, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
+import PageHeader from "@/components/landing/PageHeader";
 
 const PopiaCompliance = () => {
   const sections = [
@@ -131,33 +132,15 @@ Requests will be processed within 30 days as required by POPIA.`
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-4xl">
-          {/* Header */}
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
+      <main className="flex-1">
+        <PageHeader
+          title="POPIA Compliance"
+          subtitle="Protection of Personal Information Act - Your Privacy Matters"
+          icon={Shield}
+          badge="Data Protection"
+        />
 
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Shield className="w-6 h-6 text-accent" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-                  POPIA Compliance
-                </h1>
-                <p className="text-muted-foreground">
-                  Protection of Personal Information Act
-                </p>
-              </div>
-            </div>
-            <p className="text-muted-foreground mt-4">
-              Last updated: January 2025
-            </p>
-          </div>
-
+        <div className="container mx-auto px-4 max-w-4xl py-16">
           {/* Introduction */}
           <div className="bg-accent/5 border border-accent/20 rounded-xl p-6 mb-12">
             <h2 className="text-xl font-semibold text-foreground mb-3">
