@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Play,
@@ -39,6 +39,9 @@ import { getToken } from "@/services/api";
 import api from "@/services/api";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { useAuth } from "@/contexts/AuthContext";
+
+const QA_AUTHORIZED_EMAIL = "vendaboy.lm@gmail.com";
 
 // Types
 type UserMode = "admin" | "normal" | "readonly";
@@ -72,6 +75,14 @@ interface SystemHealth {
 const QaConsole = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isLoading } = useAuth();
+  
+  // Redirect unauthorized users
+  useEffect(() => {
+    if (!isLoading && user?.email !== QA_AUTHORIZED_EMAIL) {
+      navigate("/dashboard");
+    }
+  }, [user, isLoading, navigate]);
   const [userMode, setUserMode] = useState<UserMode>("normal");
   const [selectedSystem, setSelectedSystem] = useState<SystemType>("all");
   const [isRunning, setIsRunning] = useState(false);
