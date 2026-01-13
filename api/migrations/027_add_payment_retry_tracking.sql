@@ -31,6 +31,19 @@ CREATE TABLE IF NOT EXISTS payment_retry_notifications (
     INDEX idx_retry_notifications_type (notification_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Create settings table if it doesn't exist
+CREATE TABLE IF NOT EXISTS settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT NOT NULL,
+    setting_group VARCHAR(50) DEFAULT 'general',
+    description TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_settings_key (setting_key),
+    INDEX idx_settings_group (setting_group)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert grace period configuration into settings if it doesn't exist
 INSERT IGNORE INTO settings (setting_key, setting_value, setting_group, description)
 VALUES 
