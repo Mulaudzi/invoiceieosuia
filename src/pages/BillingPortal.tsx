@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useManualRetry } from "@/hooks/usePaymentRetry";
 import api from "@/services/api";
 import {
   CreditCard,
@@ -26,6 +27,8 @@ import {
   Loader2,
   Edit,
   Star,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Card,
@@ -83,6 +86,10 @@ interface BillingTransaction {
   payment_method?: string;
   invoice_url?: string;
   created_at: string;
+  retry_count?: number;
+  max_retries?: number;
+  next_retry_at?: string;
+  failure_reason?: string;
 }
 
 interface SubscriptionDetails {
@@ -92,6 +99,132 @@ interface SubscriptionDetails {
   cancel_at_period_end: boolean;
   next_billing_amount: number;
 }
+
+// Failed Payment Card Component with Retry Functionality
+const FailedPaymentCard = ({ 
+  transaction, 
+  onDownload, 
+  getStatusBadge 
+}: { 
+  transaction: BillingTransaction;
+  onDownload: (id: number) => void;
+  getStatusBadge: (status: string) => React.ReactNode;
+}) => {
+  const manualRetry = useManualRetry();
+  const hasRetries = transaction.retry_count !== undefined && transaction.max_retries !== undefined;
+  const canRetry = transaction.status === 'failed' && 
+    (transaction.retry_count ?? 0) < (transaction.max_retries ?? 3);
+
+  return (
+    <div
+      className={`p-4 rounded-lg hover:bg-muted/50 transition-colors ${
+        transaction.status === 'failed' 
+          ? 'bg-destructive/5 border border-destructive/20' 
+          : 'bg-muted/30'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            transaction.status === 'completed' ? 'bg-success/10' :
+            transaction.status === 'failed' ? 'bg-destructive/10' :
+            'bg-warning/10'
+          }`}>
+            {transaction.status === 'completed' ? (
+              <CheckCircle className="w-5 h-5 text-success" />
+            ) : transaction.status === 'failed' ? (
+              <AlertCircle className="w-5 h-5 text-destructive" />
+            ) : (
+              <Clock className="w-5 h-5 text-warning" />
+            )}
+          </div>
+          <div>
+            <p className="font-medium">{transaction.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {new Date(transaction.created_at).toLocaleDateString('en-ZA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              {transaction.payment_method && ` • ${transaction.payment_method}`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className={`font-semibold ${
+            transaction.status === 'refunded' ? 'text-muted-foreground line-through' : ''
+          }`}>
+            R{transaction.amount.toFixed(2)}
+          </span>
+          {getStatusBadge(transaction.status)}
+          {transaction.status === 'completed' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDownload(transaction.id)}
+              title="Download Invoice"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
+          {canRetry && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => manualRetry.mutate(transaction.id)}
+              disabled={manualRetry.isPending}
+              className="gap-2"
+            >
+              {manualRetry.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4" />
+              )}
+              Retry Now
+            </Button>
+          )}
+        </div>
+      </div>
+      
+      {/* Failed Payment Details */}
+      {transaction.status === 'failed' && hasRetries && (
+        <div className="mt-3 pt-3 border-t border-destructive/10">
+          <div className="flex items-start gap-2 text-sm">
+            <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              {transaction.failure_reason && (
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Reason:</span> {transaction.failure_reason}
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                <span className="font-medium">Retry Attempts:</span>{' '}
+                {transaction.retry_count} of {transaction.max_retries}
+              </p>
+              {transaction.next_retry_at && (
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Next Retry:</span>{' '}
+                  {new Date(transaction.next_retry_at).toLocaleDateString('en-ZA', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              )}
+              {!canRetry && (
+                <p className="text-destructive font-medium">
+                  Maximum retry attempts reached. Please update your payment method.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const BillingPortal = () => {
   const { user } = useAuth();
@@ -698,60 +831,12 @@ const BillingPortal = () => {
                   ) : (
                     <div className="space-y-3">
                       {transactions.map((transaction: BillingTransaction) => (
-                        <div
+                        <FailedPaymentCard
                           key={transaction.id}
-                          className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              transaction.status === 'completed' ? 'bg-success/10' :
-                              transaction.status === 'failed' ? 'bg-destructive/10' :
-                              'bg-warning/10'
-                            }`}>
-                              {transaction.status === 'completed' ? (
-                                <CheckCircle className={`w-5 h-5 ${
-                                  transaction.status === 'completed' ? 'text-success' :
-                                  'text-warning'
-                                }`} />
-                              ) : transaction.status === 'failed' ? (
-                                <AlertCircle className="w-5 h-5 text-destructive" />
-                              ) : (
-                                <Clock className="w-5 h-5 text-warning" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{transaction.description}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(transaction.created_at).toLocaleDateString('en-ZA', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                                {transaction.payment_method && ` • ${transaction.payment_method}`}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className={`font-semibold ${
-                              transaction.status === 'refunded' ? 'text-muted-foreground line-through' : ''
-                            }`}>
-                              R{transaction.amount.toFixed(2)}
-                            </span>
-                            {getStatusBadge(transaction.status)}
-                            {transaction.status === 'completed' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => downloadInvoice(transaction.id)}
-                                title="Download Invoice"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                          transaction={transaction}
+                          onDownload={downloadInvoice}
+                          getStatusBadge={getStatusBadge}
+                        />
                       ))}
                     </div>
                   )}
