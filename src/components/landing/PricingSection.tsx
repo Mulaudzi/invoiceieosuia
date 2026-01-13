@@ -1,11 +1,26 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, Star, Zap, Crown, Mail, MessageSquare, FileText, ArrowRight, X, Users, Repeat, BarChart3, Palette, Bell, Shield, Headphones, Building2 } from "lucide-react";
 
 const PricingSection = () => {
+  const [isAnnual, setIsAnnual] = useState(false);
+  
+  // 20% discount for annual billing
+  const annualDiscount = 0.20;
+  
+  const getPrice = (monthlyPrice: number) => {
+    if (isAnnual) {
+      const discountedMonthly = monthlyPrice * (1 - annualDiscount);
+      return Math.round(discountedMonthly);
+    }
+    return monthlyPrice;
+  };
+
   const plans = [
     {
       name: "Free",
+      monthlyPrice: 0,
       price: "R0",
       period: "forever",
       description: "Perfect for freelancers just getting started",
@@ -26,14 +41,16 @@ const PricingSection = () => {
     },
     {
       name: "Solo",
-      price: "R149",
-      period: "per month",
+      monthlyPrice: 149,
+      price: `R${getPrice(149)}`,
+      period: isAnnual ? "per month, billed annually" : "per month",
       description: "For solo entrepreneurs and consultants",
       features: [
         { text: "50 emails/month @ R0.10 each", icon: Mail, highlight: true },
         { text: "10 SMS/month @ R0.25 each", icon: MessageSquare, highlight: true },
         { text: "Unlimited invoices", icon: FileText },
-        { text: "Custom templates & branding" },
+        { text: "12 eInvoice templates" },
+        { text: "Custom branding" },
         { text: "Manual reminders" },
         { text: "Basic reports" },
         { text: "Remove IEOSUIA branding" },
@@ -46,8 +63,9 @@ const PricingSection = () => {
     },
     {
       name: "Pro",
-      price: "R299",
-      period: "per month",
+      monthlyPrice: 299,
+      price: `R${getPrice(299)}`,
+      period: isAnnual ? "per month, billed annually" : "per month",
       description: "For growing businesses and agencies",
       features: [
         { text: "100 emails/month @ R0.10 each", icon: Mail, highlight: true },
@@ -67,8 +85,9 @@ const PricingSection = () => {
     },
     {
       name: "Business",
-      price: "R599",
-      period: "per month",
+      monthlyPrice: 599,
+      price: `R${getPrice(599)}`,
+      period: isAnnual ? "per month, billed annually" : "per month",
       description: "For teams and enterprises",
       features: [
         { text: "200 emails/month @ R0.10 each", icon: Mail, highlight: true },
@@ -98,7 +117,7 @@ const PricingSection = () => {
       
       <div className="container mx-auto px-4 relative">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-8">
           <span className="inline-block px-4 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
             Pricing
           </span>
@@ -108,6 +127,34 @@ const PricingSection = () => {
           <p className="text-lg text-muted-foreground">
             Start free and scale as you grow. No hidden fees, no surprises. Cancel anytime.
           </p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+          <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+            Monthly
+          </span>
+          <button
+            onClick={() => setIsAnnual(!isAnnual)}
+            className={`relative w-14 h-7 rounded-full transition-colors ${
+              isAnnual ? 'bg-accent' : 'bg-muted'
+            }`}
+            aria-label="Toggle annual billing"
+          >
+            <span
+              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${
+                isAnnual ? 'translate-x-7' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+            Annual
+          </span>
+          {isAnnual && (
+            <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold animate-fade-in">
+              Save 20%
+            </span>
+          )}
         </div>
 
         {/* Pricing Cards */}
@@ -204,7 +251,7 @@ const PricingSection = () => {
         </div>
 
         {/* Per-unit pricing note */}
-        <div className="mt-12 text-center">
+        <div className="mt-12 text-center space-y-3">
           <div className="inline-flex items-center gap-6 px-6 py-3 rounded-full bg-muted/50 border border-border">
             <div className="flex items-center gap-2 text-sm">
               <Mail className="w-4 h-4 text-accent" />
@@ -218,6 +265,9 @@ const PricingSection = () => {
               <span className="font-semibold text-foreground">From R0.23</span>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            SMS reminders use your SMS credits. Top up anytime from your dashboard.
+          </p>
         </div>
 
         {/* Detailed Feature Comparison */}
@@ -305,9 +355,9 @@ const PricingSection = () => {
                   unlimitedLabel="Unlimited"
                 />
                 <FeatureRow 
-                  feature="Invoice templates" 
+                  feature="eInvoice templates" 
                   free="3" 
-                  solo="5" 
+                  solo="12" 
                   pro="All" 
                   business="All" 
                 />
