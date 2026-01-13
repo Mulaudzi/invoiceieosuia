@@ -1,20 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   Shield,
-  LayoutDashboard,
-  Inbox,
-  Mail,
-  Users,
-  Settings,
-  LogOut,
   RefreshCw,
-  Bug,
   Filter,
   ChevronLeft,
   ChevronRight,
   LogIn,
+  LogOut,
   UserPlus,
   UserMinus,
   Edit,
@@ -48,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
 import { format } from "date-fns";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface ActivityLog {
   id: number;
@@ -84,7 +79,6 @@ const AdminActivityLogs = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   
-  // Filters
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [searchAction, setSearchAction] = useState("");
@@ -144,23 +138,18 @@ const AdminActivityLogs = () => {
     fetchLogs(1);
   };
 
-  const handleLogout = () => {
-    removeAdminToken();
-    navigate('/admin/login');
-  };
-
-  const getActionIcon = (action: string, category: string) => {
-    if (category === 'auth') {
+  const getActionIcon = (action: string, cat: string) => {
+    if (cat === 'auth') {
       if (action.includes('login')) return <LogIn className="h-4 w-4" />;
       if (action.includes('logout')) return <LogOut className="h-4 w-4" />;
     }
-    if (category === 'user_management') {
+    if (cat === 'user_management') {
       if (action.includes('create')) return <UserPlus className="h-4 w-4" />;
       if (action.includes('delete')) return <UserMinus className="h-4 w-4" />;
       if (action.includes('update') || action.includes('edit')) return <Edit className="h-4 w-4" />;
       if (action.includes('toggle')) return <Shield className="h-4 w-4" />;
     }
-    if (category === 'submission') {
+    if (cat === 'submission') {
       if (action.includes('delete')) return <Trash2 className="h-4 w-4" />;
       if (action.includes('view')) return <Eye className="h-4 w-4" />;
     }
@@ -201,54 +190,9 @@ const AdminActivityLogs = () => {
       .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
-  const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-    { icon: Inbox, label: "Submissions", path: "/admin/submissions" },
-    { icon: Mail, label: "Email Logs", path: "/admin/email-logs" },
-    { icon: Users, label: "Admin Users", path: "/admin/users" },
-    { icon: Activity, label: "Activity Logs", path: "/admin/activity-logs", active: true },
-    { icon: Settings, label: "Settings", path: "/admin/settings" },
-    { icon: Bug, label: "QA Console", path: "/admin/qa" },
-  ];
-
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-card p-4 flex flex-col">
-        <div className="flex items-center gap-2 mb-8">
-          <Shield className="h-8 w-8 text-primary" />
-          <span className="font-bold text-xl">Admin Panel</span>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                item.active
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <Button
-          variant="ghost"
-          className="justify-start gap-3 mt-auto"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </Button>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6">
+    <AdminLayout>
+      <main className="p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -430,7 +374,7 @@ const AdminActivityLogs = () => {
           </Card>
         </div>
       </main>
-    </div>
+    </AdminLayout>
   );
 };
 

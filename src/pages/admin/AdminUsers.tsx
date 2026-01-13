@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Plus,
@@ -7,17 +7,9 @@ import {
   Trash2,
   Shield,
   ShieldOff,
-  LayoutDashboard,
-  Inbox,
-  Mail,
-  Settings,
-  LogOut,
   RefreshCw,
-  Bug,
   Eye,
   EyeOff,
-  ArrowLeft,
-  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
 import { format } from "date-fns";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface AdminUser {
   id: number;
@@ -75,7 +68,6 @@ const AdminUsers = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Form states
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
@@ -132,11 +124,6 @@ const AdminUsers = () => {
   useEffect(() => {
     fetchAdmins();
   }, []);
-
-  const handleLogout = () => {
-    removeAdminToken();
-    navigate('/admin/login');
-  };
 
   const handleEdit = (admin: AdminUser) => {
     setSelectedAdmin(admin);
@@ -278,54 +265,9 @@ const AdminUsers = () => {
     setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-    { icon: Inbox, label: "Submissions", path: "/admin/submissions" },
-    { icon: Mail, label: "Email Logs", path: "/admin/email-logs" },
-    { icon: Users, label: "Admin Users", path: "/admin/users", active: true },
-    { icon: Activity, label: "Activity Logs", path: "/admin/activity-logs" },
-    { icon: Settings, label: "Settings", path: "/admin/settings" },
-    { icon: Bug, label: "QA Console", path: "/admin/qa" },
-  ];
-
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-card p-4 flex flex-col">
-        <div className="flex items-center gap-2 mb-8">
-          <Shield className="h-8 w-8 text-primary" />
-          <span className="font-bold text-xl">Admin Panel</span>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                item.active
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <Button
-          variant="ghost"
-          className="justify-start gap-3 mt-auto"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </Button>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6">
+    <AdminLayout>
+      <main className="p-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -515,9 +457,9 @@ const AdminUsers = () => {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Admin User</DialogTitle>
+            <DialogTitle>Add New Admin</DialogTitle>
             <DialogDescription>
-              Create a new administrator with 3-step authentication.
+              Create a new administrator account. Requires setup key.
             </DialogDescription>
           </DialogHeader>
           
@@ -528,7 +470,6 @@ const AdminUsers = () => {
                 id="add-name"
                 value={addForm.name}
                 onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Admin name"
               />
             </div>
             
@@ -539,7 +480,6 @@ const AdminUsers = () => {
                 type="email"
                 value={addForm.email}
                 onChange={(e) => setAddForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="admin@example.com"
               />
             </div>
             
@@ -552,7 +492,6 @@ const AdminUsers = () => {
                     type={showPasswords[`password_${num}` as keyof typeof showPasswords] ? "text" : "password"}
                     value={addForm[`password_${num}` as keyof typeof addForm]}
                     onChange={(e) => setAddForm(prev => ({ ...prev, [`password_${num}`]: e.target.value }))}
-                    placeholder={`Enter password ${num}`}
                   />
                   <Button
                     type="button"
@@ -579,16 +518,19 @@ const AdminUsers = () => {
                   type={showPasswords.setup_key ? "text" : "password"}
                   value={addForm.setup_key}
                   onChange={(e) => setAddForm(prev => ({ ...prev, setup_key: e.target.value }))}
-                  placeholder="Enter setup key"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => togglePasswordVisibility("setup_key")}
+                  onClick={() => togglePasswordVisibility('setup_key')}
                 >
-                  {showPasswords.setup_key ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPasswords.setup_key ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -622,7 +564,7 @@ const AdminUsers = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AdminLayout>
   );
 };
 

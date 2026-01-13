@@ -1,14 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Inbox,
-  Mail,
-  Settings,
-  RefreshCw,
-  LogOut,
   Play,
-  Square,
   CheckCircle,
   XCircle,
   AlertTriangle,
@@ -18,14 +11,11 @@ import {
   Bug,
   Database,
   Server,
-  CreditCard,
-  Send,
   FileText,
   QrCode,
   MessageSquare,
   Users,
   Shield,
-  Webhook,
   Upload,
   Trash2,
   ChevronDown,
@@ -47,6 +37,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 // Types
 type UserMode = "admin" | "normal" | "readonly";
@@ -102,17 +93,6 @@ const AdminQaConsole = () => {
   const warningTests = results.warnings.length;
   const missingTests = results.missing.length;
   const crossSystemTests = results.crossSystem.length;
-
-  const handleLogout = async () => {
-    const token = getAdminToken();
-    try {
-      await api.post('/admin/logout', { admin_token: token });
-    } catch {
-      // Ignore
-    }
-    removeAdminToken();
-    navigate('/admin/login');
-  };
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev =>
@@ -239,7 +219,7 @@ const AdminQaConsole = () => {
       title: "QA Tests Complete",
       description: `${passedTests} passed, ${failedTests} failed, ${warningTests} warnings`,
     });
-  }, [selectedSystem, userMode, liveSmsMode, navigate, toast]);
+  }, [selectedSystem, userMode, liveSmsMode, navigate, toast, passedTests, failedTests, warningTests]);
 
   const categorizeResult = (result: TestResult, health: SystemHealth) => {
     if (result.status === "passed") {
@@ -392,7 +372,7 @@ const AdminQaConsole = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <AdminLayout>
       {/* QA Mode Banner */}
       <div className="bg-yellow-500 text-yellow-950 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
         <Bug className="w-4 h-4" />
@@ -400,59 +380,17 @@ const AdminQaConsole = () => {
         {liveSmsMode && <Badge variant="outline" className="ml-2 bg-red-100 text-red-700">LIVE SMS</Badge>}
       </div>
 
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Bug className="w-6 h-6" />
-              <h1 className="text-xl font-bold">System QA & Debug Console</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-primary-foreground hover:bg-white/10"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
+      <main className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Bug className="w-8 h-8" />
+              System QA & Debug Console
+            </h1>
+            <p className="text-muted-foreground">Run tests and check system health</p>
           </div>
         </div>
-      </header>
 
-      {/* Navigation */}
-      <nav className="bg-card border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-6 py-3 overflow-x-auto">
-            <Link to="/admin/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-              <LayoutDashboard className="w-4 h-4" />
-              Overview
-            </Link>
-            <Link to="/admin/submissions" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-              <Inbox className="w-4 h-4" />
-              Submissions
-            </Link>
-            <Link to="/admin/email-logs" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-              <Mail className="w-4 h-4" />
-              Email Logs
-            </Link>
-            <Link to="/admin/settings" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-              <Settings className="w-4 h-4" />
-              Settings
-            </Link>
-            <Link to="/admin/qa" className="flex items-center gap-2 text-accent font-medium whitespace-nowrap">
-              <Bug className="w-4 h-4" />
-              QA Console
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Mode Selector */}
@@ -756,7 +694,7 @@ const AdminQaConsole = () => {
           />
         </div>
       </main>
-    </div>
+    </AdminLayout>
   );
 };
 
@@ -1399,7 +1337,6 @@ const getTestsForSystem = (system: SystemType): TestDefinition[] => {
       component: "logic",
       run: async (token) => {
         try {
-          // Check if SMS credits can be checked for invoicing
           const creditsResponse = await api.get('/credits/check?type=sms&count=1', {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -1468,7 +1405,7 @@ const getTestsForSystem = (system: SystemType): TestDefinition[] => {
             name: "Invoice → Email → Credits Flow",
             status: "warning",
             severity: "warning",
-            message: "No email credits - invoice send would fail",
+            message: "No email credits - invoice sending would fail",
           };
         } catch {
           return {
@@ -1484,31 +1421,10 @@ const getTestsForSystem = (system: SystemType): TestDefinition[] => {
         }
       },
     },
-    {
-      id: "cross_qr_sms",
-      name: "QR → SMS Integration",
-      system: "qr",
-      service: "SMS",
-      component: "logic",
-      run: async () => {
-        return {
-          id: "cross_qr_sms",
-          system: "qr",
-          service: "SMS",
-          component: "logic",
-          name: "QR → SMS Integration",
-          status: "missing",
-          severity: "missing",
-          message: "QR system not implemented - cannot test SMS integration",
-          suggestedFix: "Implement QR system first, then add SMS trigger on scan events",
-        };
-      },
-    },
   ];
 
   if (system === "all") return allTests;
-  if (system === "shared") return allTests.filter(t => t.system === "shared");
-  return allTests.filter(t => t.system === system || t.service?.includes(system.toUpperCase()));
+  return allTests.filter(t => t.system === system || t.system === "shared");
 };
 
 export default AdminQaConsole;
