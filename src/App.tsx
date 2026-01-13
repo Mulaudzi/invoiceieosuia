@@ -45,6 +45,7 @@ import AdminSubmissions from "./pages/admin/AdminSubmissions";
 import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminQaConsole from "./pages/admin/AdminQaConsole";
+import AdminSetup from "./pages/AdminSetup";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/admin-setup" element={<AdminSetup />} />
               
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
