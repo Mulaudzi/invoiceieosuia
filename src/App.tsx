@@ -40,6 +40,7 @@ import Careers from "./pages/Careers";
 import FAQ from "./pages/FAQ";
 import CookieConsent from "./components/CookieConsent";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminIndex from "./pages/admin/AdminIndex";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
 import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
@@ -48,6 +49,7 @@ import AdminQaConsole from "./pages/admin/AdminQaConsole";
 import AdminSetup from "./pages/AdminSetup";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
+import QaConsole from "./pages/QaConsole";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,7 +88,7 @@ const App = () => (
               <Route path="/admin-setup" element={<AdminSetup />} />
               
               {/* Admin Routes */}
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin" element={<AdminIndex />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/submissions" element={<AdminSubmissions />} />
@@ -116,6 +118,7 @@ const App = () => (
               <Route path="/dashboard/notifications" element={<ProtectedRoute><NotificationHistory /></ProtectedRoute>} />
               <Route path="/dashboard/email-templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
               <Route path="/dashboard/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+              <Route path="/dashboard/qa" element={<ProtectedRoute><QaConsole /></ProtectedRoute>} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

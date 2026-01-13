@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import api from "@/services/api";
@@ -17,118 +18,120 @@ export const removeAdminToken = (): void => localStorage.removeItem(ADMIN_TOKEN_
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
-  const [sessionToken, setSessionToken] = useState("");
+  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password1: "",
     password2: "",
     password3: "",
   });
 
-  const handleStep1 = async (e: React.FormEvent) => {
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    remaining: number;
+    max: number;
+    locked: boolean;
+    retry_after_minutes?: number;
+  } | null>(null);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = getAdminToken();
+    if (token) {
+      navigate('/admin/dashboard');
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const response = await api.post('/admin/login/step1', {
-        username: formData.username,
-        password: formData.password1,
-      });
-
-      setSessionToken(response.data.session_token);
-      setStep(2);
+    // Check if locked out before attempting
+    if (rateLimitInfo?.locked) {
       toast({
-        title: "Step 1 Complete",
-        description: "Enter the second password to continue.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Authentication Failed",
-        description: error.response?.data?.message || "Invalid credentials",
+        title: "Account Locked",
+        description: `Too many failed attempts. Try again in ${rateLimitInfo.retry_after_minutes || 15} minutes.`,
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
+      return;
     }
-  };
 
-  const handleStep2 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+    // Execute reCAPTCHA
+    let recaptchaToken: string | null = null;
+    if (recaptchaLoaded) {
+      recaptchaToken = await executeRecaptcha('admin_login');
+      if (!recaptchaToken) {
+        toast({
+          title: "Security check failed",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
 
     try {
-      const response = await api.post('/admin/login/step2', {
-        session_token: sessionToken,
-        password: formData.password2,
-      });
-
-      setSessionToken(response.data.session_token);
-      setStep(3);
-      toast({
-        title: "Step 2 Complete",
-        description: "Enter the final password to gain access.",
-      });
-    } catch (error: any) {
-      setStep(1);
-      setSessionToken("");
-      toast({
-        title: "Authentication Failed",
-        description: error.response?.data?.message || "Invalid credentials",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleStep3 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await api.post('/admin/login/step3', {
-        session_token: sessionToken,
-        password: formData.password3,
-      });
-
-      setAdminToken(response.data.admin_token);
-      toast({
-        title: "Welcome, Admin",
-        description: "Authentication complete. Redirecting to dashboard...",
+      const response = await api.post('/admin/login/batch', {
+        email: formData.email,
+        password_1: formData.password1,
+        password_2: formData.password2,
+        password_3: formData.password3,
+        recaptcha_token: recaptchaToken,
       });
       
-      setTimeout(() => {
-        navigate('/admin/dashboard');
-      }, 1000);
+      const data = response.data;
+      
+      if (data.success && data.admin_token) {
+        setAdminToken(data.admin_token);
+        setRateLimitInfo(null);
+        toast({
+          title: "Welcome, Admin",
+          description: "Authentication complete. Redirecting to dashboard...",
+        });
+        
+        setTimeout(() => {
+          navigate('/admin/dashboard');
+        }, 500);
+      }
     } catch (error: any) {
-      setStep(1);
-      setSessionToken("");
+      const errorData = error.response?.data;
+      
+      // Update rate limit info from response
+      if (errorData?.rate_limit) {
+        setRateLimitInfo(errorData.rate_limit);
+        
+        if (errorData.rate_limit.locked) {
+          toast({
+            title: "Account Locked",
+            description: `Too many failed attempts. Try again in ${errorData.rate_limit.retry_after_minutes || 15} minutes.`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Authentication Failed",
+            description: `Invalid credentials. ${errorData.rate_limit.remaining} attempts remaining.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Authentication Failed",
+          description: errorData?.message || "Invalid credentials. Please try again.",
+          variant: "destructive",
+        });
+      }
+      // Clear passwords on failure
       setFormData({ ...formData, password1: "", password2: "", password3: "" });
-      toast({
-        title: "Authentication Failed",
-        description: error.response?.data?.message || "Invalid credentials",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const stepLabels = [
-    "Enter your administrator identity",
-    "Verify with second key",
-    "Final authentication"
-  ];
-
-  const stepDescriptions = [
-    "Enter your admin username and first password",
-    "Enter the second authentication password",
-    "Enter the final password to complete authentication"
-  ];
+  const allPasswordsFilled = formData.email && formData.password1 && formData.password2 && formData.password3;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -145,142 +148,109 @@ const AdminLogin = () => {
               Admin Access
             </h1>
             <p className="text-muted-foreground text-sm">
-              Multi-step authentication required
+              Multi-password authentication required
             </p>
-          </div>
-
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                  s < step 
-                    ? 'bg-accent text-accent-foreground' 
-                    : s === step 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground'
-                }`}>
-                  {s < step ? '✓' : s}
-                </div>
-                {s < 3 && (
-                  <div className={`w-8 h-1 mx-1 rounded ${
-                    s < step ? 'bg-accent' : 'bg-muted'
-                  }`} />
-                )}
-              </div>
-            ))}
           </div>
 
           {/* Form Card */}
           <div className="bg-card border border-border rounded-2xl p-8">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-foreground">
-                Step {step}: {stepLabels[step - 1]}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {stepDescriptions[step - 1]}
-              </p>
-            </div>
+            {/* Rate Limit Warning */}
+            {rateLimitInfo && (
+              <div className={`flex items-center gap-2 p-3 rounded-md text-sm mb-6 ${
+                rateLimitInfo.locked 
+                  ? 'bg-destructive/10 text-destructive border border-destructive/20' 
+                  : rateLimitInfo.remaining <= 2
+                    ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
+                    : 'bg-muted text-muted-foreground'
+              }`}>
+                <Shield className="w-4 h-4 flex-shrink-0" />
+                {rateLimitInfo.locked ? (
+                  <span>Account locked. Try again in {rateLimitInfo.retry_after_minutes || 15} minutes.</span>
+                ) : (
+                  <span>{rateLimitInfo.remaining} of {rateLimitInfo.max} attempts remaining</span>
+                )}
+              </div>
+            )}
 
-            {step === 1 && (
-              <form onSubmit={handleStep1} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Admin Identity
-                  </label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Admin Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder="Enter your admin username"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="admin@example.com"
                     required
-                    autoComplete="off"
+                    disabled={rateLimitInfo?.locked}
+                    className="pl-10"
+                    autoComplete="email"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-4 p-4 bg-accent/5 rounded-lg border border-accent/20">
+                <p className="text-xs text-accent flex items-center gap-1 mb-2">
+                  <Lock className="w-3 h-3" />
+                  Enter all three passwords
+                </p>
+
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    First Password
+                    Password 1
                   </label>
                   <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent" />
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={formData.password1}
                       onChange={(e) => setFormData({ ...formData, password1: e.target.value })}
                       placeholder="Enter first password"
                       required
+                      disabled={rateLimitInfo?.locked}
+                      className="pl-10"
                       autoComplete="off"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
                   </div>
                 </div>
-                <Button type="submit" variant="accent" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Verifying..." : (
-                    <>
-                      Continue to Step 2
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
 
-            {step === 2 && (
-              <form onSubmit={handleStep2} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Second Password
+                    Password 2
                   </label>
                   <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent" />
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={formData.password2}
                       onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
                       placeholder="Enter second password"
                       required
+                      disabled={rateLimitInfo?.locked}
+                      className="pl-10"
                       autoComplete="off"
-                      autoFocus
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
                   </div>
                 </div>
-                <Button type="submit" variant="accent" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Verifying..." : (
-                    <>
-                      Continue to Step 3
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
 
-            {step === 3 && (
-              <form onSubmit={handleStep3} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Final Password
+                    Password 3
                   </label>
                   <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent" />
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={formData.password3}
                       onChange={(e) => setFormData({ ...formData, password3: e.target.value })}
-                      placeholder="Enter final password"
+                      placeholder="Enter third password"
                       required
+                      disabled={rateLimitInfo?.locked}
+                      className="pl-10 pr-10"
                       autoComplete="off"
-                      autoFocus
                     />
                     <button
                       type="button"
@@ -291,16 +261,30 @@ const AdminLogin = () => {
                     </button>
                   </div>
                 </div>
-                <Button type="submit" variant="accent" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Authenticating..." : (
-                    <>
-                      <Lock className="w-4 h-4 mr-2" />
-                      Complete Authentication
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
+              </div>
+
+              <Button 
+                type="submit" 
+                variant="accent" 
+                className="w-full" 
+                disabled={isLoading || !allPasswordsFilled || rateLimitInfo?.locked}
+              >
+                {isLoading ? (
+                  "Authenticating..."
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Admin Sign In
+                  </>
+                )}
+              </Button>
+
+              {/* reCAPTCHA notice */}
+              <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                <Shield className="w-3 h-3" />
+                Protected by reCAPTCHA
+              </p>
+            </form>
 
             <p className="text-xs text-muted-foreground text-center mt-6">
               This area is restricted to authorized administrators only.
