@@ -429,6 +429,16 @@ export interface SmsResponse {
   message: string;
 }
 
+export interface UserNotification {
+  id: string;
+  message: string;
+  date: string;
+  read: boolean;
+  type?: 'info' | 'success' | 'warning' | 'error';
+  relatedType?: string;
+  relatedId?: number;
+}
+
 export const notificationService = {
   sendSms: async (invoiceId: string | number, message: string): Promise<SmsResponse> => {
     const response = await api.post<SmsResponse>(`/invoices/${invoiceId}/send-sms`, { message });
@@ -438,6 +448,28 @@ export const notificationService = {
   getEmailPreview: async (invoiceId: string | number): Promise<{ subject: string; body: string }> => {
     const response = await api.get(`/invoices/${invoiceId}/email-preview`);
     return response.data;
+  },
+
+  // User notifications
+  getNotifications: async (): Promise<{ notifications: UserNotification[]; unread_count: number }> => {
+    const response = await api.get('/notifications');
+    return response.data;
+  },
+
+  markAsRead: async (id: string): Promise<void> => {
+    await api.patch(`/notifications/${id}/read`);
+  },
+
+  markAllAsRead: async (): Promise<void> => {
+    await api.post('/notifications/mark-all-read');
+  },
+
+  deleteNotification: async (id: string): Promise<void> => {
+    await api.delete(`/notifications/${id}`);
+  },
+
+  clearAll: async (): Promise<void> => {
+    await api.delete('/notifications');
   },
 };
 

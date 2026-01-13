@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, Search, User, Settings, LogOut, X } from "lucide-react";
+import { Bell, Search, User, Settings, LogOut, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +20,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const notificationRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead, refetch } = useNotifications();
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -99,7 +99,24 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.length === 0 ? (
+                {isLoading ? (
+                  <div className="p-4 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : error ? (
+                  <div className="p-4 text-center">
+                    <AlertCircle className="w-5 h-5 mx-auto mb-2 text-destructive" />
+                    <p className="text-sm text-destructive">{error}</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 text-xs"
+                      onClick={refetch}
+                    >
+                      Try again
+                    </Button>
+                  </div>
+                ) : notifications.length === 0 ? (
                   <p className="p-4 text-center text-muted-foreground text-sm">
                     No notifications yet
                   </p>

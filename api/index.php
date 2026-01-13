@@ -191,6 +191,13 @@ $router->get('/credits/logs', [CreditsController::class, 'getNotificationLogs'],
 $router->get('/credits/plans', [CreditsController::class, 'getPlans']);
 $router->post('/credits/reset', [CreditsController::class, 'resetMonthlyCredits']); // For cron job
 
+// User Notifications Routes
+$router->get('/notifications', [UserNotificationController::class, 'index'], [AuthMiddleware::class]);
+$router->patch('/notifications/{id}/read', [UserNotificationController::class, 'markAsRead'], [AuthMiddleware::class]);
+$router->post('/notifications/mark-all-read', [UserNotificationController::class, 'markAllAsRead'], [AuthMiddleware::class]);
+$router->delete('/notifications/{id}', [UserNotificationController::class, 'delete'], [AuthMiddleware::class]);
+$router->delete('/notifications', [UserNotificationController::class, 'clearAll'], [AuthMiddleware::class]);
+
 // Contact Form Route (public with rate limiting)
 $router->post('/contact', [ContactController::class, 'submit']);
 
