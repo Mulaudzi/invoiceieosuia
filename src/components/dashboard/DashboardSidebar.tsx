@@ -20,6 +20,7 @@ import {
   TrendingUp,
   FlaskConical,
   History,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const DashboardSidebar = () => {
     { name: "Message Templates", icon: FileEdit, href: "/dashboard/email-templates" },
     { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
     { name: "Payment History", icon: History, href: "/dashboard/payment-history" },
+    { name: "Billing Portal", icon: Receipt, href: "/dashboard/billing" },
     { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
     { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
     { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },

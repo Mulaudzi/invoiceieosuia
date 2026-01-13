@@ -17,6 +17,7 @@ import Reports from "./pages/Reports";
 import Analytics from "./pages/Analytics";
 import Payments from "./pages/Payments";
 import PaymentHistory from "./pages/PaymentHistory";
+import BillingPortal from "./pages/BillingPortal";
 import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
 import Reminders from "./pages/Reminders";
@@ -128,6 +129,7 @@ const App = () => (
               <Route path="/dashboard/notifications" element={<ProtectedRoute><NotificationHistory /></ProtectedRoute>} />
               <Route path="/dashboard/email-templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
               <Route path="/dashboard/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+              <Route path="/dashboard/billing" element={<ProtectedRoute><BillingPortal /></ProtectedRoute>} />
               <Route path="/dashboard/qa" element={<ProtectedRoute><QaConsole /></ProtectedRoute>} />
               
               {/* Catch-all */}

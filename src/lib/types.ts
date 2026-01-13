@@ -1,6 +1,6 @@
 // Core types for the invoicing app
 
-export type PlanType = 'free' | 'pro' | 'business';
+export type PlanType = 'free' | 'solo' | 'pro' | 'business' | 'enterprise';
 
 export interface User {
   id: string;
@@ -15,6 +15,7 @@ export interface User {
   avatar?: string;
   emailVerified: boolean;
   emailVerifiedAt?: string;
+  subscription_renewal_date?: string;
   createdAt: string;
 }
 
