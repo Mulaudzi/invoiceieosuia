@@ -132,6 +132,10 @@ $router->get('/reports/invoice-status', [ReportController::class, 'invoiceStatus
 $router->get('/reports/top-clients', [ReportController::class, 'topClients'], [AuthMiddleware::class]);
 $router->get('/reports/income-expense', [ReportController::class, 'incomeExpense'], [AuthMiddleware::class]);
 $router->get('/reports/recent-invoices', [ReportController::class, 'recentInvoices'], [AuthMiddleware::class]);
+$router->get('/reports/payment-timeline', [ReportController::class, 'paymentTimeline'], [AuthMiddleware::class]);
+$router->get('/reports/billing-history', [ReportController::class, 'billingHistory'], [AuthMiddleware::class]);
+$router->get('/reports/extended-stats', [ReportController::class, 'extendedStats'], [AuthMiddleware::class]);
+$router->get('/reports/monthly-stats', [ReportController::class, 'monthlyStats'], [AuthMiddleware::class]);
 
 // Templates
 $router->get('/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);

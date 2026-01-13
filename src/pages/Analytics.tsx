@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDashboardStats, useMonthlyRevenue, useInvoiceStatus, useTopClients } from "@/hooks/useReports";
+import { useExtendedStats, useMonthlyStats, useInvoiceStatus, useTopClients, usePaymentTimeline } from "@/hooks/useReports";
 import { useCredits } from "@/hooks/useCredits";
 import {
   BarChart,
@@ -58,10 +58,11 @@ const Analytics = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: monthlyRevenue = [], isLoading: revenueLoading } = useMonthlyRevenue(selectedYear);
+  const { data: stats, isLoading: statsLoading } = useExtendedStats();
+  const { data: monthlyStats = [], isLoading: monthlyLoading } = useMonthlyStats(12);
   const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(10);
+  const { data: paymentTimelineData, isLoading: timelineLoading } = usePaymentTimeline();
   const { data: credits } = useCredits();
   const { exportToCsv, exportToText, exportToPdf, formatCurrencyForExport } = useExport();
 
@@ -84,31 +85,30 @@ const Analytics = () => {
     color: statusColors[s.status] || "hsl(var(--muted-foreground))",
   }));
 
-  // Calculate metrics
+  // Calculate metrics from real data
   const totalInvoices = stats?.total_invoices || 0;
   const paidInvoices = stats?.paid_invoices || 0;
   const collectionRate = totalInvoices > 0 ? Math.round((paidInvoices / totalInvoices) * 100) : 0;
   const avgInvoiceValue = totalInvoices > 0 ? (stats?.total_revenue || 0) / totalInvoices : 0;
+  const revenueChange = stats?.revenue_change || 0;
 
-  // Payment timeline data (mock - would come from API)
-  const paymentTimeline = [
-    { name: 'Within 7 days', value: 45, fill: 'hsl(var(--success))' },
-    { name: '8-14 days', value: 25, fill: 'hsl(var(--accent))' },
-    { name: '15-30 days', value: 20, fill: 'hsl(var(--warning))' },
-    { name: '30+ days', value: 10, fill: 'hsl(var(--destructive))' },
+  // Payment timeline data from API with fallback colors
+  const timelineColors = [
+    'hsl(var(--success))',
+    'hsl(var(--accent))',
+    'hsl(var(--warning))',
+    'hsl(var(--destructive))',
   ];
-
-  // Client revenue distribution
-  const clientRevenue = topClients.slice(0, 5).map((c: any) => ({
-    name: c.client?.name?.split(' ')[0] || 'Unknown',
-    revenue: c.total || 0,
+  
+  const paymentTimeline = (paymentTimelineData?.timeline || []).map((item, index) => ({
+    ...item,
+    fill: timelineColors[index] || 'hsl(var(--muted-foreground))',
   }));
 
-  // Monthly comparison data
-  const monthlyComparison = monthlyRevenue.map((m: any, i: number) => ({
-    ...m,
-    invoices: Math.floor(Math.random() * 20) + 5, // Mock data
-    avgValue: m.revenue / (Math.floor(Math.random() * 20) + 5),
+  // Client revenue distribution from API
+  const clientRevenue = topClients.slice(0, 5).map((c: any) => ({
+    name: c.name?.split(' ')[0] || 'Unknown',
+    revenue: c.total || 0,
   }));
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -148,34 +148,36 @@ const Analytics = () => {
                 </SelectContent>
               </Select>
             </div>
-            <ExportDropdown
-              label="Export Analytics"
-              onExportCsv={() => {
-                const analyticsData = monthlyRevenue.map((m: any) => ({
-                  month: m.month,
-                  revenue: formatCurrencyForExport(m.revenue || 0),
-                }));
-                exportToCsv({
-                  title: `Analytics Report - ${selectedYear}`,
-                  filename: `analytics-${selectedYear}`,
-                  columns: reportColumns.revenue,
-                  data: analyticsData,
-                });
-              }}
-              onExportPdf={() => exportToPdf('analytics')}
-              onExportText={() => {
-                const analyticsData = monthlyRevenue.map((m: any) => ({
-                  month: m.month,
-                  revenue: formatCurrencyForExport(m.revenue || 0),
-                }));
-                exportToText({
-                  title: `Analytics Report - ${selectedYear}`,
-                  filename: `analytics-${selectedYear}`,
-                  columns: reportColumns.revenue,
-                  data: analyticsData,
-                });
-              }}
-            />
+              <ExportDropdown
+                label="Export Analytics"
+                onExportCsv={() => {
+                  const analyticsData = monthlyStats.map((m: any) => ({
+                    month: m.month,
+                    revenue: formatCurrencyForExport(m.revenue || 0),
+                    invoices: m.invoices || 0,
+                  }));
+                  exportToCsv({
+                    title: `Analytics Report - ${selectedYear}`,
+                    filename: `analytics-${selectedYear}`,
+                    columns: [...reportColumns.revenue, { key: 'invoices', label: 'Invoices' }],
+                    data: analyticsData,
+                  });
+                }}
+                onExportPdf={() => exportToPdf('analytics')}
+                onExportText={() => {
+                  const analyticsData = monthlyStats.map((m: any) => ({
+                    month: m.month,
+                    revenue: formatCurrencyForExport(m.revenue || 0),
+                    invoices: m.invoices || 0,
+                  }));
+                  exportToText({
+                    title: `Analytics Report - ${selectedYear}`,
+                    filename: `analytics-${selectedYear}`,
+                    columns: [...reportColumns.revenue, { key: 'invoices', label: 'Invoices' }],
+                    data: analyticsData,
+                  });
+                }}
+              />
           </div>
 
           {/* Key Metrics */}
@@ -192,9 +194,13 @@ const Analytics = () => {
                         {formatCurrency(stats?.total_revenue || 0)}
                       </p>
                     )}
-                    <p className="text-xs text-success flex items-center gap-1 mt-1">
-                      <ArrowUpRight className="w-3 h-3" />
-                      +12.5% from last month
+                    <p className={`text-xs flex items-center gap-1 mt-1 ${revenueChange >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {revenueChange >= 0 ? (
+                        <ArrowUpRight className="w-3 h-3" />
+                      ) : (
+                        <ArrowDownRight className="w-3 h-3" />
+                      )}
+                      {revenueChange >= 0 ? '+' : ''}{revenueChange}% from last month
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -258,7 +264,7 @@ const Analytics = () => {
                     )}
                     <p className="text-xs text-success flex items-center gap-1 mt-1">
                       <ArrowUpRight className="w-3 h-3" />
-                      +5 new this month
+                      +{stats?.new_clients_this_month || 0} new this month
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
@@ -280,12 +286,12 @@ const Analytics = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {revenueLoading ? (
+              {monthlyLoading ? (
                 <Skeleton className="h-80 w-full" />
               ) : (
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={monthlyComparison}>
+                    <ComposedChart data={monthlyStats}>
                       <defs>
                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3}/>
@@ -386,31 +392,39 @@ const Analytics = () => {
                 <CardDescription>How quickly clients pay</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={paymentTimeline} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" unit="%" />
-                      <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" width={80} tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        formatter={(value: number) => [`${value}%`, 'Invoices']}
-                        contentStyle={{
-                          background: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                        {paymentTimeline.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 p-3 bg-success/10 rounded-lg">
-                  <p className="text-sm text-success font-medium">70% paid within 14 days</p>
-                </div>
+                {timelineLoading ? (
+                  <Skeleton className="h-48 w-full" />
+                ) : (
+                  <>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={paymentTimeline} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis type="number" stroke="hsl(var(--muted-foreground))" unit="%" />
+                          <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" width={80} tick={{ fontSize: 11 }} />
+                          <Tooltip
+                            formatter={(value: number) => [`${value}%`, 'Invoices']}
+                            contentStyle={{
+                              background: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px",
+                            }}
+                          />
+                          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                            {paymentTimeline.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 p-3 bg-success/10 rounded-lg">
+                      <p className="text-sm text-success font-medium">
+                        {paymentTimelineData?.paid_within_14_days || 0}% paid within 14 days
+                      </p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

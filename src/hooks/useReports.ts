@@ -8,10 +8,24 @@ export const useDashboardStats = () => {
   });
 };
 
+export const useExtendedStats = () => {
+  return useQuery({
+    queryKey: ['reports', 'extended-stats'],
+    queryFn: reportService.getExtendedStats,
+  });
+};
+
 export const useMonthlyRevenue = (year?: number) => {
   return useQuery({
     queryKey: ['reports', 'monthly-revenue', year],
     queryFn: () => reportService.getMonthlyRevenue(year),
+  });
+};
+
+export const useMonthlyStats = (months?: number) => {
+  return useQuery({
+    queryKey: ['reports', 'monthly-stats', months],
+    queryFn: () => reportService.getMonthlyStats(months),
   });
 };
 
@@ -40,5 +54,19 @@ export const useRecentInvoices = (limit?: number) => {
   return useQuery({
     queryKey: ['reports', 'recent-invoices', limit],
     queryFn: () => reportService.getRecentInvoices(limit),
+  });
+};
+
+export const usePaymentTimeline = () => {
+  return useQuery({
+    queryKey: ['reports', 'payment-timeline'],
+    queryFn: reportService.getPaymentTimeline,
+  });
+};
+
+export const useBillingHistory = () => {
+  return useQuery({
+    queryKey: ['reports', 'billing-history'],
+    queryFn: reportService.getBillingHistory,
   });
 };

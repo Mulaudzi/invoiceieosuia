@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCredits, usePlans } from "@/hooks/useCredits";
+import { useBillingHistory } from "@/hooks/useReports";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePayfastCheckout } from "@/hooks/usePayfast";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +44,7 @@ const Subscription = () => {
   const { toast } = useToast();
   const { data: credits, isLoading: creditsLoading } = useCredits();
   const { data: plans } = usePlans();
+  const { data: billingHistory = [], isLoading: billingLoading } = useBillingHistory();
   const payfast = usePayfastCheckout();
   const [searchParams] = useSearchParams();
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
@@ -162,13 +164,6 @@ const Subscription = () => {
       ],
       highlight: false,
     },
-  ];
-
-  // Mock billing history
-  const billingHistory = [
-    { id: 1, date: '2024-01-15', amount: 299, plan: 'Pro', status: 'paid' },
-    { id: 2, date: '2023-12-15', amount: 299, plan: 'Pro', status: 'paid' },
-    { id: 3, date: '2023-11-15', amount: 299, plan: 'Pro', status: 'paid' },
   ];
 
   return (
@@ -322,9 +317,29 @@ const Subscription = () => {
               <CardDescription>Your recent transactions and invoices</CardDescription>
             </CardHeader>
             <CardContent>
-              {user?.plan === 'free' ? (
+              {billingLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                        <div>
+                          <Skeleton className="h-4 w-24 mb-2" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-5 w-12" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : billingHistory.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
-                  No billing history. Upgrade to a paid plan to see transactions.
+                  {user?.plan === 'free' 
+                    ? 'No billing history. Upgrade to a paid plan to see transactions.'
+                    : 'No billing history found.'}
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -350,8 +365,12 @@ const Subscription = () => {
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="font-semibold text-foreground">R{item.amount}</span>
-                        <Badge className="bg-success/10 text-success border-success/20">
-                          Paid
+                        <Badge className={
+                          item.status === 'completed' 
+                            ? 'bg-success/10 text-success border-success/20'
+                            : 'bg-warning/10 text-warning border-warning/20'
+                        }>
+                          {item.status === 'completed' ? 'Paid' : item.status}
                         </Badge>
                       </div>
                     </div>
