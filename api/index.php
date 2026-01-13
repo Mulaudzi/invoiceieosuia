@@ -73,6 +73,12 @@ $router->post('/reset-password', [AuthController::class, 'resetPassword']);
 // Admin setup route (temporary - disable after initial setup)
 $router->post('/admin/setup', [AuthController::class, 'createAdmin']);
 
+// Admin email check (public - for login page detection)
+$router->post('/admin/check-email', [AuthController::class, 'checkAdminEmail']);
+
+// Admin batch login (all 3 passwords at once)
+$router->post('/admin/login/batch', [AuthController::class, 'adminLoginBatch']);
+
 // Google OAuth routes
 $router->get('/auth/google', [GoogleAuthController::class, 'getAuthUrl']);
 $router->post('/auth/google/callback', [GoogleAuthController::class, 'callback']);

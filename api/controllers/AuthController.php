@@ -89,6 +89,109 @@ class AuthController {
         return $this->getAdminUser($email) !== null;
     }
     
+    /**
+     * Public endpoint to check if an email belongs to an admin user
+     */
+    public function checkAdminEmail(): void {
+        $request = new Request();
+        $email = $request->input('email');
+        
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Response::json(['is_admin' => false]);
+            return;
+        }
+        
+        $isAdmin = $this->isAdminEmail(strtolower(trim($email)));
+        Response::json(['is_admin' => $isAdmin]);
+    }
+    
+    /**
+     * Batch admin login - verify all 3 passwords at once
+     */
+    public function adminLoginBatch(): void {
+        $request = new Request();
+        $data = $request->validate([
+            'email' => 'required|email',
+            'password_1' => 'required',
+            'password_2' => 'required',
+            'password_3' => 'required',
+        ]);
+        
+        // Verify reCAPTCHA (if enabled)
+        $recaptchaToken = $request->input('recaptcha_token');
+        if (Recaptcha::isEnabled()) {
+            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'admin_login');
+            if (!$recaptchaResult['success']) {
+                Response::error($recaptchaResult['error'], 422);
+            }
+        }
+        
+        $email = strtolower(trim($data['email']));
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        
+        // Rate limit admin login attempts
+        $rateLimiter = new RateLimitMiddleware(5, 15);
+        if (!$rateLimiter->handle('admin_login:' . $ip)) {
+            $this->sendAdminLoginAlert(0, $ip, 'Rate limit exceeded');
+            return;
+        }
+        
+        // Get admin user from database
+        $adminUser = $this->getAdminUser($email);
+        if (!$adminUser) {
+            $rateLimiter->hit();
+            Response::error('Authentication failed', 401);
+            return;
+        }
+        
+        // Verify all 3 passwords without revealing which one failed
+        $allValid = password_verify($data['password_1'], $adminUser['password_1'])
+            && password_verify($data['password_2'], $adminUser['password_2'])
+            && password_verify($data['password_3'], $adminUser['password_3']);
+        
+        if (!$allValid) {
+            $rateLimiter->hit();
+            error_log("Admin batch login failed from IP: $ip");
+            AdminActivityLogger::logAuth('admin_login_failed', 'failed', null, $email, [
+                'method' => 'batch',
+                'reason' => 'Invalid credentials'
+            ]);
+            $this->sendAdminLoginAlert(0, $ip, 'Batch login failed - invalid credentials');
+            Response::error('Authentication failed', 401);
+            return;
+        }
+        
+        // All passwords correct - generate admin token
+        $db = Database::getConnection();
+        $adminToken = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        
+        $stmt = $db->prepare("
+            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity, admin_user_id) 
+            VALUES (?, ?, 99, ?, NOW(), ?)
+        ");
+        $stmt->execute([hash('sha256', $adminToken), $ip, $expiresAt, $adminUser['id']]);
+        
+        // Update last login
+        $stmt = $db->prepare("UPDATE admin_users SET last_login_at = NOW() WHERE id = ?");
+        $stmt->execute([$adminUser['id']]);
+        
+        // Log successful login
+        AdminActivityLogger::logAuth('admin_login_success', 'success', $adminUser['id'], $adminUser['email'], [
+            'method' => 'batch',
+            'message' => 'All 3 passwords verified in batch'
+        ]);
+        
+        error_log("Admin batch login successful for {$adminUser['email']} from IP: $ip");
+        
+        Response::json([
+            'success' => true,
+            'admin_token' => $adminToken,
+            'admin_name' => $adminUser['name'],
+            'message' => 'Admin login successful'
+        ]);
+    }
+    
     public function login(): void {
         $request = new Request();
         $data = $request->validate([
