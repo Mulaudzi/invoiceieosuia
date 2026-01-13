@@ -43,24 +43,38 @@ class GoogleAuthController {
         
         if (!$code) {
             Response::error('Authorization code is required', 422);
+            return;
         }
         
         if (empty($this->clientId) || empty($this->clientSecret)) {
-            Response::error('Google OAuth is not configured', 500);
+            error_log("Google OAuth not configured. Client ID: " . (empty($this->clientId) ? 'MISSING' : 'SET') . 
+                      ", Client Secret: " . (empty($this->clientSecret) ? 'MISSING' : 'SET'));
+            Response::error('Google OAuth is not configured. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.', 500);
+            return;
         }
         
         // Exchange code for tokens
         $tokenResponse = $this->exchangeCodeForToken($code);
         
-        if (!$tokenResponse || !isset($tokenResponse['access_token'])) {
-            Response::error('Failed to exchange authorization code', 400);
+        if (!$tokenResponse) {
+            Response::error('Failed to exchange authorization code. The code may have expired.', 400);
+            return;
+        }
+        
+        if (!isset($tokenResponse['access_token'])) {
+            $errorMsg = $tokenResponse['error_description'] ?? $tokenResponse['error'] ?? 'Unknown error';
+            error_log("Google token exchange error: " . json_encode($tokenResponse));
+            Response::error("Google authentication failed: $errorMsg", 400);
+            return;
         }
         
         // Get user info from Google
         $googleUser = $this->getGoogleUser($tokenResponse['access_token']);
         
         if (!$googleUser || !isset($googleUser['email'])) {
+            error_log("Failed to get Google user info: " . json_encode($googleUser));
             Response::error('Failed to get user information from Google', 400);
+            return;
         }
         
         // Find or create user

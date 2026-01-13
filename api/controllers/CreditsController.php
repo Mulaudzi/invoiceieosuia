@@ -11,12 +11,12 @@ class CreditsController {
         'enterprise' => ['email' => 999999, 'sms' => 999999, 'invoices' => null],
     ];
     
-    public function __construct($db) {
-        $this->db = $db;
+    public function __construct($db = null) {
+        $this->db = $db ?? Database::getConnection();
     }
     
     public function getUsage() {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         
         $stmt = $this->db->prepare("
             SELECT 
@@ -111,8 +111,9 @@ class CreditsController {
     }
     
     public function useCredits() {
-        $userId = Auth::getUserId();
-        $data = Request::getBody();
+        $userId = Auth::id() ?? Auth::getUserId();
+        $request = new Request();
+        $data = $request->all() ?? [];
         
         $type = $data['type'] ?? null; // 'email' or 'sms'
         $count = $data['count'] ?? 1;
@@ -157,7 +158,7 @@ class CreditsController {
     }
     
     public function checkCredits() {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         $type = $_GET['type'] ?? 'email';
         $count = (int)($_GET['count'] ?? 1);
         
@@ -184,7 +185,7 @@ class CreditsController {
     }
     
     public function getNotificationLogs() {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         $type = $_GET['type'] ?? null;
         $limit = min((int)($_GET['limit'] ?? 50), 100);
         
