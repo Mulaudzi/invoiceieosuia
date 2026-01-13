@@ -104,10 +104,10 @@ const PricingSection = () => {
         { text: "Dedicated account manager" },
       ],
       cta: "Contact Sales",
-      href: "mailto:info@ieosuia.com?subject=Business Plan Inquiry",
+      href: "/contact?purpose=sales",
       variant: "default" as const,
       popular: false,
-      isExternal: true,
+      isExternal: false,
       icon: Crown,
     },
   ];
@@ -600,12 +600,12 @@ const PricingSection = () => {
                 Get custom limits, dedicated infrastructure, and priority support
               </p>
             </div>
-            <a href="mailto:hello@ieosuia.com?subject=Enterprise Inquiry">
+            <Link to="/contact?purpose=sales">
               <Button variant="outline" size="lg" className="group">
                 Contact us for Enterprise pricing
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
 

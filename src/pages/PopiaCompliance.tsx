@@ -185,9 +185,9 @@ Requests will be processed within 30 days as required by POPIA.`
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-accent" />
-                <a href="mailto:privacy@ieosuia.com" className="text-accent hover:underline">
-                  privacy@ieosuia.com
-                </a>
+                <Link to="/contact?purpose=general" className="text-accent hover:underline">
+                  Contact us for privacy inquiries
+                </Link>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-accent" />

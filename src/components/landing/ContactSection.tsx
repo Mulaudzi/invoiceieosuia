@@ -1,32 +1,83 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, Send, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Send, MessageCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+
+// Validation schema
+const contactSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100),
+  email: z.string().trim().email("Invalid email").max(255),
+  message: z.string().trim().min(1, "Message is required").max(2000),
+  purpose: z.enum(["general", "support", "sales"]),
+});
+
+type ContactFormData = z.infer<typeof contactSchema>;
+
+const purposeOptions = [
+  { value: "general" as const, label: "General Inquiry", email: "hello@ieosuia.com" },
+  { value: "support" as const, label: "Support / Technical Help", email: "support@ieosuia.com" },
+  { value: "sales" as const, label: "Sales / Partnerships", email: "sales@ieosuia.com" },
+];
 
 const ContactSection = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
     message: "",
+    purpose: "general",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
+
+  const validateForm = (): boolean => {
+    try {
+      contactSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Partial<Record<keyof ContactFormData, string>> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0] as keyof ContactFormData] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    const purposeOption = purposeOptions.find(p => p.value === formData.purpose);
+
     toast({
       title: "Message sent!",
-      description: "We'll get back to you within 24 hours.",
+      description: `Your message has been sent to ${purposeOption?.email}. We'll respond within 24 hours.`,
     });
 
-    setFormData({ name: "", email: "", message: "" });
+    setFormData({ name: "", email: "", message: "", purpose: "general" });
     setIsSubmitting(false);
   };
 
@@ -35,7 +86,7 @@ const ContactSection = () => {
       icon: Mail,
       label: "Email",
       value: "hello@ieosuia.com",
-      href: "mailto:hello@ieosuia.com",
+      purpose: "general" as const,
     },
     {
       icon: Phone,
@@ -48,10 +99,18 @@ const ContactSection = () => {
       label: "Address",
       value: "26 Rock Alder, Extension 15, Naturena, Johannesburg, 2095",
       href: "https://maps.google.com/?q=26+Rock+Alder+Extension+15+Naturena+Johannesburg+2095",
+      isExternal: true,
     },
   ];
 
   const whatsappNumber = "27638082493";
+
+  const handleContactClick = (item: typeof contactInfo[0]) => {
+    if (item.purpose) {
+      setFormData(prev => ({ ...prev, purpose: item.purpose! }));
+      document.getElementById("contact-form-section")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
     <section id="contact" className="py-16 bg-secondary/30">
@@ -71,9 +130,34 @@ const ContactSection = () => {
 
         <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
           {/* Contact Form */}
-          <div className="bg-card rounded-2xl p-8 border border-border shadow-soft">
+          <div id="contact-form-section" className="bg-card rounded-2xl p-8 border border-border shadow-soft">
             <h3 className="text-xl font-semibold text-foreground mb-6">Send us a message</h3>
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Purpose Selection */}
+              <div>
+                <label htmlFor="purpose-select" className="block text-sm font-medium text-foreground mb-2">
+                  Type of Inquiry
+                </label>
+                <div className="relative">
+                  <select
+                    id="purpose-select"
+                    value={formData.purpose}
+                    onChange={(e) => setFormData({ ...formData, purpose: e.target.value as "general" | "support" | "sales" })}
+                    className="w-full h-10 px-3 pr-10 rounded-md border border-input bg-background text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    {purposeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                </div>
+                <p className="text-xs text-accent mt-1">
+                  → Sends to: {purposeOptions.find(p => p.value === formData.purpose)?.email}
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
                   Your Name
@@ -83,9 +167,10 @@ const ContactSection = () => {
                   placeholder="John Doe"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={`bg-background ${errors.name ? "border-destructive" : ""}`}
                   required
-                  className="bg-background"
                 />
+                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
               </div>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
@@ -97,9 +182,10 @@ const ContactSection = () => {
                   placeholder="john@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className={`bg-background ${errors.email ? "border-destructive" : ""}`}
                   required
-                  className="bg-background"
                 />
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
               </div>
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
@@ -110,13 +196,14 @@ const ContactSection = () => {
                   placeholder="How can we help you?"
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  required
+                  className={`bg-background resize-none ${errors.message ? "border-destructive" : ""}`}
                   rows={4}
-                  className="bg-background resize-none"
+                  required
                 />
+                {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
               </div>
               <p className="text-xs text-muted-foreground">
-                This message will be sent from IEOSUIA Invoices & Books website contact form.
+                Your message will be sent to the appropriate team and CC'd to info@ieosuia.com.
               </p>
               <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
@@ -137,21 +224,37 @@ const ContactSection = () => {
               <h3 className="text-xl font-semibold text-foreground mb-6">Contact Information</h3>
               <div className="space-y-4">
                 {contactInfo.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target={item.label === "Address" ? "_blank" : undefined}
-                    rel={item.label === "Address" ? "noopener noreferrer" : undefined}
-                    className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group"
-                  >
-                    <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all shrink-0">
-                      <item.icon className="w-5 h-5 text-accent group-hover:text-accent-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-muted-foreground">{item.label}</p>
-                      <p className="font-medium text-foreground break-words">{item.value}</p>
-                    </div>
-                  </a>
+                  item.purpose ? (
+                    <button
+                      key={item.label}
+                      onClick={() => handleContactClick(item)}
+                      className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group w-full text-left"
+                    >
+                      <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all shrink-0">
+                        <item.icon className="w-5 h-5 text-accent group-hover:text-accent-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{item.label}</p>
+                        <p className="font-medium text-foreground break-words">{item.value}</p>
+                      </div>
+                    </button>
+                  ) : (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target={item.isExternal ? "_blank" : undefined}
+                      rel={item.isExternal ? "noopener noreferrer" : undefined}
+                      className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group"
+                    >
+                      <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all shrink-0">
+                        <item.icon className="w-5 h-5 text-accent group-hover:text-accent-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{item.label}</p>
+                        <p className="font-medium text-foreground break-words">{item.value}</p>
+                      </div>
+                    </a>
+                  )
                 ))}
                 
                 {/* Alternate phone */}

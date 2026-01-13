@@ -35,7 +35,8 @@ const Support = () => {
       title: "Email Support",
       description: "Get help via email",
       value: "support@ieosuia.com",
-      link: "mailto:support@ieosuia.com"
+      link: "/contact?purpose=support",
+      isRoute: true
     },
     {
       icon: Phone,
@@ -129,25 +130,42 @@ const Support = () => {
             <h2 className="text-2xl font-bold text-center mb-8">Contact Us Directly</h2>
             <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               {contactMethods.map((method) => (
-                <a 
-                  key={method.title} 
-                  href={method.link}
-                  target={method.title === "WhatsApp" ? "_blank" : undefined}
-                  rel={method.title === "WhatsApp" ? "noopener noreferrer" : undefined}
-                >
-                  <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer h-full hover:border-accent">
-                    <CardHeader>
-                      <div className="mx-auto w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-2">
-                        <method.icon className="h-6 w-6 text-accent" />
-                      </div>
-                      <CardTitle className="text-lg">{method.title}</CardTitle>
-                      <CardDescription>{method.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="font-medium text-accent">{method.value}</p>
-                    </CardContent>
-                  </Card>
-                </a>
+                method.isRoute ? (
+                  <Link key={method.title} to={method.link}>
+                    <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer h-full hover:border-accent">
+                      <CardHeader>
+                        <div className="mx-auto w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-2">
+                          <method.icon className="h-6 w-6 text-accent" />
+                        </div>
+                        <CardTitle className="text-lg">{method.title}</CardTitle>
+                        <CardDescription>{method.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium text-accent">{method.value}</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ) : (
+                  <a 
+                    key={method.title} 
+                    href={method.link}
+                    target={method.title === "WhatsApp" ? "_blank" : undefined}
+                    rel={method.title === "WhatsApp" ? "noopener noreferrer" : undefined}
+                  >
+                    <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer h-full hover:border-accent">
+                      <CardHeader>
+                        <div className="mx-auto w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-2">
+                          <method.icon className="h-6 w-6 text-accent" />
+                        </div>
+                        <CardTitle className="text-lg">{method.title}</CardTitle>
+                        <CardDescription>{method.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium text-accent">{method.value}</p>
+                      </CardContent>
+                    </Card>
+                  </a>
+                )
               ))}
             </div>
           </div>
