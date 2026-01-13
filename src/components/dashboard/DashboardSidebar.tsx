@@ -22,33 +22,43 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+
+const QA_AUTHORIZED_EMAIL = "vendaboy.lm@gmail.com";
 
 const DashboardSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-    { name: "Invoices", icon: FileText, href: "/dashboard/invoices" },
-    { name: "Recurring", icon: RefreshCw, href: "/dashboard/recurring" },
-    { name: "Clients", icon: Users, href: "/dashboard/clients" },
-    { name: "Products", icon: Package, href: "/dashboard/products" },
-    { name: "Reports", icon: BarChart3, href: "/dashboard/reports" },
-    { name: "Analytics", icon: TrendingUp, href: "/dashboard/analytics" },
-    { name: "Templates", icon: Palette, href: "/dashboard/templates" },
-    { name: "Message Templates", icon: FileEdit, href: "/dashboard/email-templates" },
-    { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
-    { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
-    { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
-    { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },
-    { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
-    { name: "Settings", icon: Settings, href: "/dashboard/settings" },
-    { name: "QA Console", icon: FlaskConical, href: "/dashboard/qa" },
-  ];
+  const menuItems = useMemo(() => {
+    const baseItems = [
+      { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+      { name: "Invoices", icon: FileText, href: "/dashboard/invoices" },
+      { name: "Recurring", icon: RefreshCw, href: "/dashboard/recurring" },
+      { name: "Clients", icon: Users, href: "/dashboard/clients" },
+      { name: "Products", icon: Package, href: "/dashboard/products" },
+      { name: "Reports", icon: BarChart3, href: "/dashboard/reports" },
+      { name: "Analytics", icon: TrendingUp, href: "/dashboard/analytics" },
+      { name: "Templates", icon: Palette, href: "/dashboard/templates" },
+      { name: "Message Templates", icon: FileEdit, href: "/dashboard/email-templates" },
+      { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
+      { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
+      { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
+      { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },
+      { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
+      { name: "Settings", icon: Settings, href: "/dashboard/settings" },
+    ];
+
+    // Only show QA Console for authorized user
+    if (user?.email === QA_AUTHORIZED_EMAIL) {
+      baseItems.push({ name: "QA Console", icon: FlaskConical, href: "/dashboard/qa" });
+    }
+
+    return baseItems;
+  }, [user?.email]);
 
   const handleLogout = () => {
     logout();
