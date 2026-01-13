@@ -286,6 +286,15 @@ $router->post('/billing/payment-methods/{id}/default', [BillingController::class
 $router->delete('/billing/payment-methods/{id}', [BillingController::class, 'removePaymentMethod'], [AuthMiddleware::class]);
 $router->get('/billing/transactions/{id}/invoice', [BillingController::class, 'downloadInvoice'], [AuthMiddleware::class]);
 
+// Payment Retry Routes
+$router->post('/payments/record-failure', [PaymentRetryController::class, 'recordFailure'], [AuthMiddleware::class]);
+$router->get('/payments/retry-status', [PaymentRetryController::class, 'getRetryStatus'], [AuthMiddleware::class]);
+$router->post('/payments/manual-retry', [PaymentRetryController::class, 'manualRetry'], [AuthMiddleware::class]);
+
+// Payment Retry Cron Routes (for scheduled tasks)
+$router->post('/payments/process-retries', [PaymentRetryController::class, 'processRetries']); // Daily cron - retries failed payments
+$router->post('/payments/process-grace-periods', [PaymentRetryController::class, 'processGracePeriods']); // Daily cron - handles grace period warnings/expirations
+
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);
 $router->post('/webhooks/email-delivery', [WebhookController::class, 'handleDelivery']);
