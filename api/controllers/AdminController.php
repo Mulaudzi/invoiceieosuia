@@ -868,11 +868,11 @@ class AdminController {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes')); // 5 min to complete login
         
         // Clean up old sessions for this IP
-        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE ip_address = ? AND auth_step < 3");
+        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE ip_address = ? AND step < 3");
         $stmt->execute([$ip]);
         
         $stmt = $db->prepare("
-            INSERT INTO admin_sessions (session_token, ip_address, auth_step, expires_at) 
+            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at) 
             VALUES (?, ?, ?, ?)
         ");
         $stmt->execute([$token, $ip, $step, $expiresAt]);
@@ -884,7 +884,7 @@ class AdminController {
             SELECT * FROM admin_sessions 
             WHERE session_token = ? 
             AND ip_address = ? 
-            AND auth_step = ? 
+            AND step = ? 
             AND expires_at > NOW()
         ");
         $stmt->execute([$token, $ip, $expectedStep]);
@@ -896,7 +896,7 @@ class AdminController {
         $newExpiry = date('Y-m-d H:i:s', strtotime('+5 minutes'));
         $stmt = $db->prepare("
             UPDATE admin_sessions 
-            SET auth_step = ?, expires_at = ?, last_activity = NOW() 
+            SET step = ?, expires_at = ?, last_activity = NOW() 
             WHERE session_token = ?
         ");
         $stmt->execute([$step, $newExpiry, $token]);
