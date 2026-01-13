@@ -18,6 +18,7 @@ import {
   FileEdit,
   Crown,
   TrendingUp,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ const DashboardSidebar = () => {
     { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },
     { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
+    { name: "QA Console", icon: FlaskConical, href: "/dashboard/qa" },
   ];
 
   const handleLogout = () => {
