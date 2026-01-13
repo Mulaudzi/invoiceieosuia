@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import api from "@/services/api";
+import { useSaveEmailTemplate, useSaveSmsTemplate, useEmailTemplates, useSmsTemplates } from "@/hooks/useMessageTemplates";
 import {
   Mail,
   MessageSquare,
@@ -158,40 +158,90 @@ const MessageTemplates = () => {
   const [smsTemplates, setSmsTemplates] = useState<Template[]>(defaultSmsTemplates);
   const [activeEmailTemplate, setActiveEmailTemplate] = useState<EmailTemplate>(defaultEmailTemplates[0]);
   const [activeSmsTemplate, setActiveSmsTemplate] = useState<Template>(defaultSmsTemplates[0]);
-  const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  const saveEmailMutation = useSaveEmailTemplate();
+  const saveSmsMutation = useSaveSmsTemplate();
+  const { data: fetchedEmailTemplates } = useEmailTemplates();
+  const { data: fetchedSmsTemplates } = useSmsTemplates();
+
   const isPaidPlan = user?.plan && ['solo', 'pro', 'business'].includes(user.plan);
+  const isSaving = saveEmailMutation.isPending || saveSmsMutation.isPending;
+
+  // Load fetched templates
+  useEffect(() => {
+    if (fetchedEmailTemplates && fetchedEmailTemplates.length > 0) {
+      const mapped = fetchedEmailTemplates.map(t => ({
+        id: t.category || t.id?.toString() || '',
+        name: t.name,
+        subject: t.subject || '',
+        content: t.content,
+        type: t.category as 'invoice' | 'reminder' | 'overdue' | 'thank_you',
+        isDefault: t.is_default || false,
+      }));
+      setEmailTemplates(prev => {
+        const combined = [...defaultEmailTemplates];
+        mapped.forEach(m => {
+          const idx = combined.findIndex(c => c.type === m.type);
+          if (idx >= 0) combined[idx] = m;
+        });
+        return combined;
+      });
+    }
+  }, [fetchedEmailTemplates]);
+
+  useEffect(() => {
+    if (fetchedSmsTemplates && fetchedSmsTemplates.length > 0) {
+      const mapped = fetchedSmsTemplates.map(t => ({
+        id: t.category || t.id?.toString() || '',
+        name: t.name,
+        content: t.content,
+        type: t.category as 'invoice' | 'reminder' | 'overdue' | 'thank_you',
+        isDefault: t.is_default || false,
+      }));
+      setSmsTemplates(prev => {
+        const combined = [...defaultSmsTemplates];
+        mapped.forEach(m => {
+          const idx = combined.findIndex(c => c.type === m.type);
+          if (idx >= 0) combined[idx] = m;
+        });
+        return combined;
+      });
+    }
+  }, [fetchedSmsTemplates]);
 
   const handleSaveEmail = async () => {
     if (!isPaidPlan) return;
-    setIsSaving(true);
     try {
-      await api.post('/templates/email', activeEmailTemplate);
+      await saveEmailMutation.mutateAsync({
+        category: activeEmailTemplate.type,
+        name: activeEmailTemplate.name,
+        subject: activeEmailTemplate.subject,
+        content: activeEmailTemplate.content,
+      });
       setEmailTemplates(prev => 
         prev.map(t => t.id === activeEmailTemplate.id ? activeEmailTemplate : t)
       );
       toast({ title: "Email template saved" });
     } catch (error) {
       toast({ title: "Failed to save template", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleSaveSms = async () => {
     if (!isPaidPlan) return;
-    setIsSaving(true);
     try {
-      await api.post('/templates/sms', activeSmsTemplate);
+      await saveSmsMutation.mutateAsync({
+        category: activeSmsTemplate.type,
+        name: activeSmsTemplate.name,
+        content: activeSmsTemplate.content,
+      });
       setSmsTemplates(prev => 
         prev.map(t => t.id === activeSmsTemplate.id ? activeSmsTemplate : t)
       );
       toast({ title: "SMS template saved" });
     } catch (error) {
       toast({ title: "Failed to save template", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
     }
   };
 
