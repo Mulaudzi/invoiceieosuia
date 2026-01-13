@@ -50,6 +50,7 @@ import AdminSetup from "./pages/AdminSetup";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
 import QaConsole from "./pages/QaConsole";
+import GoogleCallback from "./pages/GoogleCallback";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/auth/google/callback" element={<GoogleCallback />} />
               <Route path="/admin-setup" element={<AdminSetup />} />
               
               {/* Admin Routes */}
