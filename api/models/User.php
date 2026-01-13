@@ -3,8 +3,12 @@
 class User extends Model {
     protected static string $table = 'users';
     protected static array $fillable = [
-        'name', 'email', 'password', 'plan', 
-        'business_name', 'phone', 'address', 'tax_number', 'status'
+        'name', 'email', 'password', 'plan', 'google_id',
+        'business_name', 'phone', 'address', 'tax_number', 'status',
+        'avatar', 'logo', 'logo_path', 'email_verified_at',
+        'email_credits', 'email_credits_used', 'sms_credits', 'sms_credits_used',
+        'credits_reset_at', 'reminder_settings', 'subscription_renewal_date',
+        'subscription_grace_until', 'payment_failure_count', 'last_payment_failure_at'
     ];
     
     public function findByEmail(string $email): ?array {

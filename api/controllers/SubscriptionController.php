@@ -19,7 +19,7 @@ class SubscriptionController {
             WHERE u.plan IN ('solo', 'pro', 'business', 'enterprise')
             AND u.subscription_renewal_date IS NOT NULL
             AND DATE(u.subscription_renewal_date) = DATE_ADD(CURDATE(), INTERVAL 3 DAY)
-            AND u.email_verified = 1
+            AND u.email_verified_at IS NOT NULL
         ");
         $stmt->execute();
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
