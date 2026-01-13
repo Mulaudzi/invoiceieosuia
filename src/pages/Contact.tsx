@@ -1,12 +1,13 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, MapPin, MessageCircle, Clock, Send } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
+import PageHeader from "@/components/landing/PageHeader";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -91,29 +92,21 @@ const Contact = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
+      <main className="flex-1">
+        <PageHeader
+          title="Get in Touch"
+          subtitle="Have a question or need assistance? We're here to help. Reach out through any of the channels below."
+          icon={Mail}
+          badge="Contact Us"
+        />
 
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Get in <span className="text-accent">Touch</span>
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Have a question or need assistance? We're here to help. Reach out through any of the channels below.
-            </p>
-          </div>
-
+        <div className="container mx-auto px-4 py-16">
           <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Contact Information */}
             <div>
               <h2 className="text-2xl font-semibold text-foreground mb-6">Contact Information</h2>
               
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {contactDetails.map((contact, index) => (
                   <a
                     key={index}

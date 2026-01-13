@@ -1,15 +1,21 @@
-import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import Navbar from "@/components/landing/Navbar";
+import PageHeader from "@/components/landing/PageHeader";
+import { Shield } from "lucide-react";
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 py-20">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
-          <p className="text-muted-foreground mb-8">Last updated: {new Date().toLocaleDateString()}</p>
-          
+      <main className="flex-1">
+        <PageHeader
+          title="Privacy Policy"
+          subtitle={`Last updated: ${new Date().toLocaleDateString()}`}
+          icon={Shield}
+          badge="Legal"
+        />
+        
+        <div className="container mx-auto px-4 max-w-4xl py-16">
           <div className="prose prose-gray dark:prose-invert max-w-none space-y-8">
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
