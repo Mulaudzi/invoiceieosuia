@@ -208,6 +208,12 @@ $router->get('/admin/export/email-logs', [AdminController::class, 'exportEmailLo
 $router->get('/admin/export/submissions', [AdminController::class, 'exportSubmissions']);
 $router->get('/admin/reports/statistics', [AdminController::class, 'getStatisticsReport']);
 
+// Admin User Management Routes
+$router->get('/admin/users', [AuthController::class, 'getAdminUsers']);
+$router->put('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);
+$router->patch('/admin/users/{id}/toggle', [AuthController::class, 'toggleAdminStatus']);
+$router->delete('/admin/users/{id}', [AuthController::class, 'deleteAdminUser']);
+
 // QA Console Routes (Admin only)
 $router->post('/admin/qa/seed', [QaController::class, 'seed']);
 $router->delete('/admin/qa/cleanup', [QaController::class, 'cleanup']);
