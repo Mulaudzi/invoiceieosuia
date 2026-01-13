@@ -59,6 +59,10 @@ spl_autoload_register(function ($class) {
 // Initialize router
 $router = new Router();
 
+// Health check routes (public)
+$router->get('/health', [HealthController::class, 'check']);
+$router->get('/health/debug', [HealthController::class, 'debug']);
+
 // Public routes
 $router->post('/register', [AuthController::class, 'register']);
 $router->post('/login', [AuthController::class, 'login']);
