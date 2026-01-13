@@ -18,7 +18,8 @@ import {
   Percent,
   Timer,
   Calendar,
-  Activity
+  Activity,
+  Bug
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,6 +198,13 @@ const AdminDashboard = () => {
             >
               <Settings className="w-4 h-4" />
               Settings
+            </Link>
+            <Link 
+              to="/admin/qa" 
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Bug className="w-4 h-4" />
+              QA Console
             </Link>
           </div>
         </div>
