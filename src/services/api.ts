@@ -487,10 +487,45 @@ export interface DashboardStats {
   active_clients: number;
 }
 
+export interface ExtendedDashboardStats extends DashboardStats {
+  new_clients_this_month: number;
+  revenue_change: number;
+  current_month_invoices: number;
+  last_month_invoices: number;
+}
+
 export interface MonthlyRevenue {
   month: string;
   revenue: number;
   invoices: number;
+}
+
+export interface MonthlyStats {
+  month: string;
+  revenue: number;
+  invoices: number;
+  avg_value: number;
+}
+
+export interface PaymentTimelineItem {
+  name: string;
+  value: number;
+  count: number;
+}
+
+export interface PaymentTimelineResponse {
+  timeline: PaymentTimelineItem[];
+  total_payments: number;
+  paid_within_14_days: number;
+}
+
+export interface BillingHistoryItem {
+  id: number;
+  date: string;
+  amount: number;
+  plan: string;
+  status: string;
+  payment_id: string | null;
 }
 
 export const reportService = {
@@ -499,8 +534,18 @@ export const reportService = {
     return response.data;
   },
 
+  getExtendedStats: async (): Promise<ExtendedDashboardStats> => {
+    const response = await api.get('/reports/extended-stats');
+    return response.data;
+  },
+
   getMonthlyRevenue: async (year?: number): Promise<MonthlyRevenue[]> => {
     const response = await api.get('/reports/monthly-revenue', { params: { year } });
+    return response.data;
+  },
+
+  getMonthlyStats: async (months?: number): Promise<MonthlyStats[]> => {
+    const response = await api.get('/reports/monthly-stats', { params: { months } });
     return response.data;
   },
 
@@ -526,6 +571,16 @@ export const reportService = {
 
   getRecentInvoices: async (limit?: number): Promise<Invoice[]> => {
     const response = await api.get('/reports/recent-invoices', { params: { limit } });
+    return response.data;
+  },
+
+  getPaymentTimeline: async (): Promise<PaymentTimelineResponse> => {
+    const response = await api.get('/reports/payment-timeline');
+    return response.data;
+  },
+
+  getBillingHistory: async (): Promise<BillingHistoryItem[]> => {
+    const response = await api.get('/reports/billing-history');
     return response.data;
   },
 
