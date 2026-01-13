@@ -132,10 +132,11 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Execute reCAPTCHA
+    // Execute reCAPTCHA with appropriate action
     let recaptchaToken: string | null = null;
     if (recaptchaLoaded) {
-      recaptchaToken = await executeRecaptcha('login');
+      const recaptchaAction = isAdminEmail ? 'admin_login' : 'login';
+      recaptchaToken = await executeRecaptcha(recaptchaAction);
       if (!recaptchaToken) {
         toast({
           title: "Security check failed",
