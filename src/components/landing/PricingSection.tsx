@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Star, Zap, Crown, Mail, MessageSquare, FileText, ArrowRight } from "lucide-react";
+import { Check, Star, Zap, Crown, Mail, MessageSquare, FileText, ArrowRight, X, Users, Repeat, BarChart3, Palette, Bell, Shield, Headphones, Building2 } from "lucide-react";
 
 const PricingSection = () => {
   const plans = [
@@ -220,19 +220,363 @@ const PricingSection = () => {
           </div>
         </div>
 
+        {/* Detailed Feature Comparison */}
+        <div className="mt-20 max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+              Compare All <span className="text-accent">Features</span>
+            </h3>
+            <p className="text-muted-foreground">
+              See exactly what's included in each plan
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              {/* Table Header */}
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-4 px-4 text-foreground font-semibold min-w-[200px]">Features</th>
+                  <th className="text-center py-4 px-4 text-foreground font-semibold min-w-[120px]">Free</th>
+                  <th className="text-center py-4 px-4 text-foreground font-semibold min-w-[120px]">Solo</th>
+                  <th className="text-center py-4 px-4 min-w-[120px]">
+                    <div className="flex flex-col items-center">
+                      <span className="text-accent font-bold">Pro</span>
+                      <span className="text-xs text-accent/80">Popular</span>
+                    </div>
+                  </th>
+                  <th className="text-center py-4 px-4 text-foreground font-semibold min-w-[120px]">Business</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Communications */}
+                <tr className="bg-muted/30">
+                  <td colSpan={5} className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <Mail className="w-4 h-4 text-accent" />
+                      Communications
+                    </div>
+                  </td>
+                </tr>
+                <FeatureRow 
+                  feature="Monthly emails included" 
+                  free="20" 
+                  solo="50" 
+                  pro="100" 
+                  business="200" 
+                />
+                <FeatureRow 
+                  feature="Monthly SMS included" 
+                  free="0" 
+                  solo="10" 
+                  pro="25" 
+                  business="50" 
+                />
+                <FeatureRow 
+                  feature="Additional email cost" 
+                  free="—" 
+                  solo="R0.10" 
+                  pro="R0.10" 
+                  business="R0.10" 
+                />
+                <FeatureRow 
+                  feature="Additional SMS cost" 
+                  free="—" 
+                  solo="R0.25" 
+                  pro="R0.24" 
+                  business="R0.23" 
+                />
+
+                {/* Invoicing */}
+                <tr className="bg-muted/30">
+                  <td colSpan={5} className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <FileText className="w-4 h-4 text-accent" />
+                      Invoicing
+                    </div>
+                  </td>
+                </tr>
+                <FeatureRow 
+                  feature="Monthly invoices" 
+                  free="30" 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                  unlimitedLabel="Unlimited"
+                />
+                <FeatureRow 
+                  feature="Invoice templates" 
+                  free="3" 
+                  solo="5" 
+                  pro="All" 
+                  business="All" 
+                />
+                <FeatureRow 
+                  feature="Custom branding" 
+                  free={false} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Remove IEOSUIA branding" 
+                  free={false} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Recurring invoices" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="PDF downloads" 
+                  free={true} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+
+                {/* Reminders & Automation */}
+                <tr className="bg-muted/30">
+                  <td colSpan={5} className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <Bell className="w-4 h-4 text-accent" />
+                      Reminders & Automation
+                    </div>
+                  </td>
+                </tr>
+                <FeatureRow 
+                  feature="Manual reminders" 
+                  free={false} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Automated reminders" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Scheduled reminders" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Payment due notifications" 
+                  free={false} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+
+                {/* Reports & Analytics */}
+                <tr className="bg-muted/30">
+                  <td colSpan={5} className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <BarChart3 className="w-4 h-4 text-accent" />
+                      Reports & Analytics
+                    </div>
+                  </td>
+                </tr>
+                <FeatureRow 
+                  feature="Basic payment tracking" 
+                  free={true} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Basic reports" 
+                  free={false} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Advanced analytics" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Revenue forecasting" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Full ledger & bookkeeping" 
+                  free={false} 
+                  solo={false} 
+                  pro={false} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Export to CSV/PDF" 
+                  free={false} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+
+                {/* Team & Business */}
+                <tr className="bg-muted/30">
+                  <td colSpan={5} className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <Users className="w-4 h-4 text-accent" />
+                      Team & Business
+                    </div>
+                  </td>
+                </tr>
+                <FeatureRow 
+                  feature="Team members" 
+                  free="1" 
+                  solo="1" 
+                  pro="3" 
+                  business="10" 
+                />
+                <FeatureRow 
+                  feature="Role-based permissions" 
+                  free={false} 
+                  solo={false} 
+                  pro={false} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Multi-business support" 
+                  free={false} 
+                  solo={false} 
+                  pro={false} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="White-label solution" 
+                  free={false} 
+                  solo={false} 
+                  pro={false} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Client portal" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+
+                {/* Support */}
+                <tr className="bg-muted/30">
+                  <td colSpan={5} className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <Headphones className="w-4 h-4 text-accent" />
+                      Support
+                    </div>
+                  </td>
+                </tr>
+                <FeatureRow 
+                  feature="Email support" 
+                  free={true} 
+                  solo={true} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Priority support" 
+                  free={false} 
+                  solo={false} 
+                  pro={true} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Dedicated account manager" 
+                  free={false} 
+                  solo={false} 
+                  pro={false} 
+                  business={true} 
+                />
+                <FeatureRow 
+                  feature="Phone support" 
+                  free={false} 
+                  solo={false} 
+                  pro={false} 
+                  business={true} 
+                />
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Enterprise CTA */}
-        <div className="mt-12 text-center">
-          <p className="text-muted-foreground mb-4">
-            Need a custom solution for your enterprise?
-          </p>
-          <a href="mailto:info@ieosuia.com?subject=Enterprise Inquiry">
-            <Button variant="outline" size="lg">
-              Contact us for Enterprise pricing
-            </Button>
-          </a>
+        <div className="mt-16 text-center">
+          <div className="inline-flex flex-col items-center gap-4 p-8 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border">
+            <Building2 className="w-10 h-10 text-accent" />
+            <div>
+              <p className="text-lg font-semibold text-foreground mb-1">
+                Need a custom solution for your enterprise?
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Get custom limits, dedicated infrastructure, and priority support
+              </p>
+            </div>
+            <a href="mailto:info@ieosuia.com?subject=Enterprise Inquiry">
+              <Button variant="outline" size="lg" className="group">
+                Contact us for Enterprise pricing
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </a>
+          </div>
         </div>
       </div>
     </section>
+  );
+};
+
+// Feature row component for the comparison table
+const FeatureRow = ({ 
+  feature, 
+  free, 
+  solo, 
+  pro, 
+  business,
+  unlimitedLabel = "Unlimited"
+}: { 
+  feature: string; 
+  free: boolean | string; 
+  solo: boolean | string; 
+  pro: boolean | string; 
+  business: boolean | string;
+  unlimitedLabel?: string;
+}) => {
+  const renderValue = (value: boolean | string, isProColumn = false) => {
+    if (typeof value === 'boolean') {
+      return value ? (
+        <Check className={`w-5 h-5 mx-auto ${isProColumn ? 'text-accent' : 'text-green-500'}`} />
+      ) : (
+        <X className="w-5 h-5 mx-auto text-muted-foreground/50" />
+      );
+    }
+    return <span className={`text-sm ${isProColumn ? 'font-medium text-accent' : 'text-foreground'}`}>{value}</span>;
+  };
+
+  return (
+    <tr className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+      <td className="py-3 px-4 text-sm text-foreground">{feature}</td>
+      <td className="py-3 px-4 text-center">{renderValue(free)}</td>
+      <td className="py-3 px-4 text-center">{renderValue(solo)}</td>
+      <td className="py-3 px-4 text-center bg-accent/5">{renderValue(pro, true)}</td>
+      <td className="py-3 px-4 text-center">{renderValue(business)}</td>
+    </tr>
   );
 };
 
