@@ -182,8 +182,23 @@ $router->get('/credits/logs', [CreditsController::class, 'getNotificationLogs'],
 $router->get('/credits/plans', [CreditsController::class, 'getPlans']);
 $router->post('/credits/reset', [CreditsController::class, 'resetMonthlyCredits']); // For cron job
 
-// Contact Form Route (public)
+// Contact Form Route (public with rate limiting)
 $router->post('/contact', [ContactController::class, 'submit']);
+
+// Admin Routes (3-step authentication)
+$router->post('/admin/login/step1', [AdminController::class, 'loginStep1']);
+$router->post('/admin/login/step2', [AdminController::class, 'loginStep2']);
+$router->post('/admin/login/step3', [AdminController::class, 'loginStep3']);
+$router->post('/admin/logout', [AdminController::class, 'logout']);
+
+// Admin Protected Routes
+$router->get('/admin/dashboard', [AdminController::class, 'getDashboard']);
+$router->get('/admin/submissions', [AdminController::class, 'getSubmissions']);
+$router->get('/admin/submissions/{id}', [AdminController::class, 'getSubmission']);
+$router->put('/admin/submissions/{id}', [AdminController::class, 'updateSubmission']);
+$router->delete('/admin/submissions/{id}', [AdminController::class, 'deleteSubmission']);
+$router->post('/admin/submissions/{id}/read', [AdminController::class, 'markAsRead']);
+$router->get('/admin/email-logs', [AdminController::class, 'getEmailLogs']);
 
 // Dispatch request
 $method = $_SERVER['REQUEST_METHOD'];
