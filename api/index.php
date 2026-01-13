@@ -208,6 +208,10 @@ $router->get('/admin/export/email-logs', [AdminController::class, 'exportEmailLo
 $router->get('/admin/export/submissions', [AdminController::class, 'exportSubmissions']);
 $router->get('/admin/reports/statistics', [AdminController::class, 'getStatisticsReport']);
 
+// Admin Activity Logs Routes
+$router->get('/admin/activity-logs', [AdminController::class, 'getActivityLogs']);
+$router->get('/admin/export/activity-logs', [AdminController::class, 'exportActivityLogs']);
+
 // Admin User Management Routes
 $router->get('/admin/users', [AuthController::class, 'getAdminUsers']);
 $router->put('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);
