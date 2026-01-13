@@ -20,6 +20,10 @@ class Router {
         $this->addRoute('DELETE', $path, $handler, $middleware);
     }
     
+    public function patch(string $path, array $handler, array $middleware = []): void {
+        $this->addRoute('PATCH', $path, $handler, $middleware);
+    }
+    
     private function addRoute(string $method, string $path, array $handler, array $middleware): void {
         // Convert {param} to regex
         $pattern = preg_replace('/\{(\w+)\}/', '(?P<$1>[^/]+)', $path);

