@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import api, { getToken } from '@/services/api';
 
 interface Notification {
   id: string;
@@ -6,113 +7,112 @@ interface Notification {
   date: string;
   read: boolean;
   type?: 'info' | 'success' | 'warning' | 'error';
+  relatedType?: string;
+  relatedId?: number;
 }
-
-// Sample notifications - in production these would come from API
-const sampleNotifications: Notification[] = [
-  {
-    id: '1',
-    message: 'Invoice #INV-001 has been paid by Acme Corp.',
-    date: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-    read: false,
-    type: 'success',
-  },
-  {
-    id: '2',
-    message: 'Payment reminder sent to Tech Solutions.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    read: false,
-    type: 'info',
-  },
-  {
-    id: '3',
-    message: 'Invoice #INV-003 is overdue by 5 days.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    read: true,
-    type: 'warning',
-  },
-  {
-    id: '4',
-    message: 'New client "StartupXYZ" has been added.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
-    read: true,
-    type: 'info',
-  },
-  {
-    id: '5',
-    message: 'Monthly revenue report is ready to download.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
-    read: true,
-    type: 'success',
-  },
-];
-
-const NOTIFICATIONS_KEY = 'ieosuia_notifications';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load notifications from localStorage or use samples
-  useEffect(() => {
-    const stored = localStorage.getItem(NOTIFICATIONS_KEY);
-    if (stored) {
-      try {
-        setNotifications(JSON.parse(stored));
-      } catch {
-        setNotifications(sampleNotifications);
-        localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(sampleNotifications));
-      }
-    } else {
-      setNotifications(sampleNotifications);
-      localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(sampleNotifications));
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await api.get('/notifications');
+      setNotifications(response.data.notifications || []);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to fetch notifications:', err);
+      setError(err.response?.data?.message || 'Failed to load notifications');
+      // Don't clear existing notifications on error
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
+  // Initial fetch
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => {
-      const updated = prev.map(n => 
-        n.id === id ? { ...n, read: true } : n
-      );
-      localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+  const markAsRead = useCallback(async (id: string) => {
+    // Optimistic update
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => {
-      const updated = prev.map(n => ({ ...n, read: true }));
-      localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+    try {
+      await api.patch(`/notifications/${id}/read`);
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+      // Revert on error
+      fetchNotifications();
+    }
+  }, [fetchNotifications]);
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'date' | 'read'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications(prev => {
-      const updated = [newNotification, ...prev];
-      localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+  const markAllAsRead = useCallback(async () => {
+    // Optimistic update
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 
-  const clearNotifications = useCallback(() => {
+    try {
+      await api.post('/notifications/mark-all-read');
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+      // Revert on error
+      fetchNotifications();
+    }
+  }, [fetchNotifications]);
+
+  const deleteNotification = useCallback(async (id: string) => {
+    // Optimistic update
+    setNotifications(prev => prev.filter(n => n.id !== id));
+
+    try {
+      await api.delete(`/notifications/${id}`);
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+      // Revert on error
+      fetchNotifications();
+    }
+  }, [fetchNotifications]);
+
+  const clearNotifications = useCallback(async () => {
+    // Optimistic update
+    const previousNotifications = notifications;
     setNotifications([]);
-    localStorage.removeItem(NOTIFICATIONS_KEY);
-  }, []);
+
+    try {
+      await api.delete('/notifications');
+    } catch (err) {
+      console.error('Failed to clear notifications:', err);
+      // Revert on error
+      setNotifications(previousNotifications);
+    }
+  }, [notifications]);
+
+  const refetch = useCallback(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   return {
     notifications,
     unreadCount,
+    isLoading,
+    error,
     markAsRead,
     markAllAsRead,
-    addNotification,
+    deleteNotification,
     clearNotifications,
+    refetch,
   };
 }
