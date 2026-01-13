@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePayfastCheckout } from "@/hooks/usePayfast";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
+import { PaymentRetryStatus } from "@/components/billing/PaymentRetryStatus";
 import {
   CreditCard,
   Check,
@@ -176,6 +177,9 @@ const Subscription = () => {
         />
 
         <main className="p-6">
+          {/* Payment Retry Warning - shown at top if there are failed payments */}
+          <PaymentRetryStatus variant="full" />
+          
           {/* Current Plan Overview */}
           <Card className="mb-8">
             <CardHeader>
