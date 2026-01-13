@@ -70,6 +70,9 @@ $router->post('/verify-email', [AuthController::class, 'verifyEmail']);
 $router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
 $router->post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Admin setup route (temporary - disable after initial setup)
+$router->post('/admin/setup', [AuthController::class, 'createAdmin']);
+
 // Google OAuth routes
 $router->get('/auth/google', [GoogleAuthController::class, 'getAuthUrl']);
 $router->post('/auth/google/callback', [GoogleAuthController::class, 'callback']);
