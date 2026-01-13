@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
-import { authService } from "@/services/api";
+import api, { authService } from "@/services/api";
+import { setAdminToken } from "@/pages/admin/AdminLogin";
 import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
 import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
+
+const ADMIN_EMAIL = "godtheson@ieosuia.com";
 
 const Login = () => {
   const { toast } = useToast();
@@ -23,6 +26,10 @@ const Login = () => {
     email: "",
     password: "",
   });
+  
+  // Admin multi-step login state
+  const [adminStep, setAdminStep] = useState(0); // 0 = not admin, 1-3 = admin steps
+  const [adminSessionToken, setAdminSessionToken] = useState<string | null>(null);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -74,6 +81,18 @@ const Login = () => {
     }
   };
 
+  // Check if email is admin email
+  const isAdminEmail = formData.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  
+  // Reset admin state when email changes away from admin email
+  useEffect(() => {
+    if (!isAdminEmail && adminStep > 0) {
+      setAdminStep(0);
+      setAdminSessionToken(null);
+      setFormData(prev => ({ ...prev, password: "" }));
+    }
+  }, [formData.email, isAdminEmail, adminStep]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -93,6 +112,58 @@ const Login = () => {
       }
     }
 
+    // Check if this is admin email - handle multi-step auth
+    if (isAdminEmail) {
+      try {
+        const currentStep = adminStep === 0 ? 1 : adminStep;
+        const response = await api.post('/login', {
+          email: formData.email,
+          password: formData.password,
+          recaptcha_token: recaptchaToken,
+          admin_step: currentStep,
+          admin_session_token: adminSessionToken,
+        });
+        
+        const data = response.data;
+        
+        if (data.admin_login) {
+          if (data.success && data.admin_token) {
+            // Admin login complete
+            setAdminToken(data.admin_token);
+            toast({
+              title: "Admin login successful!",
+              description: "Redirecting to admin dashboard...",
+            });
+            navigate("/admin");
+          } else if (data.step) {
+            // Move to next step
+            setAdminStep(data.step);
+            setAdminSessionToken(data.session_token);
+            setFormData(prev => ({ ...prev, password: "" }));
+            toast({
+              title: `Step ${currentStep} verified`,
+              description: data.message || `Enter password ${data.step}`,
+            });
+          }
+        }
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error || "Invalid credentials";
+        toast({
+          title: "Admin login failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        // Reset on failure
+        if (adminStep > 0) {
+          setAdminStep(0);
+          setAdminSessionToken(null);
+        }
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    // Regular user login
     const result = await login(formData.email, formData.password, recaptchaToken || undefined);
 
     if (result.success) {
@@ -110,6 +181,19 @@ const Login = () => {
     }
 
     setIsLoading(false);
+  };
+  
+  const getPasswordLabel = () => {
+    if (!isAdminEmail) return "Password";
+    if (adminStep === 0) return "Password 1 of 3";
+    if (adminStep === 2) return "Password 2 of 3";
+    if (adminStep === 3) return "Password 3 of 3";
+    return "Password";
+  };
+  
+  const getPasswordPlaceholder = () => {
+    if (!isAdminEmail) return "••••••••";
+    return `Enter password ${adminStep === 0 ? 1 : adminStep}`;
   };
 
   return (
@@ -154,18 +238,24 @@ const Login = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label htmlFor="password" className="block text-sm font-medium text-foreground">
-                    Password
+                    {getPasswordLabel()}
                   </label>
-                  <Link to="/forgot-password" className="text-sm text-accent hover:underline">
-                    Forgot password?
-                  </Link>
+                  {!isAdminEmail && (
+                    <Link to="/forgot-password" className="text-sm text-accent hover:underline">
+                      Forgot password?
+                    </Link>
+                  )}
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  {isAdminEmail && adminStep > 0 ? (
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent" />
+                  ) : (
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  )}
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder={getPasswordPlaceholder()}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
@@ -179,11 +269,23 @@ const Login = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {isAdminEmail && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className={`h-1.5 flex-1 rounded-full ${adminStep >= 1 ? 'bg-accent' : 'bg-muted'}`} />
+                    <div className={`h-1.5 flex-1 rounded-full ${adminStep >= 2 ? 'bg-accent' : 'bg-muted'}`} />
+                    <div className={`h-1.5 flex-1 rounded-full ${adminStep >= 3 ? 'bg-accent' : 'bg-muted'}`} />
+                  </div>
+                )}
               </div>
 
               <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isLoading}>
                 {isLoading ? (
-                  "Signing in..."
+                  "Verifying..."
+                ) : isAdminEmail ? (
+                  <>
+                    {adminStep === 0 ? "Verify Password 1" : `Verify Password ${adminStep}`}
+                    <KeyRound className="w-4 h-4" />
+                  </>
                 ) : (
                   <>
                     Sign In
