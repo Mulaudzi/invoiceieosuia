@@ -219,7 +219,7 @@ class ReportController {
     public function billingHistory(): void {
         $userId = Auth::id();
         
-        $db = Database::getInstance()->getConnection();
+        $db = Database::getConnection();
         
         // Get payment transactions (subscription payments)
         $stmt = $db->prepare("
