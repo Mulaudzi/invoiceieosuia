@@ -109,6 +109,15 @@ $router->get('/clients/{id}', [ClientController::class, 'show'], [AuthMiddleware
 $router->put('/clients/{id}', [ClientController::class, 'update'], [AuthMiddleware::class]);
 $router->delete('/clients/{id}', [ClientController::class, 'destroy'], [AuthMiddleware::class]);
 
+// Client Groups
+$router->get('/client-groups', [ClientGroupController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/client-groups', [ClientGroupController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/client-groups/{id}', [ClientGroupController::class, 'show'], [AuthMiddleware::class]);
+$router->put('/client-groups/{id}', [ClientGroupController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/client-groups/{id}', [ClientGroupController::class, 'destroy'], [AuthMiddleware::class]);
+$router->post('/client-groups/{id}/assign', [ClientGroupController::class, 'assignClients'], [AuthMiddleware::class]);
+$router->post('/client-groups/{id}/remove', [ClientGroupController::class, 'removeClients'], [AuthMiddleware::class]);
+
 // Products
 $router->get('/products', [ProductController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/products/categories', [ProductController::class, 'categories'], [AuthMiddleware::class]);
@@ -148,13 +157,24 @@ $router->get('/reports/billing-history', [ReportController::class, 'billingHisto
 $router->get('/reports/extended-stats', [ReportController::class, 'extendedStats'], [AuthMiddleware::class]);
 $router->get('/reports/monthly-stats', [ReportController::class, 'monthlyStats'], [AuthMiddleware::class]);
 
-// Templates
+// Templates (Invoice)
 $router->get('/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/templates', [TemplateController::class, 'store'], [AuthMiddleware::class]);
 $router->get('/templates/{id}', [TemplateController::class, 'show'], [AuthMiddleware::class]);
 $router->put('/templates/{id}', [TemplateController::class, 'update'], [AuthMiddleware::class]);
 $router->delete('/templates/{id}', [TemplateController::class, 'destroy'], [AuthMiddleware::class]);
 $router->post('/templates/{id}/set-default', [TemplateController::class, 'setDefault'], [AuthMiddleware::class]);
+
+// Message Templates (Email/SMS)
+$router->get('/message-templates', [MessageTemplateController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/message-templates/email', [MessageTemplateController::class, 'getEmailTemplates'], [AuthMiddleware::class]);
+$router->get('/message-templates/sms', [MessageTemplateController::class, 'getSmsTemplates'], [AuthMiddleware::class]);
+$router->post('/message-templates/email', [MessageTemplateController::class, 'saveEmailTemplate'], [AuthMiddleware::class]);
+$router->post('/message-templates/sms', [MessageTemplateController::class, 'saveSmsTemplate'], [AuthMiddleware::class]);
+$router->get('/message-templates/{id}', [MessageTemplateController::class, 'show'], [AuthMiddleware::class]);
+$router->put('/message-templates/{id}', [MessageTemplateController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/message-templates/{id}', [MessageTemplateController::class, 'destroy'], [AuthMiddleware::class]);
+$router->post('/message-templates/reset', [MessageTemplateController::class, 'resetToDefaults'], [AuthMiddleware::class]);
 
 // Notifications
 $router->post('/invoices/{id}/send', [NotificationController::class, 'sendEmail'], [AuthMiddleware::class]);
