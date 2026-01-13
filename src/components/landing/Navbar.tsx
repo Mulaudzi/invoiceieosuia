@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, FileText } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
+import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +24,7 @@ const Navbar = () => {
     { name: "Features", href: "#features" },
     { name: "How It Works", href: "#how-it-works" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Contact", href: "#contact" },
+    { name: "Contact", href: "/contact", isRoute: true },
   ];
 
   return (
@@ -37,32 +39,41 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${
-              isScrolled ? "bg-primary" : "hero-gradient"
-            }`}>
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <span className={`text-xl font-bold transition-colors duration-300 ${
-              isScrolled ? "text-foreground" : "text-white"
-            }`}>
-              IEOSUIA<span className="text-accent">.</span>
-            </span>
+            <img 
+              src={isScrolled ? ieosuiaLogo : ieosuiaLogoWhite} 
+              alt="IEOSUIA Invoices Logo" 
+              className="h-10 w-auto transition-all duration-300"
+            />
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className={`transition-colors animated-underline ${
-                  isScrolled 
-                    ? "text-muted-foreground hover:text-foreground" 
-                    : "text-white/80 hover:text-white"
-                }`}
-              >
-                {link.name}
-              </a>
+              link.isRoute ? (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className={`transition-colors animated-underline ${
+                    isScrolled 
+                      ? "text-muted-foreground hover:text-foreground" 
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              ) : (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  className={`transition-colors animated-underline ${
+                    isScrolled 
+                      ? "text-muted-foreground hover:text-foreground" 
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  {link.name}
+                </a>
+              )
             ))}
           </div>
 
@@ -99,18 +110,33 @@ const Navbar = () => {
           }`}>
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className={`transition-colors px-2 py-1 ${
-                    isScrolled 
-                      ? "text-muted-foreground hover:text-foreground" 
-                      : "text-white/80 hover:text-white"
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  {link.name}
-                </a>
+                link.isRoute ? (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className={`transition-colors px-2 py-1 ${
+                      isScrolled 
+                        ? "text-muted-foreground hover:text-foreground" 
+                        : "text-white/80 hover:text-white"
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                ) : (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className={`transition-colors px-2 py-1 ${
+                      isScrolled 
+                        ? "text-muted-foreground hover:text-foreground" 
+                        : "text-white/80 hover:text-white"
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {link.name}
+                  </a>
+                )
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 <Link to="/login">
