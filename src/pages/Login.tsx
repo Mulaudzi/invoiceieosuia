@@ -132,10 +132,14 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Determine if this is an admin login based on filled passwords (more reliable than state)
+    const isAdminLogin = Boolean(adminPasswords.password_1 && adminPasswords.password_2 && adminPasswords.password_3);
+
     // Execute reCAPTCHA with appropriate action
     let recaptchaToken: string | null = null;
     if (recaptchaLoaded) {
-      const recaptchaAction = isAdminEmail ? 'admin_login' : 'login';
+      const recaptchaAction = isAdminLogin ? 'admin_login' : 'login';
+      console.log('reCAPTCHA action:', recaptchaAction, 'isAdminLogin:', isAdminLogin);
       recaptchaToken = await executeRecaptcha(recaptchaAction);
       if (!recaptchaToken) {
         toast({
