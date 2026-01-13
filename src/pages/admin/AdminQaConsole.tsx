@@ -33,6 +33,7 @@ import {
   Loader2,
   Info,
   ArrowRightLeft,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -262,19 +263,22 @@ const AdminQaConsole = () => {
     if (!token) return;
 
     try {
-      await api.post('/admin/qa/seed', { system: selectedSystem }, {
+      const response = await api.post('/admin/qa/seed', { system: selectedSystem }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTestDataSeeded(true);
+      const seeded = response.data?.seeded;
       toast({
-        title: "Test data seeded",
-        description: `Tagged test data created for ${selectedSystem} system`,
+        title: "Test data seeded successfully",
+        description: seeded 
+          ? `Created: ${Object.entries(seeded).map(([k, v]) => `${k}: ${v}`).join(', ')}`
+          : `Tagged test data created for ${selectedSystem} system`,
       });
-    } catch {
+    } catch (error: any) {
       toast({
-        title: "Seeding skipped",
-        description: "Seed endpoint not implemented - tests will use existing data",
-        variant: "default",
+        title: "Seeding failed",
+        description: error.response?.data?.message || "Failed to seed test data",
+        variant: "destructive",
       });
     }
   };
@@ -285,20 +289,73 @@ const AdminQaConsole = () => {
     if (!token) return;
 
     try {
-      await api.delete('/admin/qa/cleanup', {
+      const response = await api.delete('/admin/qa/cleanup', {
         headers: { Authorization: `Bearer ${token}` },
         data: { system: selectedSystem }
       });
       setTestDataSeeded(false);
+      const cleaned = response.data?.cleaned;
       toast({
-        title: "Test data cleaned",
-        description: "All tagged test data removed",
+        title: "Test data cleaned successfully",
+        description: cleaned
+          ? `Deleted: ${Object.entries(cleaned).map(([k, v]) => `${k}: ${v}`).join(', ')}`
+          : "All tagged test data removed",
       });
-    } catch {
+    } catch (error: any) {
       toast({
-        title: "Cleanup skipped",
-        description: "Cleanup endpoint not implemented",
-        variant: "default",
+        title: "Cleanup failed",
+        description: error.response?.data?.message || "Failed to cleanup test data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Check test data status
+  const checkTestDataStatus = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      const response = await api.get('/admin/qa/status', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const counts = response.data?.test_data_counts;
+      setTestDataSeeded(response.data?.has_test_data || false);
+      toast({
+        title: "Test Data Status",
+        description: counts 
+          ? `Clients: ${counts.clients}, Products: ${counts.products}, Invoices: ${counts.invoices}, Logs: ${counts.notification_logs}`
+          : "No test data found",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Status check failed",
+        description: error.response?.data?.message || "Failed to check status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Run system health check
+  const runHealthCheck = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      const response = await api.get('/admin/qa/health', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const health = response.data;
+      toast({
+        title: `System Health: ${health.overall_status?.toUpperCase()}`,
+        description: `Database: ${health.checks?.database?.[0]?.status || 'unknown'}, Tables: ${health.checks?.tables?.filter((t: any) => t.status === 'ok').length || 0} OK`,
+        variant: health.overall_status === 'healthy' ? 'default' : 'destructive',
+      });
+    } catch (error: any) {
+      toast({
+        title: "Health check failed",
+        description: error.response?.data?.message || "Failed to run health check",
+        variant: "destructive",
       });
     }
   };
@@ -525,17 +582,25 @@ const AdminQaConsole = () => {
         {/* Seeding Controls */}
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 Test Data Management
               </CardTitle>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={checkTestDataStatus}>
+                  <Info className="w-4 h-4 mr-2" />
+                  Check Status
+                </Button>
+                <Button variant="outline" size="sm" onClick={runHealthCheck}>
+                  <Activity className="w-4 h-4 mr-2" />
+                  Health Check
+                </Button>
                 <Button variant="outline" size="sm" onClick={seedTestData}>
                   <Upload className="w-4 h-4 mr-2" />
                   Seed {selectedSystem.toUpperCase()} Data
                 </Button>
-                <Button variant="outline" size="sm" onClick={cleanupTestData}>
+                <Button variant="outline" size="sm" onClick={cleanupTestData} className="text-destructive hover:text-destructive">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Cleanup
                 </Button>

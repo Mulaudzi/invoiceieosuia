@@ -205,6 +205,12 @@ $router->get('/admin/export/email-logs', [AdminController::class, 'exportEmailLo
 $router->get('/admin/export/submissions', [AdminController::class, 'exportSubmissions']);
 $router->get('/admin/reports/statistics', [AdminController::class, 'getStatisticsReport']);
 
+// QA Console Routes (Admin only)
+$router->post('/admin/qa/seed', [QaController::class, 'seed']);
+$router->delete('/admin/qa/cleanup', [QaController::class, 'cleanup']);
+$router->get('/admin/qa/status', [QaController::class, 'status']);
+$router->get('/admin/qa/health', [QaController::class, 'healthCheck']);
+
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);
 $router->post('/webhooks/email-delivery', [WebhookController::class, 'handleDelivery']);
