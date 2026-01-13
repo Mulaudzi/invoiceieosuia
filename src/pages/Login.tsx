@@ -31,13 +31,14 @@ const Login = () => {
     }
   }, [user, navigate]);
 
-  // Handle Google OAuth callback
+  // Handle Google OAuth callback - redirect to dedicated callback page
   useEffect(() => {
     const code = searchParams.get('code');
     if (code) {
-      handleGoogleCallback(code);
+      // Redirect to the dedicated callback handler to avoid duplicate processing
+      navigate(`/auth/google/callback?code=${encodeURIComponent(code)}`, { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   // Keyboard shortcut: Ctrl+Shift+A (Windows) or Cmd+Shift+A (Mac) to go to admin login
   useEffect(() => {
@@ -53,26 +54,6 @@ const Login = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate]);
 
-  const handleGoogleCallback = async (code: string) => {
-    setIsGoogleLoading(true);
-    try {
-      await authService.googleCallback(code);
-      toast({
-        title: "Login successful!",
-        description: "Welcome back!",
-      });
-      navigate("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Google login failed",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
@@ -87,6 +68,8 @@ const Login = () => {
       setIsGoogleLoading(false);
     }
   };
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
