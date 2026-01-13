@@ -426,7 +426,7 @@ class AdminController {
     }
     
     /**
-     * Get dashboard stats
+     * Get dashboard stats with enhanced analytics
      */
     public function getDashboard(): void {
         if (!self::verifyAdminToken()) return;
@@ -456,6 +456,36 @@ class AdminController {
         ");
         $todaySubmissions = $stmt->fetch()['count'];
         
+        // This week's submissions
+        $stmt = $db->query("
+            SELECT COUNT(*) as count 
+            FROM contact_submissions 
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        ");
+        $weekSubmissions = $stmt->fetch()['count'];
+        
+        // This month's submissions
+        $stmt = $db->query("
+            SELECT COUNT(*) as count 
+            FROM contact_submissions 
+            WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())
+        ");
+        $monthSubmissions = $stmt->fetch()['count'];
+        
+        // Calculate response rate (responded / total)
+        $totalSubmissions = (int)$submissionStats['total'];
+        $respondedCount = (int)$submissionStats['responded_count'];
+        $responseRate = $totalSubmissions > 0 ? round(($respondedCount / $totalSubmissions) * 100, 1) : 0;
+        
+        // Calculate average response time (for submissions that have been responded to)
+        $stmt = $db->query("
+            SELECT AVG(TIMESTAMPDIFF(HOUR, created_at, responded_at)) as avg_hours
+            FROM contact_submissions 
+            WHERE status = 'responded' AND responded_at IS NOT NULL
+        ");
+        $avgResponseResult = $stmt->fetch();
+        $avgResponseHours = $avgResponseResult['avg_hours'] ? round($avgResponseResult['avg_hours'], 1) : null;
+        
         // Email logs stats
         $stmt = $db->query("
             SELECT 
@@ -468,6 +498,27 @@ class AdminController {
         ");
         $emailStats = $stmt->fetch();
         
+        // Email delivery rate
+        $totalEmails = (int)$emailStats['total'];
+        $sentEmails = (int)$emailStats['sent_count'];
+        $deliveryRate = $totalEmails > 0 ? round(($sentEmails / $totalEmails) * 100, 1) : 0;
+        
+        // Bounce rate
+        $bouncedEmails = (int)$emailStats['bounced_count'];
+        $bounceRate = $totalEmails > 0 ? round(($bouncedEmails / $totalEmails) * 100, 1) : 0;
+        
+        // Submissions trend (last 7 days)
+        $stmt = $db->query("
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as count
+            FROM contact_submissions
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        ");
+        $dailyTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         // Recent submissions
         $stmt = $db->query("
             SELECT * FROM contact_submissions 
@@ -479,7 +530,7 @@ class AdminController {
         // Recent failed emails
         $stmt = $db->query("
             SELECT * FROM email_logs 
-            WHERE status = 'failed' 
+            WHERE status IN ('failed', 'bounced')
             ORDER BY created_at DESC 
             LIMIT 5
         ");
@@ -487,28 +538,115 @@ class AdminController {
         
         Response::json([
             'submissions' => [
-                'total' => (int)$submissionStats['total'],
+                'total' => $totalSubmissions,
                 'new' => (int)$submissionStats['new_count'],
                 'read' => (int)$submissionStats['read_count'],
-                'responded' => (int)$submissionStats['responded_count'],
+                'responded' => $respondedCount,
                 'archived' => (int)$submissionStats['archived_count'],
                 'today' => (int)$todaySubmissions,
+                'this_week' => (int)$weekSubmissions,
+                'this_month' => (int)$monthSubmissions,
+                'response_rate' => $responseRate,
+                'avg_response_hours' => $avgResponseHours,
                 'by_purpose' => [
                     'general' => (int)$submissionStats['general_count'],
                     'support' => (int)$submissionStats['support_count'],
                     'sales' => (int)$submissionStats['sales_count'],
-                ]
+                ],
+                'daily_trend' => $dailyTrend,
             ],
             'emails' => [
-                'total' => (int)$emailStats['total'],
-                'sent' => (int)$emailStats['sent_count'],
+                'total' => $totalEmails,
+                'sent' => $sentEmails,
                 'failed' => (int)$emailStats['failed_count'],
-                'bounced' => (int)$emailStats['bounced_count'],
+                'bounced' => $bouncedEmails,
                 'pending' => (int)$emailStats['pending_count'],
+                'delivery_rate' => $deliveryRate,
+                'bounce_rate' => $bounceRate,
             ],
             'recent_submissions' => $recentSubmissions,
             'recent_failed_emails' => $recentFailedEmails,
         ]);
+    }
+    
+    /**
+     * Get notification settings
+     */
+    public function getNotificationSettings(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $db = Database::getConnection();
+        
+        try {
+            $stmt = $db->query("SELECT * FROM admin_notification_settings ORDER BY notification_type");
+            $settings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            Response::json(['settings' => $settings]);
+        } catch (\Exception $e) {
+            // Table might not exist
+            Response::json(['settings' => []]);
+        }
+    }
+    
+    /**
+     * Update notification settings
+     */
+    public function updateNotificationSettings(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $data = $request->all();
+        
+        $notificationType = $data['notification_type'] ?? '';
+        
+        if (empty($notificationType)) {
+            Response::error('Notification type is required', 400);
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        $updates = [];
+        $params = [];
+        
+        if (isset($data['enabled'])) {
+            $updates[] = 'enabled = ?';
+            $params[] = $data['enabled'] ? 1 : 0;
+        }
+        
+        if (isset($data['email_recipients'])) {
+            $updates[] = 'email_recipients = ?';
+            $params[] = trim($data['email_recipients']);
+        }
+        
+        if (empty($updates)) {
+            Response::error('No updates provided', 400);
+            return;
+        }
+        
+        $params[] = $notificationType;
+        
+        $stmt = $db->prepare("
+            UPDATE admin_notification_settings 
+            SET " . implode(', ', $updates) . "
+            WHERE notification_type = ?
+        ");
+        $stmt->execute($params);
+        
+        if ($stmt->rowCount() === 0) {
+            // Insert if doesn't exist
+            $stmt = $db->prepare("
+                INSERT INTO admin_notification_settings (notification_type, enabled, email_recipients)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([
+                $notificationType,
+                $data['enabled'] ?? true ? 1 : 0,
+                $data['email_recipients'] ?? ''
+            ]);
+        }
+        
+        Response::json(['success' => true, 'message' => 'Settings updated']);
     }
     
     // ==================== Helper Methods ====================

@@ -199,6 +199,8 @@ $router->put('/admin/submissions/{id}', [AdminController::class, 'updateSubmissi
 $router->delete('/admin/submissions/{id}', [AdminController::class, 'deleteSubmission']);
 $router->post('/admin/submissions/{id}/read', [AdminController::class, 'markAsRead']);
 $router->get('/admin/email-logs', [AdminController::class, 'getEmailLogs']);
+$router->get('/admin/notification-settings', [AdminController::class, 'getNotificationSettings']);
+$router->put('/admin/notification-settings', [AdminController::class, 'updateNotificationSettings']);
 
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);

@@ -43,6 +43,7 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
 import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="/admin/submissions" element={<AdminSubmissions />} />
               <Route path="/admin/submissions/:id" element={<AdminSubmissions />} />
               <Route path="/admin/email-logs" element={<AdminEmailLogs />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
               
               {/* Email Verification Reminder (requires auth but not verification) */}
               <Route path="/verify-email-reminder" element={<ProtectedRoute requireVerified={false}><VerifyEmailReminder /></ProtectedRoute>} />

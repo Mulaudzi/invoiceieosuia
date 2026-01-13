@@ -13,10 +13,16 @@ import {
   Clock,
   TrendingUp,
   Users,
-  Send
+  Send,
+  Settings,
+  Percent,
+  Timer,
+  Calendar,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
@@ -29,11 +35,16 @@ interface DashboardStats {
     responded: number;
     archived: number;
     today: number;
+    this_week: number;
+    this_month: number;
+    response_rate: number;
+    avg_response_hours: number | null;
     by_purpose: {
       general: number;
       support: number;
       sales: number;
     };
+    daily_trend: { date: string; count: number }[];
   };
   emails: {
     total: number;
@@ -41,6 +52,8 @@ interface DashboardStats {
     failed: number;
     bounced: number;
     pending: number;
+    delivery_rate: number;
+    bounce_rate: number;
   };
   recent_submissions: any[];
   recent_failed_emails: any[];
@@ -177,6 +190,13 @@ const AdminDashboard = () => {
               <Mail className="w-4 h-4" />
               Email Logs
             </Link>
+            <Link 
+              to="/admin/settings" 
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Settings
+            </Link>
           </div>
         </div>
       </nav>
@@ -242,6 +262,125 @@ const AdminDashboard = () => {
               <p className="text-xs text-muted-foreground mt-1">
                 Need attention
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Response Rate
+              </CardTitle>
+              <Percent className="w-4 h-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats?.submissions.response_rate || 0}%</div>
+              <Progress 
+                value={stats?.submissions.response_rate || 0} 
+                className="mt-2 h-2"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                {stats?.submissions.responded || 0} of {stats?.submissions.total || 0} responded
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Avg Response Time
+              </CardTitle>
+              <Timer className="w-4 h-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {stats?.submissions.avg_response_hours !== null 
+                  ? `${stats.submissions.avg_response_hours}h`
+                  : 'N/A'}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Average time to respond
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Email Delivery Rate
+              </CardTitle>
+              <Activity className="w-4 h-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{stats?.emails.delivery_rate || 0}%</div>
+              <Progress 
+                value={stats?.emails.delivery_rate || 0} 
+                className="mt-2 h-2"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                {stats?.emails.sent || 0} delivered successfully
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Bounce Rate
+              </CardTitle>
+              <AlertCircle className="w-4 h-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${(stats?.emails.bounce_rate || 0) > 5 ? 'text-destructive' : 'text-green-600'}`}>
+                {stats?.emails.bounce_rate || 0}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats?.emails.bounced || 0} emails bounced
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Time-Based Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                Today
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.submissions.today || 0}</div>
+              <p className="text-xs text-muted-foreground">submissions today</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-purple-500" />
+                This Week
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.submissions.this_week || 0}</div>
+              <p className="text-xs text-muted-foreground">submissions this week</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-green-500" />
+                This Month
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.submissions.this_month || 0}</div>
+              <p className="text-xs text-muted-foreground">submissions this month</p>
             </CardContent>
           </Card>
         </div>
