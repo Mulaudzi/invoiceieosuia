@@ -1,31 +1,56 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
 import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
+// Pages that have dark headers (PageHeader component with bg-primary)
+const DARK_HEADER_PAGES = [
+  '/support',
+  '/faq',
+  '/documentation',
+  '/careers',
+  '/privacy-policy',
+  '/terms-of-service',
+  '/cookie-policy',
+  '/contact',
+  '/popia-compliance'
+];
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const location = useLocation();
+
+  // Check if current page has a dark header
+  const hasDarkHeader = DARK_HEADER_PAGES.includes(location.pathname);
+  
+  // For pages with dark headers, threshold is much smaller (just past the header)
+  const scrollThreshold = hasDarkHeader ? 150 : window.innerHeight * 0.85;
 
   useEffect(() => {
     const handleScroll = () => {
-      // Get hero section height (approximately viewport height)
-      const heroHeight = window.innerHeight * 0.85;
-      setIsScrolled(window.scrollY > heroHeight);
+      const threshold = hasDarkHeader ? 150 : window.innerHeight * 0.85;
+      setIsScrolled(window.scrollY > threshold);
     };
+
+    // Check initial scroll position
+    handleScroll();
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [hasDarkHeader]);
 
   const navLinks = [
-    { name: "Features", href: "#features" },
-    { name: "How It Works", href: "#how-it-works" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "Features", href: "/#features", isRoute: true },
+    { name: "How It Works", href: "/#how-it-works", isRoute: true },
+    { name: "Pricing", href: "/#pricing", isRoute: true },
     { name: "Contact", href: "/contact", isRoute: true },
   ];
+
+  // Use dark styling when not scrolled (either on landing page or pages with dark headers)
+  const useDarkStyling = !isScrolled;
 
   return (
     <nav 
@@ -40,7 +65,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img 
-              src={isScrolled ? ieosuiaLogo : ieosuiaLogoWhite} 
+              src={useDarkStyling ? ieosuiaLogoWhite : ieosuiaLogo} 
               alt="IEOSUIA Invoices Logo" 
               className="h-10 w-auto transition-all duration-300"
             />
@@ -54,9 +79,9 @@ const Navbar = () => {
                   key={link.name}
                   to={link.href}
                   className={`transition-colors animated-underline ${
-                    isScrolled 
-                      ? "text-muted-foreground hover:text-foreground" 
-                      : "text-white/80 hover:text-white"
+                    useDarkStyling 
+                      ? "text-white/80 hover:text-white" 
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {link.name}
@@ -66,9 +91,9 @@ const Navbar = () => {
                   key={link.name}
                   href={link.href}
                   className={`transition-colors animated-underline ${
-                    isScrolled 
-                      ? "text-muted-foreground hover:text-foreground" 
-                      : "text-white/80 hover:text-white"
+                    useDarkStyling 
+                      ? "text-white/80 hover:text-white" 
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {link.name}
@@ -81,8 +106,8 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login">
               <Button 
-                variant={isScrolled ? "ghost" : "ghost"} 
-                className={isScrolled ? "" : "text-white hover:bg-white/10"}
+                variant="ghost" 
+                className={useDarkStyling ? "text-white hover:bg-white/10" : ""}
               >
                 Login
               </Button>
@@ -96,7 +121,7 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className={`md:hidden p-2 transition-colors ${isScrolled ? "text-foreground" : "text-white"}`}
+            className={`md:hidden p-2 transition-colors ${useDarkStyling ? "text-white" : "text-foreground"}`}
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -106,7 +131,7 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isOpen && (
           <div className={`md:hidden py-4 border-t animate-fade-in ${
-            isScrolled ? "border-border bg-white" : "border-white/10 bg-primary/95 backdrop-blur-lg"
+            useDarkStyling ? "border-white/10 bg-primary/95 backdrop-blur-lg" : "border-border bg-white"
           }`}>
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
@@ -115,9 +140,9 @@ const Navbar = () => {
                     key={link.name}
                     to={link.href}
                     className={`transition-colors px-2 py-1 ${
-                      isScrolled 
-                        ? "text-muted-foreground hover:text-foreground" 
-                        : "text-white/80 hover:text-white"
+                      useDarkStyling 
+                        ? "text-white/80 hover:text-white" 
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     onClick={() => setIsOpen(false)}
                   >
@@ -128,9 +153,9 @@ const Navbar = () => {
                     key={link.name}
                     href={link.href}
                     className={`transition-colors px-2 py-1 ${
-                      isScrolled 
-                        ? "text-muted-foreground hover:text-foreground" 
-                        : "text-white/80 hover:text-white"
+                      useDarkStyling 
+                        ? "text-white/80 hover:text-white" 
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     onClick={() => setIsOpen(false)}
                   >
@@ -140,7 +165,7 @@ const Navbar = () => {
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 <Link to="/login">
-                  <Button variant="ghost" className={`w-full ${isScrolled ? "" : "text-white"}`}>
+                  <Button variant="ghost" className={`w-full ${useDarkStyling ? "text-white" : ""}`}>
                     Login
                   </Button>
                 </Link>
