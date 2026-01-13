@@ -132,6 +132,10 @@ $router->get('/payments/summary', [PaymentController::class, 'summary'], [AuthMi
 $router->get('/payments/{id}', [PaymentController::class, 'show'], [AuthMiddleware::class]);
 $router->delete('/payments/{id}', [PaymentController::class, 'destroy'], [AuthMiddleware::class]);
 
+// Payment History
+$router->get('/payment-history', [PaymentHistoryController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/payment-history/summary', [PaymentHistoryController::class, 'summary'], [AuthMiddleware::class]);
+
 // Reports
 $router->get('/reports/dashboard', [ReportController::class, 'dashboard'], [AuthMiddleware::class]);
 $router->get('/reports/monthly-revenue', [ReportController::class, 'monthlyRevenue'], [AuthMiddleware::class]);
@@ -167,7 +171,15 @@ $router->delete('/gdpr/delete', [GdprController::class, 'delete'], [AuthMiddlewa
 
 // PayFast Routes
 $router->post('/payfast/checkout', [PayfastController::class, 'checkout'], [AuthMiddleware::class]);
+$router->post('/payfast/invoice', [PayfastController::class, 'invoicePayment'], [AuthMiddleware::class]);
 $router->post('/payfast/webhook', [PayfastController::class, 'webhook']);
+$router->post('/payfast/invoice-webhook', [PayfastController::class, 'invoiceWebhook']);
+
+// Paystack Routes
+$router->post('/paystack/initialize', [PaystackController::class, 'initialize'], [AuthMiddleware::class]);
+$router->get('/paystack/verify/{reference}', [PaystackController::class, 'verify'], [AuthMiddleware::class]);
+$router->post('/paystack/webhook', [PaystackController::class, 'webhook']);
+$router->get('/paystack/config', [PaystackController::class, 'config']);
 
 // Currency Routes
 $router->get('/currencies', [CurrencyController::class, 'index']);
