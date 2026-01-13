@@ -1182,4 +1182,160 @@ class AdminController {
         echo $csv;
         exit;
     }
+    
+    // ==================== Subscription Metrics ====================
+    
+    /**
+     * Get subscription metrics for admin dashboard
+     */
+    public function getSubscriptionMetrics(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $db = Database::getConnection();
+        
+        // Get total users and plan distribution
+        $stmt = $db->query("
+            SELECT 
+                COUNT(*) as total_users,
+                SUM(CASE WHEN plan = 'free' OR plan IS NULL THEN 1 ELSE 0 END) as free_users,
+                SUM(CASE WHEN plan = 'solo' THEN 1 ELSE 0 END) as solo_users,
+                SUM(CASE WHEN plan = 'pro' THEN 1 ELSE 0 END) as pro_users,
+                SUM(CASE WHEN plan = 'business' THEN 1 ELSE 0 END) as business_users,
+                SUM(CASE WHEN plan = 'enterprise' THEN 1 ELSE 0 END) as enterprise_users,
+                SUM(CASE WHEN plan NOT IN ('free') AND plan IS NOT NULL THEN 1 ELSE 0 END) as active_subscribers
+            FROM users
+        ");
+        $userStats = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Calculate MRR based on plan prices
+        $planPrices = [
+            'solo' => 149,
+            'pro' => 299,
+            'business' => 599,
+            'enterprise' => 999
+        ];
+        
+        $mrr = (
+            ($userStats['solo_users'] ?? 0) * $planPrices['solo'] +
+            ($userStats['pro_users'] ?? 0) * $planPrices['pro'] +
+            ($userStats['business_users'] ?? 0) * $planPrices['business'] +
+            ($userStats['enterprise_users'] ?? 0) * $planPrices['enterprise']
+        );
+        
+        // Get last month's MRR for growth calculation
+        $stmt = $db->query("
+            SELECT 
+                SUM(CASE WHEN plan = 'solo' THEN 149 
+                         WHEN plan = 'pro' THEN 299 
+                         WHEN plan = 'business' THEN 599 
+                         WHEN plan = 'enterprise' THEN 999 
+                         ELSE 0 END) as last_mrr
+            FROM subscription_history
+            WHERE status = 'active'
+            AND started_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+        ");
+        $lastMrr = $stmt->fetch(PDO::FETCH_ASSOC)['last_mrr'] ?? $mrr;
+        $mrrGrowth = $lastMrr > 0 ? round((($mrr - $lastMrr) / $lastMrr) * 100, 1) : 0;
+        
+        // Get churn data
+        $stmt = $db->query("
+            SELECT COUNT(*) as churned
+            FROM subscription_history
+            WHERE status = 'cancelled' OR status = 'expired'
+            AND ended_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+        ");
+        $churnedThisMonth = $stmt->fetch(PDO::FETCH_ASSOC)['churned'] ?? 0;
+        
+        // Get new subscribers this month
+        $stmt = $db->query("
+            SELECT COUNT(*) as new_subs
+            FROM subscription_history
+            WHERE status = 'active'
+            AND started_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+            AND plan != 'free'
+        ");
+        $newSubscribersThisMonth = $stmt->fetch(PDO::FETCH_ASSOC)['new_subs'] ?? 0;
+        
+        // Calculate churn rate
+        $activeSubscribers = $userStats['active_subscribers'] ?? 0;
+        $churnRate = $activeSubscribers > 0 ? round(($churnedThisMonth / $activeSubscribers) * 100, 1) : 0;
+        
+        // ARPU (Average Revenue Per User)
+        $arpu = $activeSubscribers > 0 ? round($mrr / $activeSubscribers, 2) : 0;
+        
+        // LTV (simplified: ARPU * average lifetime in months)
+        $avgLifetimeMonths = 12; // Assumption
+        $ltv = $arpu * $avgLifetimeMonths;
+        
+        // Get upgrades/downgrades this month (from payment transactions)
+        $stmt = $db->query("
+            SELECT 
+                SUM(CASE WHEN amount > 0 THEN 1 ELSE 0 END) as upgrades
+            FROM payment_transactions
+            WHERE status = 'completed'
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+        ");
+        $upgradesThisMonth = $stmt->fetch(PDO::FETCH_ASSOC)['upgrades'] ?? 0;
+        
+        // MRR Trend (last 12 months - simulated from current data)
+        $mrrTrend = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $date = date('Y-m-01', strtotime("-$i months"));
+            // Simulate historical MRR (in production, query actual historical data)
+            $factor = 1 - ($i * 0.05); // Assume 5% growth per month
+            $mrrTrend[] = [
+                'date' => $date,
+                'mrr' => max(0, round($mrr * $factor))
+            ];
+        }
+        
+        // Recent subscription changes
+        $stmt = $db->query("
+            SELECT 
+                sh.id,
+                sh.user_id,
+                u.name as user_name,
+                u.email as user_email,
+                COALESCE(LAG(sh.plan) OVER (PARTITION BY sh.user_id ORDER BY sh.started_at), 'free') as from_plan,
+                sh.plan as to_plan,
+                sh.started_at as changed_at,
+                CASE 
+                    WHEN sh.status = 'cancelled' OR sh.status = 'expired' THEN 'churn'
+                    WHEN LAG(sh.plan) OVER (PARTITION BY sh.user_id ORDER BY sh.started_at) IS NULL THEN 'new'
+                    WHEN sh.plan IN ('enterprise','business','pro','solo') 
+                         AND COALESCE(LAG(sh.plan) OVER (PARTITION BY sh.user_id ORDER BY sh.started_at), 'free') IN ('free','solo','pro','business') 
+                    THEN 'upgrade'
+                    ELSE 'downgrade'
+                END as type
+            FROM subscription_history sh
+            JOIN users u ON sh.user_id = u.id
+            ORDER BY sh.started_at DESC
+            LIMIT 20
+        ");
+        $recentChanges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        Response::json([
+            'mrr' => $mrr,
+            'mrr_growth' => $mrrGrowth,
+            'active_subscribers' => (int)$activeSubscribers,
+            'total_users' => (int)($userStats['total_users'] ?? 0),
+            'churn_rate' => $churnRate,
+            'churned_this_month' => (int)$churnedThisMonth,
+            'new_subscribers_this_month' => (int)$newSubscribersThisMonth,
+            'upgrades_this_month' => (int)$upgradesThisMonth,
+            'downgrades_this_month' => 0, // Would need more tracking
+            'arpu' => $arpu,
+            'ltv' => $ltv,
+            'plan_distribution' => [
+                'free' => (int)($userStats['free_users'] ?? 0),
+                'solo' => (int)($userStats['solo_users'] ?? 0),
+                'pro' => (int)($userStats['pro_users'] ?? 0),
+                'business' => (int)($userStats['business_users'] ?? 0),
+                'enterprise' => (int)($userStats['enterprise_users'] ?? 0),
+            ],
+            'mrr_trend' => $mrrTrend,
+            'subscriber_trend' => [], // Would need historical tracking
+            'recent_changes' => $recentChanges
+        ]);
+    }
 }

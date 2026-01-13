@@ -175,6 +175,17 @@ class PaystackController {
             case 'charge.failed':
                 $this->handleChargeFailed($event['data']);
                 break;
+            case 'subscription.create':
+                $this->handleSubscriptionCreate($event['data']);
+                break;
+            case 'subscription.not_renew':
+            case 'subscription.disable':
+                $this->handleSubscriptionCancel($event['data']);
+                break;
+            case 'invoice.create':
+            case 'invoice.update':
+                $this->handleSubscriptionInvoice($event['data']);
+                break;
             case 'transfer.success':
                 // Handle transfer success if needed
                 break;
@@ -372,6 +383,152 @@ class PaystackController {
         Response::json([
             'public_key' => $this->publicKey
         ]);
+    }
+    
+    /**
+     * Handle subscription creation
+     */
+    private function handleSubscriptionCreate(array $data): void {
+        $customerEmail = $data['customer']['email'] ?? '';
+        $planCode = $data['plan']['plan_code'] ?? '';
+        $subscriptionCode = $data['subscription_code'] ?? '';
+        
+        if (empty($customerEmail)) {
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Find user by email
+        $stmt = $db->prepare("SELECT id, name FROM users WHERE email = ?");
+        $stmt->execute([$customerEmail]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            error_log("Paystack subscription.create: User not found for email $customerEmail");
+            return;
+        }
+        
+        // Determine plan from plan code
+        $plan = $this->getPlanFromCode($planCode);
+        
+        // Update user plan and set renewal date (1 month from now)
+        $renewalDate = (new DateTime())->modify('+1 month')->format('Y-m-d');
+        
+        $stmt = $db->prepare("
+            UPDATE users 
+            SET plan = ?, subscription_renewal_date = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$plan, $renewalDate, $user['id']]);
+        
+        // Record in subscription history
+        $stmt = $db->prepare("
+            INSERT INTO subscription_history (user_id, plan, payment_reference, status, started_at)
+            VALUES (?, ?, ?, 'active', NOW())
+        ");
+        $stmt->execute([$user['id'], $plan, $subscriptionCode]);
+        
+        // Send confirmation email
+        Mailer::sendSubscriptionSuccessEmail($customerEmail, [
+            'name' => $user['name'],
+            'plan' => $plan,
+        ]);
+        
+        error_log("Paystack subscription created: user {$user['id']}, plan $plan");
+    }
+    
+    /**
+     * Handle subscription cancellation
+     */
+    private function handleSubscriptionCancel(array $data): void {
+        $customerEmail = $data['customer']['email'] ?? '';
+        $subscriptionCode = $data['subscription_code'] ?? '';
+        
+        if (empty($customerEmail)) {
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Find user by email
+        $stmt = $db->prepare("SELECT id, name, plan FROM users WHERE email = ?");
+        $stmt->execute([$customerEmail]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            return;
+        }
+        
+        // Update subscription history
+        $stmt = $db->prepare("
+            UPDATE subscription_history 
+            SET status = 'cancelled', ended_at = NOW()
+            WHERE user_id = ? AND status = 'active'
+        ");
+        $stmt->execute([$user['id']]);
+        
+        // Note: Don't immediately downgrade - let them use until end of billing period
+        // The processExpired cron job will handle downgrade after renewal date passes
+        
+        error_log("Paystack subscription cancelled: user {$user['id']}");
+    }
+    
+    /**
+     * Handle subscription invoice (for recurring billing)
+     */
+    private function handleSubscriptionInvoice(array $data): void {
+        $customerEmail = $data['customer']['email'] ?? '';
+        $amount = ($data['amount'] ?? 0) / 100;
+        $status = $data['status'] ?? '';
+        
+        if ($status === 'success' || $status === 'paid') {
+            $db = Database::getConnection();
+            
+            $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$customerEmail]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                // Extend renewal date by 1 month
+                $stmt = $db->prepare("
+                    UPDATE users 
+                    SET subscription_renewal_date = DATE_ADD(COALESCE(subscription_renewal_date, CURDATE()), INTERVAL 1 MONTH)
+                    WHERE id = ?
+                ");
+                $stmt->execute([$user['id']]);
+                
+                error_log("Paystack subscription renewed: user {$user['id']}, amount R$amount");
+            }
+        }
+    }
+    
+    /**
+     * Map Paystack plan code to internal plan name
+     */
+    private function getPlanFromCode(string $planCode): string {
+        // Map your Paystack plan codes to internal plan names
+        $planMap = [
+            'PLN_solo' => 'solo',
+            'PLN_pro' => 'pro',
+            'PLN_business' => 'business',
+            'PLN_enterprise' => 'enterprise',
+        ];
+        
+        foreach ($planMap as $code => $plan) {
+            if (stripos($planCode, $code) !== false) {
+                return $plan;
+            }
+        }
+        
+        // Try to infer from plan code name
+        $planCode = strtolower($planCode);
+        if (strpos($planCode, 'solo') !== false) return 'solo';
+        if (strpos($planCode, 'pro') !== false) return 'pro';
+        if (strpos($planCode, 'business') !== false) return 'business';
+        if (strpos($planCode, 'enterprise') !== false) return 'enterprise';
+        
+        return 'solo'; // Default
     }
     
     /**

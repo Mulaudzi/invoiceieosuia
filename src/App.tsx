@@ -50,8 +50,11 @@ import AdminQaConsole from "./pages/admin/AdminQaConsole";
 import AdminSetup from "./pages/AdminSetup";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import QaConsole from "./pages/QaConsole";
 import GoogleCallback from "./pages/GoogleCallback";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailed from "./pages/PaymentFailed";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,6 +92,8 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/auth/google/callback" element={<GoogleCallback />} />
               <Route path="/admin-setup" element={<AdminSetup />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
+              <Route path="/payment/failed" element={<PaymentFailed />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminIndex />} />
@@ -101,6 +106,7 @@ const App = () => (
               <Route path="/admin/qa" element={<AdminQaConsole />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/activity-logs" element={<AdminActivityLogs />} />
+              <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
               
               {/* Email Verification Reminder (requires auth but not verification) */}
               <Route path="/verify-email-reminder" element={<ProtectedRoute requireVerified={false}><VerifyEmailReminder /></ProtectedRoute>} />
