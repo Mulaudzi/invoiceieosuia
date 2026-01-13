@@ -11,6 +11,7 @@ import { User, Building2, CreditCard, LogOut, Loader2, Check, Download, Trash2, 
 import { Label } from "@/components/ui/label";
 import { PlanType } from "@/lib/types";
 import { LogoUpload } from "@/components/profile/LogoUpload";
+import { PaymentRetryStatus } from "@/components/billing/PaymentRetryStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -277,6 +278,10 @@ const Settings = () => {
               <CreditCard className="w-5 h-5" />
               Subscription Plan
             </h3>
+            
+            {/* Payment Retry Warning */}
+            <PaymentRetryStatus variant="full" />
+            
             <p className="text-muted-foreground mb-4">
               Current plan:{" "}
               <span className="font-medium text-accent capitalize">{user?.plan}</span>

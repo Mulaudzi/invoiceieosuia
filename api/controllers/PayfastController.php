@@ -300,6 +300,27 @@ class PayfastController {
             }
         } else if ($paymentStatus === 'FAILED' || $paymentStatus === 'CANCELLED') {
             // Handle failed payment
+            $failureReason = 'Payment was ' . strtolower($paymentStatus) . '.';
+            
+            // Update transaction with failure
+            $db->prepare("
+                UPDATE payment_transactions 
+                SET status = 'failed', 
+                    failure_reason = ?,
+                    gateway_response = ?
+                WHERE merchant_payment_id = ?
+            ")->execute([$failureReason, json_encode($pfData), $paymentId]);
+            
+            // Initialize retry system for this transaction
+            $stmt = $db->prepare("SELECT id FROM payment_transactions WHERE merchant_payment_id = ?");
+            $stmt->execute([$paymentId]);
+            $txn = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($txn) {
+                $this->initializeRetry($txn['id'], $userId, $failureReason);
+            }
+            
+            // Send immediate notification for invoice payments
             $invoice = Invoice::query()->find($invoiceId);
             if ($invoice) {
                 $client = Client::query()->find($invoice['client_id']);
@@ -311,7 +332,7 @@ class PayfastController {
                         'currency' => $invoice['currency'] ?? 'R',
                         'invoice_number' => $invoice['invoice_number'],
                         'reference' => $paymentId,
-                        'error_message' => 'Payment was ' . strtolower($paymentStatus) . '.',
+                        'error_message' => $failureReason,
                         'date' => date('Y-m-d H:i'),
                     ]);
                 }
@@ -587,5 +608,45 @@ class PayfastController {
      */
     private function getApiUrl(): string {
         return $_ENV['API_URL'] ?? 'https://invoices.ieosuia.com/api';
+    }
+    
+    /**
+     * Initialize retry system for failed payment
+     */
+    private function initializeRetry(int $transactionId, int $userId, string $failureReason): void {
+        $db = Database::getConnection();
+        
+        // Load retry settings
+        $stmt = $db->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_group = 'payment'");
+        $stmt->execute();
+        $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        $retryIntervals = !empty($settings['payment_retry_intervals']) 
+            ? array_map('intval', explode(',', $settings['payment_retry_intervals']))
+            : [1, 3, 7];
+        $maxRetries = (int)($settings['payment_max_retries'] ?? 3);
+        
+        // Calculate first retry date
+        $nextRetryAt = (new DateTime())->modify("+{$retryIntervals[0]} days")->format('Y-m-d H:i:s');
+        
+        // Update transaction with retry schedule
+        $stmt = $db->prepare("
+            UPDATE payment_transactions 
+            SET max_retries = ?,
+                next_retry_at = ?,
+                failure_reason = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$maxRetries, $nextRetryAt, $failureReason, $transactionId]);
+        
+        // Update user failure tracking
+        $db->prepare("
+            UPDATE users 
+            SET payment_failure_count = payment_failure_count + 1,
+                last_payment_failure_at = NOW()
+            WHERE id = ?
+        ")->execute([$userId]);
+        
+        error_log("PayFast payment retry initialized for transaction $transactionId, next retry: $nextRetryAt");
     }
 }

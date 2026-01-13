@@ -349,4 +349,55 @@ class BillingController {
         
         return $prices[$plan] ?? 0;
     }
+    
+    /**
+     * Get payment retry status for user
+     * GET /api/billing/retry-status
+     */
+    public function getRetryStatus(): void {
+        $userId = Auth::id();
+        $db = Database::getConnection();
+        
+        // Get user grace period info
+        $user = User::query()->find($userId);
+        
+        // Get failed transactions that are pending retry
+        $stmt = $db->prepare("
+            SELECT 
+                id, 
+                amount, 
+                plan, 
+                failure_reason, 
+                retry_count, 
+                max_retries,
+                next_retry_at,
+                created_at
+            FROM payment_transactions
+            WHERE user_id = ? 
+            AND status = 'failed'
+            AND (retry_count < max_retries OR max_retries IS NULL)
+            ORDER BY created_at DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$userId]);
+        $failedTransactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $hasFailedPayments = !empty($failedTransactions);
+        $latestFailure = $failedTransactions[0] ?? null;
+        
+        Response::json([
+            'has_failed_payments' => $hasFailedPayments,
+            'failed_count' => count($failedTransactions),
+            'grace_until' => $user['subscription_grace_until'] ?? null,
+            'next_retry_at' => $latestFailure['next_retry_at'] ?? null,
+            'latest_failure' => $latestFailure ? [
+                'id' => (int)$latestFailure['id'],
+                'amount' => (float)$latestFailure['amount'],
+                'plan' => $latestFailure['plan'],
+                'failure_reason' => $latestFailure['failure_reason'],
+                'retry_count' => (int)($latestFailure['retry_count'] ?? 0),
+                'max_retries' => (int)($latestFailure['max_retries'] ?? 3),
+            ] : null,
+        ]);
+    }
 }

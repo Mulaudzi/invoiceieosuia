@@ -285,6 +285,7 @@ $router->post('/billing/payment-methods', [BillingController::class, 'addPayment
 $router->post('/billing/payment-methods/{id}/default', [BillingController::class, 'setDefaultPaymentMethod'], [AuthMiddleware::class]);
 $router->delete('/billing/payment-methods/{id}', [BillingController::class, 'removePaymentMethod'], [AuthMiddleware::class]);
 $router->get('/billing/transactions/{id}/invoice', [BillingController::class, 'downloadInvoice'], [AuthMiddleware::class]);
+$router->get('/billing/retry-status', [BillingController::class, 'getRetryStatus'], [AuthMiddleware::class]);
 
 // Payment Retry Routes
 $router->post('/payments/record-failure', [PaymentRetryController::class, 'recordFailure'], [AuthMiddleware::class]);

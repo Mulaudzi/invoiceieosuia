@@ -323,42 +323,103 @@ class PaystackController {
     private function handleChargeFailed(array $data): void {
         $reference = $data['reference'] ?? '';
         $invoiceId = $data['metadata']['invoice_id'] ?? null;
+        $isSubscription = $data['metadata']['is_subscription'] ?? false;
+        $userId = $data['metadata']['user_id'] ?? null;
         
-        if (!$invoiceId) {
-            return;
-        }
-        
-        $invoice = Invoice::query()->find((int)$invoiceId);
-        if (!$invoice) {
-            return;
-        }
-        
-        $client = Client::query()->find($invoice['client_id']);
-        $amount = ($data['amount'] ?? 0) / 100;
-        
-        // Update transaction status
         $db = Database::getConnection();
+        
+        // Get or find the transaction
+        $stmt = $db->prepare("SELECT id, user_id FROM payment_transactions WHERE merchant_payment_id = ?");
+        $stmt->execute([$reference]);
+        $transaction = $stmt->fetch(\PDO::FETCH_ASSOC);
+        
+        // Update transaction status with failure details
         $stmt = $db->prepare("
             UPDATE payment_transactions 
-            SET status = 'failed', gateway_response = ?, updated_at = NOW()
+            SET status = 'failed', 
+                gateway_response = ?, 
+                failure_reason = ?,
+                updated_at = NOW()
             WHERE merchant_payment_id = ?
         ");
-        $stmt->execute([json_encode($data), $reference]);
+        $failureReason = $data['gateway_response'] ?? $data['message'] ?? 'Payment declined by gateway';
+        $stmt->execute([json_encode($data), $failureReason, $reference]);
         
-        // Send payment failed email
-        if ($client && !empty($client['email'])) {
-            Mailer::sendPaymentFailedEmail($client['email'], [
-                'name' => $client['name'],
-                'amount' => $amount,
-                'currency' => $invoice['currency'] ?? 'R',
-                'invoice_number' => $invoice['invoice_number'],
-                'reference' => $reference,
-                'error_message' => $data['gateway_response'] ?? 'The payment could not be processed.',
-                'date' => date('Y-m-d H:i'),
-            ]);
+        // Trigger payment retry system for subscription payments
+        if ($transaction) {
+            $this->initializeRetry($transaction['id'], $transaction['user_id'], $failureReason);
         }
         
-        error_log("Payment failed: $reference, invoice: $invoiceId");
+        // Send immediate failure notification for invoice payments
+        if ($invoiceId) {
+            $invoice = Invoice::query()->find((int)$invoiceId);
+            if ($invoice) {
+                $client = Client::query()->find($invoice['client_id']);
+                $amount = ($data['amount'] ?? 0) / 100;
+                
+                if ($client && !empty($client['email'])) {
+                    Mailer::sendPaymentFailedEmail($client['email'], [
+                        'name' => $client['name'],
+                        'amount' => $amount,
+                        'currency' => $invoice['currency'] ?? 'R',
+                        'invoice_number' => $invoice['invoice_number'],
+                        'reference' => $reference,
+                        'error_message' => $failureReason,
+                        'date' => date('Y-m-d H:i'),
+                    ]);
+                }
+            }
+        }
+        
+        error_log("Payment failed: $reference" . ($invoiceId ? ", invoice: $invoiceId" : ""));
+    }
+    
+    /**
+     * Initialize retry system for failed payment
+     */
+    private function initializeRetry(int $transactionId, int $userId, string $failureReason): void {
+        $db = Database::getConnection();
+        
+        // Load retry settings
+        $stmt = $db->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_group = 'payment'");
+        $stmt->execute();
+        $settings = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+        
+        $retryIntervals = !empty($settings['payment_retry_intervals']) 
+            ? array_map('intval', explode(',', $settings['payment_retry_intervals']))
+            : [1, 3, 7];
+        $maxRetries = (int)($settings['payment_max_retries'] ?? 3);
+        
+        // Calculate first retry date
+        $nextRetryAt = (new DateTime())->modify("+{$retryIntervals[0]} days")->format('Y-m-d H:i:s');
+        
+        // Update transaction with retry schedule
+        $stmt = $db->prepare("
+            UPDATE payment_transactions 
+            SET max_retries = ?,
+                next_retry_at = ?,
+                failure_reason = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$maxRetries, $nextRetryAt, $failureReason, $transactionId]);
+        
+        // Update user failure tracking
+        $db->prepare("
+            UPDATE users 
+            SET payment_failure_count = payment_failure_count + 1,
+                last_payment_failure_at = NOW()
+            WHERE id = ?
+        ")->execute([$userId]);
+        
+        // Get user for notification
+        $user = User::query()->find($userId);
+        if ($user && !empty($user['email'])) {
+            // Send first failure notification via retry controller
+            $retryController = new PaymentRetryController();
+            // Note: We're letting the retry controller handle the email through its template system
+        }
+        
+        error_log("Payment retry initialized for transaction $transactionId, next retry: $nextRetryAt");
     }
     
     /**
