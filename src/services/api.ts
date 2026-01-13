@@ -33,12 +33,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
+    const isAdminRoute = window.location.pathname.startsWith('/admin');
+    
     if (error.response?.status === 401) {
-      // Unauthorized: Clear token and redirect to login
-      removeToken();
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login';
+      // Unauthorized: Don't auto-redirect for admin routes - let the page handle it
+      if (!isAdminRoute) {
+        removeToken();
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
       }
+      // For admin routes, just reject the error and let the component handle it
     } else if (error.response?.status === 403) {
       // Forbidden: Tier limit reached or insufficient permissions
       const message = error.response.data?.message || 'Access denied. You may need to upgrade your plan.';
