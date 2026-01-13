@@ -318,6 +318,9 @@ class AdminController {
         $stmt = $db->prepare("UPDATE contact_submissions SET " . implode(', ', $sets) . " WHERE id = ?");
         $stmt->execute($params);
         
+        // Log the update
+        AdminActivityLogger::logSubmission('submission_updated', (int)$id, ['changed_fields' => array_keys($filtered)]);
+        
         // Get updated submission
         $stmt = $db->prepare("SELECT * FROM contact_submissions WHERE id = ?");
         $stmt->execute([$id]);
@@ -335,6 +338,11 @@ class AdminController {
         $id = Request::param('id');
         $db = Database::getConnection();
         
+        // Get submission info before deletion for logging
+        $stmt = $db->prepare("SELECT email, name FROM contact_submissions WHERE id = ?");
+        $stmt->execute([$id]);
+        $submissionInfo = $stmt->fetch();
+        
         // Delete related email logs first
         $stmt = $db->prepare("DELETE FROM email_logs WHERE contact_submission_id = ?");
         $stmt->execute([$id]);
@@ -342,6 +350,12 @@ class AdminController {
         // Delete submission
         $stmt = $db->prepare("DELETE FROM contact_submissions WHERE id = ?");
         $stmt->execute([$id]);
+        
+        // Log deletion
+        AdminActivityLogger::logSubmission('submission_deleted', (int)$id, [
+            'deleted_email' => $submissionInfo['email'] ?? 'unknown',
+            'deleted_name' => $submissionInfo['name'] ?? 'unknown'
+        ]);
         
         Response::json(['success' => true, 'message' => 'Submission deleted']);
     }
@@ -361,6 +375,10 @@ class AdminController {
             WHERE id = ? AND status = 'new'
         ");
         $stmt->execute([$id]);
+        
+        if ($stmt->rowCount() > 0) {
+            AdminActivityLogger::logSubmission('submission_marked_read', (int)$id);
+        }
         
         Response::json(['success' => true]);
     }
@@ -834,6 +852,12 @@ class AdminController {
             ]);
         }
         
+        // Log settings change
+        AdminActivityLogger::logSettings('notification_settings_updated', [
+            'notification_type' => $notificationType,
+            'enabled' => $data['enabled'] ?? null
+        ]);
+        
         Response::json(['success' => true, 'message' => 'Settings updated']);
     }
     
@@ -882,5 +906,115 @@ class AdminController {
         $db = Database::getConnection();
         $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token = ?");
         $stmt->execute([$token]);
+    }
+    
+    // ==================== Activity Logs ====================
+    
+    /**
+     * Get admin activity logs
+     */
+    public function getActivityLogs(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $page = (int)($request->query('page') ?? 1);
+        $perPage = (int)($request->query('per_page') ?? 50);
+        $category = $request->query('category');
+        $action = $request->query('action');
+        $adminUserId = $request->query('admin_user_id');
+        $status = $request->query('status');
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $result = AdminActivityLogger::getLogs(
+            $page,
+            $perPage,
+            $category ?: null,
+            $action ?: null,
+            $adminUserId ? (int)$adminUserId : null,
+            $status ?: null,
+            $startDate ?: null,
+            $endDate ?: null
+        );
+        
+        Response::json($result);
+    }
+    
+    /**
+     * Export activity logs to CSV
+     */
+    public function exportActivityLogs(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $category = $request->query('category');
+        $status = $request->query('status');
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        // Get all logs matching filters (no pagination for export)
+        $db = Database::getConnection();
+        
+        $where = [];
+        $params = [];
+        
+        if ($category) {
+            $where[] = 'aal.category = ?';
+            $params[] = $category;
+        }
+        if ($status) {
+            $where[] = 'aal.status = ?';
+            $params[] = $status;
+        }
+        if ($startDate) {
+            $where[] = 'aal.created_at >= ?';
+            $params[] = $startDate . ' 00:00:00';
+        }
+        if ($endDate) {
+            $where[] = 'aal.created_at <= ?';
+            $params[] = $endDate . ' 23:59:59';
+        }
+        
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        
+        $stmt = $db->prepare("
+            SELECT aal.*, au.name as admin_name
+            FROM admin_activity_logs aal
+            LEFT JOIN admin_users au ON aal.admin_user_id = au.id
+            $whereClause
+            ORDER BY aal.created_at DESC
+            LIMIT 10000
+        ");
+        $stmt->execute($params);
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Log export action
+        AdminActivityLogger::logSettings('activity_logs_exported', ['count' => count($logs)]);
+        
+        // Generate CSV
+        $csv = "ID,Timestamp,Admin Name,Admin Email,Action,Category,Target Type,Target ID,Status,IP Address,Details\n";
+        
+        foreach ($logs as $log) {
+            $details = $log['details'] ? str_replace('"', '""', $log['details']) : '';
+            $csv .= sprintf(
+                "%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%s,\"%s\",\"%s\",\"%s\"\n",
+                $log['id'],
+                $log['created_at'],
+                $log['admin_name'] ?? '',
+                $log['admin_email'] ?? '',
+                $log['action'],
+                $log['category'],
+                $log['target_type'] ?? '',
+                $log['target_id'] ?? '',
+                $log['status'],
+                $log['ip_address'] ?? '',
+                $details
+            );
+        }
+        
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="activity_logs_' . date('Y-m-d') . '.csv"');
+        echo $csv;
+        exit;
     }
 }

@@ -186,6 +186,7 @@ class AuthController {
             if (!password_verify($password, $adminUser['password_1'])) {
                 $rateLimiter->hit();
                 error_log("Admin login step 1 failed from IP: $ip");
+                AdminActivityLogger::logAuth('admin_login_failed', 'failed', null, $email, ['step' => 1, 'reason' => 'Wrong first password']);
                 $this->sendAdminLoginAlert(1, $ip, 'Wrong first password');
                 Response::error('Invalid credentials', 401);
                 return;
@@ -254,6 +255,9 @@ class AuthController {
             $rateLimiter->hit();
             error_log("Admin login step $step failed from IP: $ip");
             
+            // Log failed attempt
+            AdminActivityLogger::logAuth('admin_login_failed', 'failed', null, $email, ['step' => $step, 'reason' => "Wrong password at step $step"]);
+            
             // Send security alert
             $this->sendAdminLoginAlert($step, $ip, "Wrong password at step $step");
             
@@ -296,6 +300,12 @@ class AuthController {
         // Update last login
         $stmt = $db->prepare("UPDATE admin_users SET last_login_at = NOW() WHERE id = ?");
         $stmt->execute([$adminUser['id']]);
+        
+        // Log successful login
+        AdminActivityLogger::logAuth('admin_login_success', 'success', $adminUser['id'], $adminUser['email'], [
+            'step' => 3,
+            'message' => 'All 3 password steps completed'
+        ]);
         
         error_log("Admin login successful for {$adminUser['email']} from IP: $ip");
         
@@ -834,6 +844,12 @@ class AuthController {
         
         $adminId = $db->lastInsertId();
         
+        // Log admin creation
+        AdminActivityLogger::logUserManagement('admin_user_created', (int)$adminId, [
+            'email' => strtolower(trim($data['email'])),
+            'name' => $data['name']
+        ], 'success');
+        
         error_log("New admin user created: {$data['email']} (ID: $adminId)");
         
         Response::json([
@@ -938,6 +954,18 @@ class AuthController {
         $stmt = $db->prepare($sql);
         $stmt->execute($params_arr);
         
+        // Log the update
+        $changedFields = [];
+        if ($name) $changedFields[] = 'name';
+        if ($email) $changedFields[] = 'email';
+        if ($status) $changedFields[] = 'status';
+        if ($password_1 && $password_2 && $password_3) $changedFields[] = 'passwords';
+        
+        AdminActivityLogger::logUserManagement('admin_user_updated', (int)$id, [
+            'target_email' => $admin['email'],
+            'changed_fields' => implode(', ', $changedFields)
+        ]);
+        
         error_log("Admin user updated: ID $id");
         
         Response::json([
@@ -972,6 +1000,13 @@ class AuthController {
         
         $stmt = $db->prepare("UPDATE admin_users SET status = ? WHERE id = ?");
         $stmt->execute([$newStatus, $id]);
+        
+        // Log status change
+        AdminActivityLogger::logUserManagement(
+            $newStatus === 'active' ? 'admin_user_activated' : 'admin_user_deactivated',
+            (int)$id,
+            ['previous_status' => $admin['status'], 'new_status' => $newStatus]
+        );
         
         error_log("Admin user status changed: ID $id -> $newStatus");
         
@@ -1012,8 +1047,18 @@ class AuthController {
             return;
         }
         
+        // Get admin email before deletion for logging
+        $stmt = $db->prepare("SELECT email FROM admin_users WHERE id = ?");
+        $stmt->execute([$id]);
+        $adminToDelete = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         $stmt = $db->prepare("DELETE FROM admin_users WHERE id = ?");
         $stmt->execute([$id]);
+        
+        // Log deletion
+        AdminActivityLogger::logUserManagement('admin_user_deleted', (int)$id, [
+            'deleted_email' => $adminToDelete['email'] ?? 'unknown'
+        ]);
         
         error_log("Admin user deleted: ID $id");
         

@@ -16,7 +16,8 @@ import {
   Bug,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -282,6 +283,7 @@ const AdminUsers = () => {
     { icon: Inbox, label: "Submissions", path: "/admin/submissions" },
     { icon: Mail, label: "Email Logs", path: "/admin/email-logs" },
     { icon: Users, label: "Admin Users", path: "/admin/users", active: true },
+    { icon: Activity, label: "Activity Logs", path: "/admin/activity-logs" },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
     { icon: Bug, label: "QA Console", path: "/admin/qa" },
   ];
