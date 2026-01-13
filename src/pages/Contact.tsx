@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import PageHeader from "@/components/landing/PageHeader";
+import { contactService } from "@/services/api";
 import { z } from "zod";
 
 // Validation schema
@@ -103,20 +104,31 @@ const Contact = () => {
 
     setIsSubmitting(true);
 
-    // Get the recipient email based on purpose
-    const purposeOption = purposeOptions.find(p => p.value === formData.purpose);
-    const recipientEmail = purposeOption?.email || "hello@ieosuia.com";
+    try {
+      // Call the API to send the email
+      const response = await contactService.submit({
+        name: formData.name,
+        email: formData.email,
+        message: formData.message,
+        purpose: formData.purpose,
+        origin: originUrl,
+      });
 
-    // Simulate form submission - in production this would call an edge function
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast({
+        title: "Message sent!",
+        description: response.message || `Your message has been sent. We'll get back to you soon.`,
+      });
 
-    toast({
-      title: "Message sent!",
-      description: `Your message has been sent to ${recipientEmail}. We'll get back to you soon.`,
-    });
-
-    setFormData({ name: "", email: "", message: "", purpose: initialPurpose });
-    setIsSubmitting(false);
+      setFormData({ name: "", email: "", message: "", purpose: initialPurpose });
+    } catch (error) {
+      toast({
+        title: "Failed to send message",
+        description: error instanceof Error ? error.message : "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactDetails = [

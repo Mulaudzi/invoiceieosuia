@@ -177,7 +177,7 @@ const FAQ = () => {
         },
         {
           question: "Do you offer custom enterprise pricing?",
-          answer: "Yes! For larger organizations needing custom limits, dedicated infrastructure, or special requirements, contact us at hello@ieosuia.com for a tailored enterprise solution."
+          answer: "Yes! For larger organizations needing custom limits, dedicated infrastructure, or special requirements, contact us through our contact form for a tailored enterprise solution."
         },
         {
           question: "Are there any hidden fees?",

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import PageHeader from "@/components/landing/PageHeader";
@@ -146,11 +147,19 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">13. Contact Us</h2>
               <p className="text-muted-foreground leading-relaxed">
-                If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us at:
+                If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us:
               </p>
               <ul className="list-none text-muted-foreground space-y-2 mt-2">
-                <li>Email: hello@ieosuia.com</li>
-                <li>Support: support@ieosuia.com</li>
+                <li>
+                  <Link to="/contact?purpose=general" className="text-accent hover:underline">
+                    Contact Form (General Inquiries)
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/contact?purpose=support" className="text-accent hover:underline">
+                    Contact Form (Support)
+                  </Link>
+                </li>
                 <li>Address: 26 Rock Alder, Extension 15, Naturena, Johannesburg, 2095</li>
               </ul>
             </section>
