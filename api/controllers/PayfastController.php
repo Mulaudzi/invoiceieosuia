@@ -191,10 +191,19 @@ class PayfastController {
         $status = $paymentStatus === 'COMPLETE' ? 'completed' : strtolower($paymentStatus);
         $stmt->execute([$status, $pfData['pf_payment_id'] ?? null, $paymentId]);
         
-        // If payment is complete, update user plan
+        // If payment is complete, update user plan and send email
         if ($paymentStatus === 'COMPLETE' && in_array($plan, ['solo', 'pro', 'business'])) {
             User::query()->update($userId, ['plan' => $plan]);
             error_log("User $userId upgraded to $plan plan via PayFast");
+            
+            // Send subscription success email
+            $user = User::query()->find($userId);
+            if ($user && !empty($user['email'])) {
+                Mailer::sendSubscriptionSuccessEmail($user['email'], [
+                    'name' => $user['name'],
+                    'plan' => $plan,
+                ]);
+            }
         }
         
         Response::success(['message' => 'OK']);
@@ -238,6 +247,9 @@ class PayfastController {
         if ($paymentStatus === 'COMPLETE') {
             $invoice = Invoice::query()->find($invoiceId);
             if ($invoice) {
+                // Get client for email notification
+                $client = Client::query()->find($invoice['client_id']);
+                
                 // Record payment
                 Payment::query()->create([
                     'user_id' => $invoice['user_id'],
@@ -257,7 +269,52 @@ class PayfastController {
                     Invoice::query()->update($invoiceId, ['status' => 'Paid']);
                 }
                 
+                // Send payment success email to client
+                if ($client && !empty($client['email'])) {
+                    Mailer::sendPaymentSuccessEmail($client['email'], [
+                        'name' => $client['name'],
+                        'amount' => $amount,
+                        'currency' => $invoice['currency'] ?? 'R',
+                        'invoice_number' => $invoice['invoice_number'],
+                        'reference' => $paymentId,
+                        'payment_method' => 'PayFast (' . ($pfData['payment_method'] ?? 'online') . ')',
+                        'date' => date('Y-m-d H:i'),
+                    ]);
+                }
+                
+                // Also notify the invoice owner (user)
+                $user = User::query()->find($invoice['user_id']);
+                if ($user && !empty($user['email'])) {
+                    Mailer::sendPaymentSuccessEmail($user['email'], [
+                        'name' => $user['name'],
+                        'amount' => $amount,
+                        'currency' => $invoice['currency'] ?? 'R',
+                        'invoice_number' => $invoice['invoice_number'],
+                        'reference' => $paymentId,
+                        'payment_method' => 'PayFast (' . ($pfData['payment_method'] ?? 'online') . ')',
+                        'date' => date('Y-m-d H:i'),
+                    ]);
+                }
+                
                 error_log("PayFast invoice payment recorded: $paymentId, amount: $amount, invoice: $invoiceId");
+            }
+        } else if ($paymentStatus === 'FAILED' || $paymentStatus === 'CANCELLED') {
+            // Handle failed payment
+            $invoice = Invoice::query()->find($invoiceId);
+            if ($invoice) {
+                $client = Client::query()->find($invoice['client_id']);
+                
+                if ($client && !empty($client['email'])) {
+                    Mailer::sendPaymentFailedEmail($client['email'], [
+                        'name' => $client['name'],
+                        'amount' => $amount,
+                        'currency' => $invoice['currency'] ?? 'R',
+                        'invoice_number' => $invoice['invoice_number'],
+                        'reference' => $paymentId,
+                        'error_message' => 'Payment was ' . strtolower($paymentStatus) . '.',
+                        'date' => date('Y-m-d H:i'),
+                    ]);
+                }
             }
         }
         
