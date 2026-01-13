@@ -15,7 +15,10 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Send
+  Send,
+  Download,
+  FileText,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface EmailLog {
   id: number;
@@ -131,6 +140,183 @@ const AdminEmailLogs = () => {
     });
   };
 
+  const exportToCSV = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      toast({
+        title: "Exporting...",
+        description: "Preparing CSV export",
+      });
+
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (typeFilter !== 'all') params.append('type', typeFilter);
+
+      const response = await api.get(`/admin/export/email-logs?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = response.data.data;
+      if (!data || data.length === 0) {
+        toast({
+          title: "No data",
+          description: "No email logs to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create CSV content
+      const headers = ['ID', 'Recipient', 'Subject', 'Type', 'Status', 'Error', 'Bounce Type', 'Sent At', 'Created At', 'Contact Name', 'Contact Email'];
+      const csvRows = [headers.join(',')];
+      
+      data.forEach((log: any) => {
+        const row = [
+          log.id,
+          `"${log.recipient_email || ''}"`,
+          `"${(log.subject || '').replace(/"/g, '""')}"`,
+          log.type || '',
+          log.status || '',
+          `"${(log.error_message || '').replace(/"/g, '""')}"`,
+          log.bounce_type || '',
+          log.sent_at || '',
+          log.created_at || '',
+          `"${log.contact_name || ''}"`,
+          `"${log.contact_email || ''}"`,
+        ];
+        csvRows.push(row.join(','));
+      });
+
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `email-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Complete",
+        description: `Exported ${data.length} email logs to CSV`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export email logs",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const exportToPDF = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      toast({
+        title: "Generating Report...",
+        description: "Preparing PDF report",
+      });
+
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (typeFilter !== 'all') params.append('type', typeFilter);
+
+      const response = await api.get(`/admin/export/email-logs?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = response.data.data;
+      if (!data || data.length === 0) {
+        toast({
+          title: "No data",
+          description: "No email logs to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a simple HTML report that can be printed as PDF
+      const reportHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Email Logs Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            .meta { color: #666; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f4f4f4; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .status-sent { color: green; }
+            .status-failed { color: red; }
+            .status-bounced { color: orange; }
+            .status-pending { color: gray; }
+            @media print { body { margin: 20px; } }
+          </style>
+        </head>
+        <body>
+          <h1>Email Logs Report</h1>
+          <div class="meta">
+            Generated: ${new Date().toLocaleString()}<br>
+            Total Records: ${data.length}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Recipient</th>
+                <th>Subject</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Sent At</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map((log: any) => `
+                <tr>
+                  <td>${log.id}</td>
+                  <td>${log.recipient_email || ''}</td>
+                  <td>${log.subject || ''}</td>
+                  <td>${log.type || ''}</td>
+                  <td class="status-${log.status}">${log.status || ''}</td>
+                  <td>${log.sent_at || log.created_at || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(reportHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 250);
+      }
+
+      toast({
+        title: "Report Generated",
+        description: "PDF report opened in new window",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF report",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
@@ -233,6 +419,13 @@ const AdminEmailLogs = () => {
               <Mail className="w-4 h-4" />
               Email Logs
             </Link>
+            <Link 
+              to="/admin/settings" 
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Settings
+            </Link>
           </div>
         </div>
       </nav>
@@ -290,6 +483,26 @@ const AdminEmailLogs = () => {
                   <option value="contact_confirmation">User Confirmation</option>
                   <option value="admin_notification">Admin Alert</option>
                 </select>
+                
+                {/* Export Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-card">
+                    <DropdownMenuItem onClick={exportToCSV}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPDF}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export as PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 

@@ -507,17 +507,28 @@ class AdminController {
         $bouncedEmails = (int)$emailStats['bounced_count'];
         $bounceRate = $totalEmails > 0 ? round(($bouncedEmails / $totalEmails) * 100, 1) : 0;
         
-        // Submissions trend (last 7 days)
+        // Submissions trend (last 30 days) - fill in missing dates with 0
         $stmt = $db->query("
             SELECT 
                 DATE(created_at) as date,
                 COUNT(*) as count
             FROM contact_submissions
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY DATE(created_at)
             ORDER BY date ASC
         ");
-        $dailyTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rawTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Fill missing dates with 0 count
+        $dailyTrend = [];
+        $trendMap = array_column($rawTrend, 'count', 'date');
+        for ($i = 29; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-$i days"));
+            $dailyTrend[] = [
+                'date' => $date,
+                'count' => isset($trendMap[$date]) ? (int)$trendMap[$date] : 0
+            ];
+        }
         
         // Recent submissions
         $stmt = $db->query("
@@ -566,6 +577,183 @@ class AdminController {
             ],
             'recent_submissions' => $recentSubmissions,
             'recent_failed_emails' => $recentFailedEmails,
+        ]);
+    }
+    
+    /**
+     * Export email logs as CSV
+     */
+    public function exportEmailLogs(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $status = $request->query('status');
+        $type = $request->query('type');
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $db = Database::getConnection();
+        
+        $where = [];
+        $params = [];
+        
+        if ($status) {
+            $where[] = 'status = ?';
+            $params[] = $status;
+        }
+        
+        if ($type) {
+            $where[] = 'email_type = ?';
+            $params[] = $type;
+        }
+        
+        if ($startDate) {
+            $where[] = 'created_at >= ?';
+            $params[] = $startDate . ' 00:00:00';
+        }
+        
+        if ($endDate) {
+            $where[] = 'created_at <= ?';
+            $params[] = $endDate . ' 23:59:59';
+        }
+        
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        
+        $stmt = $db->prepare("
+            SELECT 
+                el.id,
+                el.recipient_email,
+                el.subject,
+                el.email_type as type,
+                el.status,
+                el.error_message,
+                el.bounce_type,
+                el.sent_at,
+                el.created_at,
+                cs.name as contact_name,
+                cs.email as contact_email
+            FROM email_logs el
+            LEFT JOIN contact_submissions cs ON el.contact_submission_id = cs.id
+            $whereClause 
+            ORDER BY el.created_at DESC
+        ");
+        $stmt->execute($params);
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        Response::json([
+            'data' => $logs,
+            'export_date' => date('Y-m-d H:i:s'),
+            'total' => count($logs)
+        ]);
+    }
+    
+    /**
+     * Export submissions as CSV
+     */
+    public function exportSubmissions(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $status = $request->query('status');
+        $purpose = $request->query('purpose');
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $db = Database::getConnection();
+        
+        $where = [];
+        $params = [];
+        
+        if ($status) {
+            $where[] = 'status = ?';
+            $params[] = $status;
+        }
+        
+        if ($purpose) {
+            $where[] = 'purpose = ?';
+            $params[] = $purpose;
+        }
+        
+        if ($startDate) {
+            $where[] = 'created_at >= ?';
+            $params[] = $startDate . ' 00:00:00';
+        }
+        
+        if ($endDate) {
+            $where[] = 'created_at <= ?';
+            $params[] = $endDate . ' 23:59:59';
+        }
+        
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        
+        $stmt = $db->prepare("
+            SELECT 
+                id,
+                name,
+                email,
+                purpose,
+                message,
+                status,
+                created_at,
+                responded_at,
+                notes
+            FROM contact_submissions
+            $whereClause 
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute($params);
+        $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        Response::json([
+            'data' => $submissions,
+            'export_date' => date('Y-m-d H:i:s'),
+            'total' => count($submissions)
+        ]);
+    }
+    
+    /**
+     * Get statistics report data
+     */
+    public function getStatisticsReport(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $db = Database::getConnection();
+        
+        // Monthly submission stats
+        $stmt = $db->query("
+            SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month,
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'responded' THEN 1 ELSE 0 END) as responded,
+                SUM(CASE WHEN purpose = 'general' THEN 1 ELSE 0 END) as general,
+                SUM(CASE WHEN purpose = 'support' THEN 1 ELSE 0 END) as support,
+                SUM(CASE WHEN purpose = 'sales' THEN 1 ELSE 0 END) as sales
+            FROM contact_submissions
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            ORDER BY month ASC
+        ");
+        $monthlySubmissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Monthly email stats
+        $stmt = $db->query("
+            SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month,
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN status = 'bounced' THEN 1 ELSE 0 END) as bounced
+            FROM email_logs
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            ORDER BY month ASC
+        ");
+        $monthlyEmails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        Response::json([
+            'monthly_submissions' => $monthlySubmissions,
+            'monthly_emails' => $monthlyEmails,
+            'generated_at' => date('Y-m-d H:i:s')
         ]);
     }
     
