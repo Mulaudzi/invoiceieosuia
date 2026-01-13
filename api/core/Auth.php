@@ -33,8 +33,29 @@ class Auth {
         return self::$user['id'] ?? null;
     }
     
+    /**
+     * Alias for id() - for backwards compatibility
+     */
+    public static function getUserId(): ?int {
+        return self::id();
+    }
+    
     public static function setUser(array $user): void {
         self::$user = $user;
+    }
+    
+    /**
+     * Set user ID directly (for cron jobs)
+     */
+    public static function setUserId(int $userId): void {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        if ($user) {
+            unset($user['password']);
+            self::$user = $user;
+        }
     }
     
     public static function check(): bool {

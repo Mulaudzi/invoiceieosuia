@@ -4,11 +4,11 @@ class RecurringInvoiceController {
     private $db;
     
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
+        $this->db = Database::getConnection();
     }
     
     public function getAll() {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         
         $stmt = $this->db->prepare("
             SELECT 
@@ -36,7 +36,7 @@ class RecurringInvoiceController {
     }
     
     public function getById($id) {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         
         $stmt = $this->db->prepare("
             SELECT 
@@ -66,8 +66,9 @@ class RecurringInvoiceController {
     }
     
     public function create() {
-        $userId = Auth::getUserId();
-        $data = Request::getBody();
+        $userId = Auth::id() ?? Auth::getUserId();
+        $request = new Request();
+        $data = $request->all() ?? [];
         
         if (empty($data['client_id']) || empty($data['description']) || empty($data['frequency']) || empty($data['start_date'])) {
             Response::error('Missing required fields', 400);
@@ -151,8 +152,9 @@ class RecurringInvoiceController {
     }
     
     public function update($id) {
-        $userId = Auth::getUserId();
-        $data = Request::getBody();
+        $userId = Auth::id() ?? Auth::getUserId();
+        $request = new Request();
+        $data = $request->all() ?? [];
         
         // Verify ownership
         $stmt = $this->db->prepare("SELECT id FROM recurring_invoices WHERE id = ? AND user_id = ?");
@@ -237,7 +239,7 @@ class RecurringInvoiceController {
     }
     
     public function delete($id) {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         
         $stmt = $this->db->prepare("DELETE FROM recurring_invoices WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $userId]);
@@ -251,8 +253,9 @@ class RecurringInvoiceController {
     }
     
     public function updateStatus($id) {
-        $userId = Auth::getUserId();
-        $data = Request::getBody();
+        $userId = Auth::id() ?? Auth::getUserId();
+        $request = new Request();
+        $data = $request->all() ?? [];
         
         if (empty($data['status'])) {
             Response::error('Status is required', 400);
@@ -281,7 +284,7 @@ class RecurringInvoiceController {
     }
     
     public function generate($id) {
-        $userId = Auth::getUserId();
+        $userId = Auth::id() ?? Auth::getUserId();
         
         // Get recurring invoice
         $stmt = $this->db->prepare("
