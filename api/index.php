@@ -265,6 +265,14 @@ $router->delete('/admin/qa/cleanup', [QaController::class, 'cleanup']);
 $router->get('/admin/qa/status', [QaController::class, 'status']);
 $router->get('/admin/qa/health', [QaController::class, 'healthCheck']);
 
+// Subscription Routes
+$router->get('/subscription', [SubscriptionController::class, 'getSubscription'], [AuthMiddleware::class]);
+$router->put('/subscription/renewal-date', [SubscriptionController::class, 'updateRenewalDate'], [AuthMiddleware::class]);
+
+// Subscription Cron Routes (for scheduled tasks)
+$router->post('/subscription/process-renewals', [SubscriptionController::class, 'processRenewalReminders']); // Daily cron - sends 3-day reminders
+$router->post('/subscription/process-expired', [SubscriptionController::class, 'processExpired']); // Daily cron - handles expired subscriptions
+
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);
 $router->post('/webhooks/email-delivery', [WebhookController::class, 'handleDelivery']);
