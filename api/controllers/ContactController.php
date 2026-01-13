@@ -22,7 +22,25 @@ class ContactController {
     ];
     
     public function submit(): void {
-        $data = Request::getBody();
+        $request = new Request();
+        $data = $request->all();
+        
+        // Rate limit: 5 submissions per 15 minutes per IP
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $rateLimiter = new RateLimitMiddleware(5, 15);
+        if (!$rateLimiter->handle('contact:' . $ip)) {
+            return;
+        }
+        
+        // Verify reCAPTCHA (if enabled)
+        $recaptchaToken = $request->input('recaptcha_token');
+        if (Recaptcha::isEnabled()) {
+            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'contact');
+            if (!$recaptchaResult['success']) {
+                Response::error($recaptchaResult['error'], 422);
+                return;
+            }
+        }
         
         // Validate required fields
         $errors = $this->validate($data);
@@ -30,6 +48,8 @@ class ContactController {
             Response::error('Validation failed', 400, ['errors' => $errors]);
             return;
         }
+        
+        $rateLimiter->hit();
         
         $name = trim($data['name'] ?? '');
         $email = trim($data['email'] ?? '');
@@ -41,6 +61,9 @@ class ContactController {
         if (!array_key_exists($purpose, self::$emailRouting)) {
             $purpose = 'general';
         }
+        
+        // Save submission to database
+        $submissionId = $this->saveSubmission($name, $email, $message, $purpose, $origin, $ip);
         
         // Get recipient based on purpose
         $recipientEmail = self::$emailRouting[$purpose];
@@ -57,38 +80,109 @@ class ContactController {
             'message' => nl2br(htmlspecialchars($message)),
             'origin' => htmlspecialchars($origin),
             'timestamp' => date('Y-m-d H:i:s T'),
+            'submission_id' => $submissionId,
         ]);
         
         // Plain text version
-        $altBody = "New Contact Form Submission\n\n";
+        $altBody = "New Contact Form Submission (ID: #$submissionId)\n\n";
         $altBody .= "From: {$name} <{$email}>\n";
         $altBody .= "Purpose: {$purposeLabel}\n";
         $altBody .= "Origin: {$origin}\n";
         $altBody .= "Date: " . date('Y-m-d H:i:s T') . "\n\n";
         $altBody .= "Message:\n{$message}";
         
-        // Send the email
-        $sent = $this->sendContactEmail(
+        // Send the notification email
+        $notificationSent = $this->sendContactEmail(
             $recipientEmail,
             $subject,
             $body,
             $altBody,
             $email,
-            $name
+            $name,
+            $submissionId
         );
         
-        if ($sent) {
-            // Also send confirmation to the user
-            $this->sendConfirmationEmail($email, $name, $purposeLabel);
-            
+        // Send confirmation email to user
+        $confirmationSent = $this->sendConfirmationEmail($email, $name, $purposeLabel, $submissionId);
+        
+        if ($notificationSent) {
             Response::json([
                 'success' => true,
                 'message' => 'Your message has been sent successfully.',
                 'recipient' => $recipientEmail,
             ]);
         } else {
-            Response::error('Failed to send message. Please try again later.', 500);
+            // Still save submission even if email fails
+            Response::json([
+                'success' => true,
+                'message' => 'Your message has been received. Our team will contact you soon.',
+                'warning' => 'Email delivery is pending.',
+            ]);
         }
+    }
+    
+    private function saveSubmission(
+        string $name, 
+        string $email, 
+        string $message, 
+        string $purpose, 
+        string $origin,
+        string $ip
+    ): int {
+        $db = Database::getConnection();
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        
+        $stmt = $db->prepare("
+            INSERT INTO contact_submissions 
+            (name, email, message, purpose, origin, ip_address, user_agent, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'new')
+        ");
+        $stmt->execute([$name, $email, $message, $purpose, $origin, $ip, $userAgent]);
+        
+        return (int)$db->lastInsertId();
+    }
+    
+    private function logEmail(
+        int $submissionId,
+        string $recipientEmail,
+        string $subject,
+        string $emailType,
+        string $status,
+        ?string $errorMessage = null,
+        ?string $ccEmails = null
+    ): int {
+        $db = Database::getConnection();
+        
+        $stmt = $db->prepare("
+            INSERT INTO email_logs 
+            (contact_submission_id, recipient_email, cc_emails, subject, email_type, status, error_message, sent_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $sentAt = $status === 'sent' ? date('Y-m-d H:i:s') : null;
+        $stmt->execute([
+            $submissionId, 
+            $recipientEmail, 
+            $ccEmails, 
+            $subject, 
+            $emailType, 
+            $status, 
+            $errorMessage,
+            $sentAt
+        ]);
+        
+        return (int)$db->lastInsertId();
+    }
+    
+    private function updateEmailLog(int $logId, string $status, ?string $errorMessage = null): void {
+        $db = Database::getConnection();
+        $sentAt = $status === 'sent' ? date('Y-m-d H:i:s') : null;
+        
+        $stmt = $db->prepare("
+            UPDATE email_logs 
+            SET status = ?, error_message = ?, sent_at = COALESCE(?, sent_at) 
+            WHERE id = ?
+        ");
+        $stmt->execute([$status, $errorMessage, $sentAt, $logId]);
     }
     
     private function validate(array $data): array {
@@ -135,8 +229,20 @@ class ContactController {
         string $body, 
         string $altBody,
         string $replyTo,
-        string $replyToName
+        string $replyToName,
+        int $submissionId
     ): bool {
+        // Log email as pending
+        $logId = $this->logEmail(
+            $submissionId,
+            $to,
+            $subject,
+            'contact_notification',
+            'pending',
+            null,
+            self::CC_EMAIL
+        );
+        
         try {
             // Use PHPMailer directly for more control
             require_once __DIR__ . '/../lib/PHPMailer/Exception.php';
@@ -182,22 +288,55 @@ class ContactController {
             $mail->Body = $body;
             $mail->AltBody = $altBody;
             
-            return $mail->send();
+            $sent = $mail->send();
+            
+            // Update log
+            $this->updateEmailLog($logId, 'sent');
+            
+            return true;
         } catch (\Exception $e) {
-            error_log("Contact Email Error: " . $e->getMessage());
+            $errorMessage = $e->getMessage();
+            error_log("Contact Email Error: " . $errorMessage);
+            
+            // Update log with error
+            $this->updateEmailLog($logId, 'failed', $errorMessage);
+            
             return false;
         }
     }
     
-    private function sendConfirmationEmail(string $email, string $name, string $purposeLabel): bool {
+    private function sendConfirmationEmail(string $email, string $name, string $purposeLabel, int $submissionId): bool {
         $subject = "We've received your message - IEOSUIA";
+        
+        // Log email as pending
+        $logId = $this->logEmail(
+            $submissionId,
+            $email,
+            $subject,
+            'contact_confirmation',
+            'pending'
+        );
         
         $body = $this->getConfirmationEmailTemplate([
             'name' => htmlspecialchars($name),
             'purpose' => $purposeLabel,
+            'submission_id' => $submissionId,
         ]);
         
-        return Mailer::send($email, $subject, $body);
+        try {
+            $sent = Mailer::send($email, $subject, $body);
+            
+            if ($sent) {
+                $this->updateEmailLog($logId, 'sent');
+            } else {
+                $this->updateEmailLog($logId, 'failed', 'Mailer returned false');
+            }
+            
+            return $sent;
+        } catch (\Exception $e) {
+            $this->updateEmailLog($logId, 'failed', $e->getMessage());
+            return false;
+        }
     }
     
     private function getContactEmailTemplate(array $data): string {
@@ -218,12 +357,13 @@ class ContactController {
                     .message-box { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
                     .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
                     .badge { display: inline-block; background: #10b981; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+                    .id-badge { display: inline-block; background: #1e3a5f; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 10px; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>📬 New Contact Form Submission</h1>
+                        <h1>📬 New Contact Form Submission <span class="id-badge">#' . ($data['submission_id'] ?? '') . '</span></h1>
                     </div>
                     <div class="content">
                         <p><span class="badge">' . $data['purpose'] . '</span></p>
@@ -280,6 +420,7 @@ class ContactController {
                     .content { padding: 30px; }
                     .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
                     .success-icon { font-size: 48px; text-align: center; margin-bottom: 20px; }
+                    .ref-number { background: #f0f0f0; padding: 8px 16px; border-radius: 4px; font-family: monospace; display: inline-block; }
                 </style>
             </head>
             <body>
@@ -292,6 +433,7 @@ class ContactController {
                         <h2 style="text-align: center;">Message Received!</h2>
                         <p>Hi ' . $data['name'] . ',</p>
                         <p>Thank you for contacting us! We\'ve received your <strong>' . $data['purpose'] . '</strong> and our team will review it shortly.</p>
+                        <p style="text-align: center;">Reference: <span class="ref-number">#' . $data['submission_id'] . '</span></p>
                         <p><strong>What happens next?</strong></p>
                         <ul>
                             <li>Our team will review your message</li>
