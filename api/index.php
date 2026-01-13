@@ -218,6 +218,11 @@ $router->get('/admin/reports/statistics', [AdminController::class, 'getStatistic
 $router->get('/admin/activity-logs', [AdminController::class, 'getActivityLogs']);
 $router->get('/admin/export/activity-logs', [AdminController::class, 'exportActivityLogs']);
 
+// Admin Session Management Routes
+$router->get('/admin/sessions', [AdminController::class, 'getActiveSessions']);
+$router->delete('/admin/sessions/{id}', [AdminController::class, 'terminateSession']);
+$router->delete('/admin/sessions', [AdminController::class, 'terminateAllSessions']);
+
 // Admin User Management Routes
 $router->get('/admin/users', [AuthController::class, 'getAdminUsers']);
 $router->put('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);

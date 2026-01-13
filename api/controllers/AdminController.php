@@ -908,6 +908,171 @@ class AdminController {
         $stmt->execute([$token]);
     }
     
+    // ==================== Session Management ====================
+    
+    /**
+     * Get all active admin sessions
+     */
+    public function getActiveSessions(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $currentToken = $request->bearerToken();
+        
+        $db = Database::getConnection();
+        
+        // Get all active sessions (step = 3 and not expired)
+        $stmt = $db->query("
+            SELECT 
+                id,
+                session_token,
+                ip_address,
+                admin_user_id,
+                last_activity,
+                created_at,
+                expires_at
+            FROM admin_sessions 
+            WHERE step = 3 AND expires_at > NOW()
+            ORDER BY last_activity DESC
+        ");
+        $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add current session flag and admin user info
+        foreach ($sessions as &$session) {
+            $session['is_current'] = $session['session_token'] === $currentToken;
+            // Mask the token for security
+            $session['session_token_masked'] = substr($session['session_token'], 0, 8) . '...' . substr($session['session_token'], -8);
+            unset($session['session_token']); // Don't expose full token
+            
+            // Get admin user info if available
+            if ($session['admin_user_id']) {
+                $userStmt = $db->prepare("SELECT name, email FROM admin_users WHERE id = ?");
+                $userStmt->execute([$session['admin_user_id']]);
+                $adminUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+                $session['admin_name'] = $adminUser['name'] ?? 'Unknown';
+                $session['admin_email'] = $adminUser['email'] ?? 'Unknown';
+            } else {
+                $session['admin_name'] = 'Legacy Session';
+                $session['admin_email'] = 'N/A';
+            }
+            
+            // Calculate time remaining
+            $expiresAt = new DateTime($session['expires_at']);
+            $now = new DateTime();
+            $remaining = $now->diff($expiresAt);
+            $session['time_remaining'] = $remaining->h . 'h ' . $remaining->i . 'm';
+            
+            // Format last activity for display
+            $lastActivity = new DateTime($session['last_activity']);
+            $session['last_activity_ago'] = $this->timeAgo($lastActivity);
+        }
+        
+        Response::json([
+            'sessions' => $sessions,
+            'total' => count($sessions)
+        ]);
+    }
+    
+    /**
+     * Terminate a specific admin session
+     */
+    public function terminateSession(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $sessionId = Request::param('id');
+        $currentToken = $request->bearerToken();
+        
+        if (!$sessionId) {
+            Response::error('Session ID required', 400);
+            return;
+        }
+        
+        $db = Database::getConnection();
+        
+        // Get the session to terminate
+        $stmt = $db->prepare("SELECT session_token, ip_address FROM admin_sessions WHERE id = ?");
+        $stmt->execute([$sessionId]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$session) {
+            Response::error('Session not found', 404);
+            return;
+        }
+        
+        // Don't allow terminating own session
+        if ($session['session_token'] === $currentToken) {
+            Response::error('Cannot terminate your own session. Use logout instead.', 400);
+            return;
+        }
+        
+        // Delete the session
+        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE id = ?");
+        $stmt->execute([$sessionId]);
+        
+        // Log the action
+        AdminActivityLogger::logSettings('session_terminated', [
+            'terminated_session_id' => $sessionId,
+            'terminated_ip' => $session['ip_address']
+        ]);
+        
+        Response::json([
+            'success' => true,
+            'message' => 'Session terminated successfully'
+        ]);
+    }
+    
+    /**
+     * Terminate all other admin sessions (keep current)
+     */
+    public function terminateAllSessions(): void {
+        if (!self::verifyAdminToken()) return;
+        
+        $request = new Request();
+        $currentToken = $request->bearerToken();
+        
+        $db = Database::getConnection();
+        
+        // Count sessions to be terminated
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as count 
+            FROM admin_sessions 
+            WHERE session_token != ? AND step = 3 AND expires_at > NOW()
+        ");
+        $stmt->execute([$currentToken]);
+        $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Delete all other sessions
+        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token != ?");
+        $stmt->execute([$currentToken]);
+        
+        // Log the action
+        AdminActivityLogger::logSettings('all_sessions_terminated', [
+            'terminated_count' => $count
+        ]);
+        
+        Response::json([
+            'success' => true,
+            'message' => "Terminated $count other session(s)",
+            'terminated_count' => $count
+        ]);
+    }
+    
+    /**
+     * Get helper - time ago string
+     */
+    private function timeAgo(DateTime $datetime): string {
+        $now = new DateTime();
+        $diff = $now->diff($datetime);
+        
+        if ($diff->y > 0) return $diff->y . ' year(s) ago';
+        if ($diff->m > 0) return $diff->m . ' month(s) ago';
+        if ($diff->d > 0) return $diff->d . ' day(s) ago';
+        if ($diff->h > 0) return $diff->h . ' hour(s) ago';
+        if ($diff->i > 0) return $diff->i . ' minute(s) ago';
+        return 'Just now';
+    }
+    
     // ==================== Activity Logs ====================
     
     /**

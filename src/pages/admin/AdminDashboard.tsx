@@ -19,7 +19,13 @@ import {
   Timer,
   Calendar,
   Activity,
-  Bug
+  Bug,
+  Monitor,
+  Smartphone,
+  Globe,
+  XCircle,
+  Shield,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +34,17 @@ import { useToast } from "@/hooks/use-toast";
 import { getAdminToken, removeAdminToken } from "./AdminLogin";
 import api from "@/services/api";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface DashboardStats {
   submissions: {
@@ -61,11 +78,29 @@ interface DashboardStats {
   recent_failed_emails: any[];
 }
 
+interface AdminSession {
+  id: number;
+  session_token_masked: string;
+  ip_address: string;
+  admin_user_id: number | null;
+  admin_name: string;
+  admin_email: string;
+  last_activity: string;
+  last_activity_ago: string;
+  created_at: string;
+  expires_at: string;
+  time_remaining: string;
+  is_current: boolean;
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [terminatingId, setTerminatingId] = useState<number | null>(null);
 
   const fetchDashboard = async () => {
     const token = getAdminToken();
@@ -96,8 +131,73 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchSessions = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      setSessionsLoading(true);
+      const response = await api.get('/admin/sessions', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSessions(response.data.sessions || []);
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const terminateSession = async (sessionId: number) => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      setTerminatingId(sessionId);
+      await api.delete(`/admin/sessions/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast({
+        title: "Session terminated",
+        description: "The session has been terminated successfully.",
+      });
+      fetchSessions();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to terminate session",
+        variant: "destructive",
+      });
+    } finally {
+      setTerminatingId(null);
+    }
+  };
+
+  const terminateAllSessions = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      const response = await api.delete('/admin/sessions', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast({
+        title: "Sessions terminated",
+        description: response.data.message || "All other sessions have been terminated.",
+      });
+      fetchSessions();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to terminate sessions",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     fetchDashboard();
+    fetchSessions();
   }, []);
 
   const handleLogout = async () => {
@@ -118,6 +218,14 @@ const AdminDashboard = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getDeviceIcon = (ipAddress: string) => {
+    // Simple heuristic - in reality you'd parse user agent
+    if (ipAddress.includes('::1') || ipAddress === '127.0.0.1') {
+      return <Monitor className="w-4 h-4" />;
+    }
+    return <Globe className="w-4 h-4" />;
   };
 
   if (isLoading) {
@@ -620,6 +728,158 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Active Sessions Management */}
+        <Card className="mt-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Active Admin Sessions
+                </CardTitle>
+                <CardDescription>Manage active admin login sessions across all devices</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchSessions}
+                  disabled={sessionsLoading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${sessionsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                {sessions.filter(s => !s.is_current).length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Terminate All Others
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Terminate all other sessions?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will immediately log out all other admin sessions except your current one. 
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={terminateAllSessions}>
+                          Terminate All
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {sessionsLoading && sessions.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : sessions.length > 0 ? (
+              <div className="space-y-3">
+                {sessions.map((session) => (
+                  <div 
+                    key={session.id}
+                    className={`p-4 rounded-lg border ${
+                      session.is_current 
+                        ? 'bg-primary/5 border-primary/30' 
+                        : 'bg-muted/50 border-border'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-full ${
+                          session.is_current ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {getDeviceIcon(session.ip_address)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">{session.admin_name}</p>
+                            {session.is_current && (
+                              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{session.admin_email}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              {session.ip_address}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Active {session.last_activity_ago}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Timer className="w-3 h-3" />
+                              Expires in {session.time_remaining}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Session: {session.session_token_masked}
+                          </p>
+                        </div>
+                      </div>
+                      {!session.is_current && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={terminatingId === session.id}
+                            >
+                              {terminatingId === session.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive" />
+                              ) : (
+                                <XCircle className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Terminate this session?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will immediately log out the admin session from {session.ip_address}. 
+                                The user will need to log in again.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => terminateSession(session.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Terminate Session
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Shield className="w-12 h-12 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">
+                  No active sessions found
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
