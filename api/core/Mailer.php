@@ -293,9 +293,205 @@ class Mailer {
                 </body>
                 </html>
             ',
+            'payment_success' => '
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; }
+                        .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                        .content { padding: 30px; }
+                        .success-box { background: #ecfdf5; border: 2px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+                        .amount { font-size: 36px; font-weight: bold; color: #10b981; }
+                        .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        .info-table td { padding: 10px; border-bottom: 1px solid #eee; }
+                        .info-table td:first-child { font-weight: bold; width: 40%; color: #666; }
+                        .button { display: inline-block; background: #10b981; color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+                        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>✅ Payment Successful</h1>
+                        </div>
+                        <div class="content">
+                            <div class="success-box">
+                                <p style="margin: 0; color: #059669;">Amount Received</p>
+                                <p class="amount">{{currency}}{{amount}}</p>
+                            </div>
+                            <p>Hi {{name}},</p>
+                            <p>Great news! We have successfully received your payment.</p>
+                            <table class="info-table">
+                                <tr><td>Invoice:</td><td>{{invoice_number}}</td></tr>
+                                <tr><td>Reference:</td><td>{{reference}}</td></tr>
+                                <tr><td>Payment Method:</td><td>{{payment_method}}</td></tr>
+                                <tr><td>Date:</td><td>{{date}}</td></tr>
+                            </table>
+                            <p style="text-align: center;">
+                                <a href="{{dashboard_url}}" class="button">View Payment Details</a>
+                            </p>
+                            <p>Thank you for your payment!</p>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ',
+            'payment_failed' => '
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { background: linear-gradient(135deg, #dc2626, #991b1b); padding: 30px; text-align: center; }
+                        .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                        .content { padding: 30px; }
+                        .error-box { background: #fef2f2; border: 2px solid #dc2626; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                        .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        .info-table td { padding: 10px; border-bottom: 1px solid #eee; }
+                        .info-table td:first-child { font-weight: bold; width: 40%; color: #666; }
+                        .button { display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+                        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>❌ Payment Failed</h1>
+                        </div>
+                        <div class="content">
+                            <div class="error-box">
+                                <h2 style="margin-top: 0; color: #dc2626;">Payment Could Not Be Processed</h2>
+                                <p>{{error_message}}</p>
+                            </div>
+                            <p>Hi {{name}},</p>
+                            <p>Unfortunately, we were unable to process your payment.</p>
+                            <table class="info-table">
+                                <tr><td>Invoice:</td><td>{{invoice_number}}</td></tr>
+                                <tr><td>Amount:</td><td>{{currency}}{{amount}}</td></tr>
+                                <tr><td>Reference:</td><td>{{reference}}</td></tr>
+                                <tr><td>Date:</td><td>{{date}}</td></tr>
+                            </table>
+                            <p>Please try again or use a different payment method.</p>
+                            <p style="text-align: center;">
+                                <a href="{{retry_url}}" class="button">Try Again</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ',
+            'subscription_renewal' => '
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { background: linear-gradient(135deg, #1e3a5f, #0d1f33); padding: 30px; text-align: center; }
+                        .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                        .content { padding: 30px; }
+                        .renewal-box { background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+                        .amount { font-size: 36px; font-weight: bold; color: #1e3a5f; }
+                        .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        .info-table td { padding: 10px; border-bottom: 1px solid #eee; }
+                        .info-table td:first-child { font-weight: bold; width: 40%; color: #666; }
+                        .button { display: inline-block; background: #10b981; color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+                        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🔄 Subscription Renewal Reminder</h1>
+                        </div>
+                        <div class="content">
+                            <div class="renewal-box">
+                                <p style="margin: 0; color: #92400e;">⏰ Renewing in {{days_until}} days</p>
+                                <p class="amount">{{currency}}{{amount}}</p>
+                            </div>
+                            <p>Hi {{name}},</p>
+                            <p>This is a friendly reminder that your IEOSUIA subscription will automatically renew soon.</p>
+                            <table class="info-table">
+                                <tr><td>Plan:</td><td>{{plan_name}}</td></tr>
+                                <tr><td>Renewal Date:</td><td>{{renewal_date}}</td></tr>
+                                <tr><td>Amount:</td><td>{{currency}}{{amount}}</td></tr>
+                            </table>
+                            <p>No action is required if you wish to continue your subscription. Your payment method on file will be charged automatically.</p>
+                            <p>If you wish to make changes to your subscription, please visit your account settings.</p>
+                            <p style="text-align: center;">
+                                <a href="{{settings_url}}" class="button">Manage Subscription</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ',
+            'subscription_success' => '
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; }
+                        .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                        .content { padding: 30px; }
+                        .success-box { background: #ecfdf5; border: 2px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+                        .plan-badge { display: inline-block; background: #10b981; color: #fff; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; }
+                        .feature-list { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                        .feature-list li { margin: 10px 0; }
+                        .button { display: inline-block; background: #10b981; color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+                        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🎉 Subscription Activated!</h1>
+                        </div>
+                        <div class="content">
+                            <div class="success-box">
+                                <p style="margin: 0 0 10px 0; color: #059669;">Your new plan</p>
+                                <span class="plan-badge">{{plan_name}}</span>
+                            </div>
+                            <p>Hi {{name}},</p>
+                            <p>Congratulations! Your subscription has been successfully activated.</p>
+                            <div class="feature-list">
+                                <h3>Your plan includes:</h3>
+                                <ul>
+                                    {{features}}
+                                </ul>
+                            </div>
+                            <p style="text-align: center;">
+                                <a href="{{dashboard_url}}" class="button">Go to Dashboard</a>
+                            </p>
+                            <p>Thank you for choosing IEOSUIA!</p>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ',
         ];
-        
-        $html = $templates[$template] ?? '';
         
         foreach ($data as $key => $value) {
             $html = str_replace('{{' . $key . '}}', $value, $html);
@@ -317,5 +513,73 @@ class Mailer {
         ]);
         
         return self::send($adminEmail, $subject, $body);
+    }
+    
+    public static function sendPaymentSuccessEmail(string $email, array $data): bool {
+        $subject = "✅ Payment Received - Invoice " . ($data['invoice_number'] ?? 'N/A');
+        $body = self::getEmailTemplate('payment_success', [
+            'name' => htmlspecialchars($data['name'] ?? 'Customer'),
+            'amount' => number_format($data['amount'] ?? 0, 2),
+            'currency' => $data['currency'] ?? 'R',
+            'invoice_number' => htmlspecialchars($data['invoice_number'] ?? 'N/A'),
+            'reference' => htmlspecialchars($data['reference'] ?? 'N/A'),
+            'payment_method' => htmlspecialchars($data['payment_method'] ?? 'Online'),
+            'date' => $data['date'] ?? date('Y-m-d H:i'),
+            'dashboard_url' => ($_ENV['FRONTEND_URL'] ?? 'https://invoices.ieosuia.com') . '/dashboard/payments',
+        ]);
+        
+        return self::send($email, $subject, $body);
+    }
+    
+    public static function sendPaymentFailedEmail(string $email, array $data): bool {
+        $subject = "❌ Payment Failed - Invoice " . ($data['invoice_number'] ?? 'N/A');
+        $body = self::getEmailTemplate('payment_failed', [
+            'name' => htmlspecialchars($data['name'] ?? 'Customer'),
+            'amount' => number_format($data['amount'] ?? 0, 2),
+            'currency' => $data['currency'] ?? 'R',
+            'invoice_number' => htmlspecialchars($data['invoice_number'] ?? 'N/A'),
+            'reference' => htmlspecialchars($data['reference'] ?? 'N/A'),
+            'error_message' => htmlspecialchars($data['error_message'] ?? 'The payment could not be processed.'),
+            'date' => $data['date'] ?? date('Y-m-d H:i'),
+            'retry_url' => ($_ENV['FRONTEND_URL'] ?? 'https://invoices.ieosuia.com') . '/dashboard/invoices',
+        ]);
+        
+        return self::send($email, $subject, $body);
+    }
+    
+    public static function sendSubscriptionRenewalEmail(string $email, array $data): bool {
+        $subject = "🔄 Subscription Renewal Reminder - " . ($data['plan_name'] ?? 'Your Plan');
+        $body = self::getEmailTemplate('subscription_renewal', [
+            'name' => htmlspecialchars($data['name'] ?? 'Customer'),
+            'plan_name' => htmlspecialchars($data['plan_name'] ?? 'Pro'),
+            'amount' => number_format($data['amount'] ?? 0, 2),
+            'currency' => $data['currency'] ?? 'R',
+            'renewal_date' => $data['renewal_date'] ?? date('Y-m-d', strtotime('+3 days')),
+            'days_until' => $data['days_until'] ?? 3,
+            'settings_url' => ($_ENV['FRONTEND_URL'] ?? 'https://invoices.ieosuia.com') . '/dashboard/settings',
+        ]);
+        
+        return self::send($email, $subject, $body);
+    }
+    
+    public static function sendSubscriptionSuccessEmail(string $email, array $data): bool {
+        $planFeatures = [
+            'solo' => '<li>📄 100 invoices/month</li><li>📧 50 email credits</li><li>📱 20 SMS credits</li>',
+            'pro' => '<li>📄 500 invoices/month</li><li>📧 200 email credits</li><li>📱 100 SMS credits</li><li>🎨 Custom templates</li>',
+            'business' => '<li>📄 Unlimited invoices</li><li>📧 500 email credits</li><li>📱 300 SMS credits</li><li>🎨 Custom templates</li><li>📊 Advanced reports</li>',
+        ];
+        
+        $plan = strtolower($data['plan'] ?? 'pro');
+        $features = $planFeatures[$plan] ?? $planFeatures['pro'];
+        
+        $subject = "🎉 Subscription Activated - " . ucfirst($plan) . " Plan";
+        $body = self::getEmailTemplate('subscription_success', [
+            'name' => htmlspecialchars($data['name'] ?? 'Customer'),
+            'plan_name' => ucfirst($plan) . ' Plan',
+            'features' => $features,
+            'dashboard_url' => ($_ENV['FRONTEND_URL'] ?? 'https://invoices.ieosuia.com') . '/dashboard',
+        ]);
+        
+        return self::send($email, $subject, $body);
     }
 }

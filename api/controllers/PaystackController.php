@@ -172,6 +172,9 @@ class PaystackController {
             case 'charge.success':
                 $this->handleChargeSuccess($event['data']);
                 break;
+            case 'charge.failed':
+                $this->handleChargeFailed($event['data']);
+                break;
             case 'transfer.success':
                 // Handle transfer success if needed
                 break;
@@ -241,6 +244,9 @@ class PaystackController {
             return;
         }
         
+        // Get client for email notification
+        $client = Client::query()->find($invoice['client_id']);
+        
         $amount = ($data['amount'] ?? 0) / 100; // Convert from kobo
         
         // Record in payments table
@@ -270,7 +276,78 @@ class PaystackController {
             Invoice::query()->update($invoiceId, ['status' => 'Paid']);
         }
         
+        // Send payment success email to client
+        if ($client && !empty($client['email'])) {
+            Mailer::sendPaymentSuccessEmail($client['email'], [
+                'name' => $client['name'],
+                'amount' => $amount,
+                'currency' => $invoice['currency'] ?? 'R',
+                'invoice_number' => $invoice['invoice_number'],
+                'reference' => $reference,
+                'payment_method' => 'Paystack (' . ($data['channel'] ?? 'card') . ')',
+                'date' => date('Y-m-d H:i'),
+            ]);
+        }
+        
+        // Also notify the invoice owner (user)
+        $user = User::query()->find($invoice['user_id']);
+        if ($user && !empty($user['email'])) {
+            Mailer::sendPaymentSuccessEmail($user['email'], [
+                'name' => $user['name'],
+                'amount' => $amount,
+                'currency' => $invoice['currency'] ?? 'R',
+                'invoice_number' => $invoice['invoice_number'],
+                'reference' => $reference,
+                'payment_method' => 'Paystack (' . ($data['channel'] ?? 'card') . ')',
+                'date' => date('Y-m-d H:i'),
+            ]);
+        }
+        
         error_log("Payment recorded successfully: $reference, amount: $amount, invoice: $invoiceId");
+    }
+    
+    /**
+     * Handle failed payment notification
+     */
+    private function handleChargeFailed(array $data): void {
+        $reference = $data['reference'] ?? '';
+        $invoiceId = $data['metadata']['invoice_id'] ?? null;
+        
+        if (!$invoiceId) {
+            return;
+        }
+        
+        $invoice = Invoice::query()->find((int)$invoiceId);
+        if (!$invoice) {
+            return;
+        }
+        
+        $client = Client::query()->find($invoice['client_id']);
+        $amount = ($data['amount'] ?? 0) / 100;
+        
+        // Update transaction status
+        $db = Database::getConnection();
+        $stmt = $db->prepare("
+            UPDATE payment_transactions 
+            SET status = 'failed', gateway_response = ?, updated_at = NOW()
+            WHERE merchant_payment_id = ?
+        ");
+        $stmt->execute([json_encode($data), $reference]);
+        
+        // Send payment failed email
+        if ($client && !empty($client['email'])) {
+            Mailer::sendPaymentFailedEmail($client['email'], [
+                'name' => $client['name'],
+                'amount' => $amount,
+                'currency' => $invoice['currency'] ?? 'R',
+                'invoice_number' => $invoice['invoice_number'],
+                'reference' => $reference,
+                'error_message' => $data['gateway_response'] ?? 'The payment could not be processed.',
+                'date' => date('Y-m-d H:i'),
+            ]);
+        }
+        
+        error_log("Payment failed: $reference, invoice: $invoiceId");
     }
     
     /**
