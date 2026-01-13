@@ -150,13 +150,19 @@ class AuthController {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $rateLimiter = new RateLimitMiddleware(5, 15);
         if (!$rateLimiter->handle('admin_login:' . $ip)) {
+            // Send alert for rate limit exceeded
+            $this->sendAdminLoginAlert($step, $ip, 'Rate limit exceeded');
             return;
         }
         
         $db = Database::getConnection();
         
-        // Clean up expired sessions
+        // Clean up expired sessions (including inactive sessions older than 5 minutes)
         $stmt = $db->prepare("DELETE FROM admin_sessions WHERE expires_at < NOW()");
+        $stmt->execute();
+        
+        // Also clean up sessions with step < 99 that haven't been updated in 2 minutes (inactivity timeout)
+        $stmt = $db->prepare("DELETE FROM admin_sessions WHERE step < 99 AND last_activity < DATE_SUB(NOW(), INTERVAL 2 MINUTE)");
         $stmt->execute();
         
         // Step 1: First password
@@ -164,17 +170,18 @@ class AuthController {
             if ($password !== self::ADMIN_PASSWORDS[1]) {
                 $rateLimiter->hit();
                 error_log("Admin login step 1 failed from IP: $ip");
+                $this->sendAdminLoginAlert(1, $ip, 'Wrong first password');
                 Response::error('Invalid credentials', 401);
                 return;
             }
             
-            // Create session for step 2
+            // Create session for step 2 with 2-minute timeout
             $token = bin2hex(random_bytes(32));
             $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes'));
             
             $stmt = $db->prepare("
-                INSERT INTO admin_sessions (session_token, ip_address, step, expires_at) 
-                VALUES (?, ?, 2, ?)
+                INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity) 
+                VALUES (?, ?, 2, ?, NOW())
             ");
             $stmt->execute([hash('sha256', $token), $ip, $expiresAt]);
             
@@ -182,7 +189,8 @@ class AuthController {
                 'admin_login' => true,
                 'step' => 2,
                 'session_token' => $token,
-                'message' => 'Enter second password'
+                'message' => 'Enter second password',
+                'timeout' => 120 // 2 minutes in seconds
             ]);
             return;
         }
@@ -193,22 +201,44 @@ class AuthController {
             return;
         }
         
+        // Check session with inactivity timeout (2 minutes)
         $stmt = $db->prepare("
             SELECT * FROM admin_sessions 
-            WHERE session_token = ? AND ip_address = ? AND step = ? AND expires_at > NOW()
+            WHERE session_token = ? AND ip_address = ? AND step = ? 
+            AND expires_at > NOW() 
+            AND last_activity > DATE_SUB(NOW(), INTERVAL 2 MINUTE)
         ");
         $stmt->execute([hash('sha256', $sessionToken), $ip, $step]);
         $session = $stmt->fetch();
         
         if (!$session) {
-            Response::error('Session expired. Please start over.', 401);
+            // Check if session exists but timed out due to inactivity
+            $stmt = $db->prepare("SELECT * FROM admin_sessions WHERE session_token = ?");
+            $stmt->execute([hash('sha256', $sessionToken)]);
+            $expiredSession = $stmt->fetch();
+            
+            if ($expiredSession) {
+                // Delete the expired session
+                $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token = ?");
+                $stmt->execute([hash('sha256', $sessionToken)]);
+                Response::error('Session timed out due to inactivity. Please start over.', 401);
+            } else {
+                Response::error('Session expired. Please start over.', 401);
+            }
             return;
         }
+        
+        // Update last activity timestamp
+        $stmt = $db->prepare("UPDATE admin_sessions SET last_activity = NOW() WHERE session_token = ?");
+        $stmt->execute([hash('sha256', $sessionToken)]);
         
         // Validate password for current step
         if ($password !== self::ADMIN_PASSWORDS[$step]) {
             $rateLimiter->hit();
             error_log("Admin login step $step failed from IP: $ip");
+            
+            // Send security alert
+            $this->sendAdminLoginAlert($step, $ip, "Wrong password at step $step");
             
             // Delete session on failure
             $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token = ?");
@@ -220,14 +250,15 @@ class AuthController {
         
         // Step 2: Update session for step 3
         if ($step === 2) {
-            $stmt = $db->prepare("UPDATE admin_sessions SET step = 3 WHERE session_token = ?");
+            $stmt = $db->prepare("UPDATE admin_sessions SET step = 3, last_activity = NOW() WHERE session_token = ?");
             $stmt->execute([hash('sha256', $sessionToken)]);
             
             Response::json([
                 'admin_login' => true,
                 'step' => 3,
                 'session_token' => $sessionToken,
-                'message' => 'Enter third password'
+                'message' => 'Enter third password',
+                'timeout' => 120 // 2 minutes in seconds
             ]);
             return;
         }
@@ -240,8 +271,8 @@ class AuthController {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
         
         $stmt = $db->prepare("
-            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at) 
-            VALUES (?, ?, 99, ?)
+            INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity) 
+            VALUES (?, ?, 99, ?, NOW())
         ");
         $stmt->execute([hash('sha256', $adminToken), $ip, $expiresAt]);
         
@@ -253,6 +284,30 @@ class AuthController {
             'admin_token' => $adminToken,
             'message' => 'Admin login successful'
         ]);
+    }
+    
+    /**
+     * Send email alert for failed admin login attempts
+     */
+    private function sendAdminLoginAlert(int $step, string $ip, string $reason): void {
+        try {
+            // Count recent attempts from this IP
+            $db = Database::getConnection();
+            $stmt = $db->prepare("
+                SELECT COUNT(*) as count FROM admin_sessions 
+                WHERE ip_address = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+            ");
+            $stmt->execute([$ip]);
+            $result = $stmt->fetch();
+            $attemptCount = ($result['count'] ?? 0) + 1;
+            
+            // Send email alert
+            Mailer::sendAdminSecurityAlert($step, $ip, $attemptCount);
+            
+            error_log("Admin security alert sent: $reason from IP: $ip (attempt #$attemptCount)");
+        } catch (Exception $e) {
+            error_log("Failed to send admin security alert: " . $e->getMessage());
+        }
     }
     
     public function logout(): void {

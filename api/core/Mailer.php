@@ -249,6 +249,50 @@ class Mailer {
                 </body>
                 </html>
             ',
+            'admin_security_alert' => '
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { background: linear-gradient(135deg, #dc2626, #991b1b); padding: 30px; text-align: center; }
+                        .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                        .content { padding: 30px; }
+                        .alert-box { background: #fef2f2; border: 2px solid #dc2626; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                        .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        .info-table td { padding: 10px; border-bottom: 1px solid #eee; }
+                        .info-table td:first-child { font-weight: bold; width: 40%; color: #666; }
+                        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🚨 Security Alert</h1>
+                        </div>
+                        <div class="content">
+                            <div class="alert-box">
+                                <h2 style="margin-top: 0; color: #dc2626;">Failed Admin Login Attempt</h2>
+                                <p>Someone attempted to log into the admin panel with incorrect credentials.</p>
+                            </div>
+                            <table class="info-table">
+                                <tr><td>Step Failed:</td><td>{{step}}</td></tr>
+                                <tr><td>IP Address:</td><td>{{ip_address}}</td></tr>
+                                <tr><td>User Agent:</td><td>{{user_agent}}</td></tr>
+                                <tr><td>Date/Time:</td><td>{{timestamp}}</td></tr>
+                                <tr><td>Attempts from IP:</td><td>{{attempt_count}}</td></tr>
+                            </table>
+                            <p style="color: #666; font-size: 14px;">If this was not you, please ensure your admin credentials are secure and consider additional security measures.</p>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ' . date('Y') . ' IEOSUIA. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ',
         ];
         
         $html = $templates[$template] ?? '';
@@ -258,5 +302,20 @@ class Mailer {
         }
         
         return $html;
+    }
+    
+    public static function sendAdminSecurityAlert(int $step, string $ip, int $attemptCount): bool {
+        $adminEmail = $_ENV['ADMIN_ALERT_EMAIL'] ?? 'godtheson@ieosuia.com';
+        
+        $subject = "🚨 SECURITY ALERT: Failed Admin Login Attempt";
+        $body = self::getEmailTemplate('admin_security_alert', [
+            'step' => "Step $step of 3",
+            'ip_address' => $ip,
+            'user_agent' => htmlspecialchars($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'),
+            'timestamp' => date('Y-m-d H:i:s T'),
+            'attempt_count' => $attemptCount,
+        ]);
+        
+        return self::send($adminEmail, $subject, $body);
     }
 }
