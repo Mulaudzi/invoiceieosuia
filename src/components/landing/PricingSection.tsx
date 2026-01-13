@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Star, Zap, Crown, Mail, MessageSquare, FileText, ArrowRight, X, Users, Repeat, BarChart3, Palette, Bell, Shield, Headphones, Building2 } from "lucide-react";
+import { Check, Star, Zap, Crown, Mail, MessageSquare, FileText, ArrowRight, X, Users, Repeat, BarChart3, Palette, Bell, Shield, Headphones, Building2, ChevronDown, ChevronUp } from "lucide-react";
+import PricingFAQ from "./PricingFAQ";
 
 const PricingSection = () => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [showFeatureComparison, setShowFeatureComparison] = useState(false);
   
   // 20% discount for annual billing
   const annualDiscount = 0.20;
@@ -270,8 +272,26 @@ const PricingSection = () => {
           </p>
         </div>
 
+        {/* Detailed Feature Comparison Toggle */}
+        <div className="mt-12 text-center">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setShowFeatureComparison(!showFeatureComparison)}
+            className="group"
+          >
+            {showFeatureComparison ? "Hide" : "Compare All"} Features
+            {showFeatureComparison ? (
+              <ChevronUp className="w-4 h-4 ml-2" />
+            ) : (
+              <ChevronDown className="w-4 h-4 ml-2" />
+            )}
+          </Button>
+        </div>
+
         {/* Detailed Feature Comparison */}
-        <div className="mt-20 max-w-6xl mx-auto">
+        {showFeatureComparison && (
+        <div className="mt-10 max-w-6xl mx-auto animate-fade-in">
           <div className="text-center mb-10">
             <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
               Compare All <span className="text-accent">Features</span>
@@ -566,6 +586,7 @@ const PricingSection = () => {
             </table>
           </div>
         </div>
+        )}
 
         {/* Enterprise CTA */}
         <div className="mt-16 text-center">
@@ -579,7 +600,7 @@ const PricingSection = () => {
                 Get custom limits, dedicated infrastructure, and priority support
               </p>
             </div>
-            <a href="mailto:info@ieosuia.com?subject=Enterprise Inquiry">
+            <a href="mailto:hello@ieosuia.com?subject=Enterprise Inquiry">
               <Button variant="outline" size="lg" className="group">
                 Contact us for Enterprise pricing
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -587,6 +608,9 @@ const PricingSection = () => {
             </a>
           </div>
         </div>
+
+        {/* Pricing FAQ */}
+        <PricingFAQ />
       </div>
     </section>
   );

@@ -14,8 +14,8 @@ const HeroSection = () => {
   ];
 
   const stats = [
-    { value: "10K+", label: "Invoices Sent" },
-    { value: "R2M+", label: "Processed" },
+    { value: "ZAR", label: "Multi-Currency" },
+    { value: "24/7", label: "Always Available" },
     { value: "99.9%", label: "Uptime" },
   ];
 
@@ -44,8 +44,8 @@ const HeroSection = () => {
               {/* Announcement Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-sm mb-8 animate-fade-in mt-8">
                 <Sparkles className="w-4 h-4 text-accent" />
-                <span>South Africa's Leading Invoicing Platform</span>
-                <span className="px-2 py-0.5 bg-accent/20 rounded-full text-accent text-xs font-medium">New</span>
+                <span>Built for South African Businesses</span>
+                <span className="px-2 py-0.5 bg-accent/20 rounded-full text-accent text-xs font-medium">POPIA Compliant</span>
               </div>
 
               {/* Main Headline */}

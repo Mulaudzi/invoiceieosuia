@@ -34,20 +34,20 @@ const ContactSection = () => {
     {
       icon: Mail,
       label: "Email",
-      value: "info@ieosuia.com",
-      href: "mailto:info@ieosuia.com",
+      value: "hello@ieosuia.com",
+      href: "mailto:hello@ieosuia.com",
     },
     {
       icon: Phone,
-      label: "Phone",
-      value: "+27 63 808 2493",
-      href: "tel:+27638082493",
+      label: "Phone (Calls)",
+      value: "+27 79 928 2775",
+      href: "tel:+27799282775",
     },
     {
       icon: MapPin,
       label: "Address",
-      value: "3116 Rock Alder, Extension 15, Naturena, Johannesburg South, Gauteng, 2095, South Africa",
-      href: "https://maps.google.com/?q=3116+Rock+Alder+Extension+15+Naturena+Johannesburg+South+Gauteng+2095+South+Africa",
+      value: "26 Rock Alder, Extension 15, Naturena, Johannesburg, 2095",
+      href: "https://maps.google.com/?q=26+Rock+Alder+Extension+15+Naturena+Johannesburg+2095",
     },
   ];
 
@@ -115,6 +115,9 @@ const ContactSection = () => {
                   className="bg-background resize-none"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                This message will be sent from IEOSUIA Invoices & Books website contact form.
+              </p>
               <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   "Sending..."
@@ -150,6 +153,20 @@ const ContactSection = () => {
                     </div>
                   </a>
                 ))}
+                
+                {/* Alternate phone */}
+                <a
+                  href="tel:+27631540696"
+                  className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all shrink-0">
+                    <Phone className="w-5 h-5 text-accent group-hover:text-accent-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Alternate Phone</p>
+                    <p className="font-medium text-foreground break-words">+27 63 154 0696</p>
+                  </div>
+                </a>
               </div>
             </div>
 
