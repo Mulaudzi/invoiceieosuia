@@ -126,7 +126,7 @@ class AdminController {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+8 hours'));
         $stmt = $db->prepare("
             UPDATE admin_sessions 
-            SET session_token = ?, expires_at = ?, auth_step = 3 
+            SET session_token = ?, expires_at = ?, step = 3 
             WHERE session_token = ?
         ");
         $stmt->execute([$adminToken, $expiresAt, $data['session_token']]);
@@ -175,7 +175,7 @@ class AdminController {
             SELECT * FROM admin_sessions 
             WHERE session_token = ? 
             AND ip_address = ?
-            AND auth_step = 3 
+            AND step = 3 
             AND expires_at > NOW()
         ");
         $stmt->execute([$token, $ip]);

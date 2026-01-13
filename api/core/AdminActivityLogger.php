@@ -119,7 +119,7 @@ class AdminActivityLogger {
                 JOIN admin_users au ON ass.admin_user_id = au.id
                 WHERE ass.session_token = ? 
                 AND ass.ip_address = ?
-                AND (ass.auth_step = 3 OR ass.step = 99)
+                AND ass.step IN (3, 99)
                 AND ass.expires_at > NOW()
             ");
             $stmt->execute([$token, $ip]);
