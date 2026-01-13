@@ -11,6 +11,7 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const menuItems = [
   { name: "Submissions", href: "/admin/submissions", icon: Inbox, badge: true },
   { name: "Email Logs", href: "/admin/email-logs", icon: Mail },
   { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Activity Logs", href: "/admin/activity-logs", icon: Activity },
   { name: "Settings", href: "/admin/settings", icon: Settings },
   { name: "QA Console", href: "/admin/qa", icon: Bug },

@@ -392,6 +392,190 @@ class PayfastController {
     }
     
     /**
+     * Handle subscription recurring payment (ITN)
+     * POST /api/payfast/subscription-webhook
+     */
+    public function subscriptionWebhook(): void {
+        $pfData = $_POST;
+        
+        error_log("PayFast Subscription ITN received: " . json_encode($pfData));
+        
+        if (!$this->verifyWebhook($pfData)) {
+            error_log("PayFast Subscription ITN verification failed");
+            Response::error('Invalid signature', 400);
+        }
+        
+        $paymentStatus = $pfData['payment_status'] ?? '';
+        $userId = (int)($pfData['custom_int1'] ?? 0);
+        $plan = $pfData['custom_str1'] ?? '';
+        $amount = (float)($pfData['amount_gross'] ?? 0);
+        $token = $pfData['token'] ?? ''; // Subscription token for recurring
+        $billingDate = $pfData['billing_date'] ?? null;
+        
+        if (!$userId) {
+            Response::error('Missing user ID', 400);
+        }
+        
+        $db = Database::getConnection();
+        $user = User::query()->find($userId);
+        
+        if (!$user) {
+            Response::error('User not found', 404);
+        }
+        
+        if ($paymentStatus === 'COMPLETE') {
+            // Successful recurring payment - extend subscription
+            $nextRenewalDate = $billingDate 
+                ? (new DateTime($billingDate))->format('Y-m-d')
+                : (new DateTime())->modify('+1 month')->format('Y-m-d');
+            
+            $stmt = $db->prepare("
+                UPDATE users 
+                SET plan = ?, subscription_renewal_date = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$plan, $nextRenewalDate, $userId]);
+            
+            // Record payment transaction
+            $stmt = $db->prepare("
+                INSERT INTO payment_transactions 
+                (user_id, plan, amount, status, gateway, merchant_payment_id, gateway_response, created_at, completed_at)
+                VALUES (?, ?, ?, 'completed', 'payfast', ?, ?, NOW(), NOW())
+            ");
+            $stmt->execute([
+                $userId,
+                $plan,
+                $amount,
+                $pfData['pf_payment_id'] ?? bin2hex(random_bytes(8)),
+                json_encode($pfData)
+            ]);
+            
+            // Send renewal success email
+            Mailer::sendSubscriptionSuccessEmail($user['email'], [
+                'name' => $user['name'],
+                'plan' => $plan,
+            ]);
+            
+            error_log("PayFast subscription renewed: user $userId, plan $plan, amount R$amount");
+            
+        } else if ($paymentStatus === 'FAILED' || $paymentStatus === 'CANCELLED') {
+            // Failed recurring payment
+            
+            // Log the failure
+            $stmt = $db->prepare("
+                INSERT INTO payment_transactions 
+                (user_id, plan, amount, status, gateway, gateway_response, created_at)
+                VALUES (?, ?, ?, 'failed', 'payfast', ?, NOW())
+            ");
+            $stmt->execute([$userId, $plan, $amount, json_encode($pfData)]);
+            
+            // Send payment failed email
+            Mailer::sendPaymentFailedEmail($user['email'], [
+                'name' => $user['name'],
+                'amount' => $amount,
+                'currency' => 'R',
+                'invoice_number' => 'Subscription Renewal',
+                'reference' => $pfData['pf_payment_id'] ?? '',
+                'error_message' => 'Your subscription payment could not be processed. Please update your payment method.',
+                'date' => date('Y-m-d H:i'),
+            ]);
+            
+            error_log("PayFast subscription payment failed: user $userId");
+        }
+        
+        Response::success(['message' => 'OK']);
+    }
+    
+    /**
+     * Cancel subscription
+     * POST /api/payfast/cancel-subscription
+     */
+    public function cancelSubscription(): void {
+        $user = User::query()->find(Auth::id());
+        
+        if (!$user || $user['plan'] === 'free') {
+            Response::error('No active subscription to cancel', 400);
+        }
+        
+        $db = Database::getConnection();
+        
+        // Update subscription history
+        $stmt = $db->prepare("
+            UPDATE subscription_history 
+            SET status = 'cancelled', ended_at = NOW()
+            WHERE user_id = ? AND status = 'active'
+        ");
+        $stmt->execute([$user['id']]);
+        
+        // Note: Keep user on current plan until renewal date
+        // The processExpired cron will handle downgrade after expiry
+        
+        // Send cancellation confirmation
+        Mailer::send(
+            $user['email'],
+            'Subscription Cancellation Confirmed - IEOSUIA',
+            $this->getCancellationEmailBody($user['name'], $user['plan'], $user['subscription_renewal_date'])
+        );
+        
+        Response::json([
+            'success' => true,
+            'message' => 'Subscription cancelled. You will retain access until ' . ($user['subscription_renewal_date'] ?? 'the end of your billing period'),
+        ]);
+    }
+    
+    private function getCancellationEmailBody(string $name, string $plan, ?string $endDate): string {
+        $endDateFormatted = $endDate ? date('F j, Y', strtotime($endDate)) : 'the end of your billing period';
+        $reactivateUrl = ($_ENV['APP_URL'] ?? 'http://localhost:5173') . '/dashboard/subscription';
+        
+        return "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset='UTF-8'>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .header { background: linear-gradient(135deg, #1e3a5f, #0d1f33); padding: 30px; text-align: center; }
+                    .header h1 { color: #fff; margin: 0; font-size: 24px; }
+                    .content { padding: 30px; }
+                    .button { display: inline-block; background: #10b981; color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+                    .info-box { background: #f9f9f9; border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; margin: 20px 0; }
+                    .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>IEOSUIA</h1>
+                    </div>
+                    <div class='content'>
+                        <h2>Subscription Cancelled</h2>
+                        <p>Hi {$name},</p>
+                        <p>We've received your request to cancel your <strong>" . ucfirst($plan) . "</strong> subscription.</p>
+                        
+                        <div class='info-box'>
+                            <p><strong>Important:</strong> You will continue to have access to all your plan features until <strong>{$endDateFormatted}</strong>.</p>
+                            <p>After this date, your account will be downgraded to the Free plan.</p>
+                        </div>
+                        
+                        <p>Changed your mind? You can reactivate your subscription anytime before the end date:</p>
+                        <p style='text-align: center;'>
+                            <a href='{$reactivateUrl}' class='button'>Reactivate Subscription</a>
+                        </p>
+                        
+                        <p>We're sorry to see you go. If you have any feedback on how we can improve, please let us know.</p>
+                        <p>Best regards,<br>The IEOSUIA Team</p>
+                    </div>
+                    <div class='footer'>
+                        <p>&copy; " . date('Y') . " IEOSUIA. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        ";
+    }
+    
+    /**
      * Get frontend base URL
      */
     private function getBaseUrl(): string {

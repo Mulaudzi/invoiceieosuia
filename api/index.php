@@ -174,6 +174,8 @@ $router->post('/payfast/checkout', [PayfastController::class, 'checkout'], [Auth
 $router->post('/payfast/invoice', [PayfastController::class, 'invoicePayment'], [AuthMiddleware::class]);
 $router->post('/payfast/webhook', [PayfastController::class, 'webhook']);
 $router->post('/payfast/invoice-webhook', [PayfastController::class, 'invoiceWebhook']);
+$router->post('/payfast/subscription-webhook', [PayfastController::class, 'subscriptionWebhook']);
+$router->post('/payfast/cancel-subscription', [PayfastController::class, 'cancelSubscription'], [AuthMiddleware::class]);
 
 // Paystack Routes
 $router->post('/paystack/initialize', [PaystackController::class, 'initialize'], [AuthMiddleware::class]);
@@ -258,6 +260,9 @@ $router->get('/admin/users', [AuthController::class, 'getAdminUsers']);
 $router->put('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);
 $router->patch('/admin/users/{id}/toggle', [AuthController::class, 'toggleAdminStatus']);
 $router->delete('/admin/users/{id}', [AuthController::class, 'deleteAdminUser']);
+
+// Admin Subscription Metrics Route
+$router->get('/admin/subscription-metrics', [AdminController::class, 'getSubscriptionMetrics']);
 
 // QA Console Routes (Admin only)
 $router->post('/admin/qa/seed', [QaController::class, 'seed']);
