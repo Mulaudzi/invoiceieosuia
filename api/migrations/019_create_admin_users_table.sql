@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add admin_user_id column to admin_sessions if not exists
-ALTER TABLE admin_sessions ADD COLUMN admin_user_id INT NULL AFTER step;
+-- Note: The column is added after auth_step (the original column name)
+ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS admin_user_id INT NULL AFTER auth_step;
 ALTER TABLE admin_sessions ADD FOREIGN KEY (admin_user_id) REFERENCES admin_users(id) ON DELETE SET NULL;
 
 -- Note: After running this migration, use the /admin-setup page to create the first admin user
