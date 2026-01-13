@@ -4,7 +4,7 @@ class Client extends Model {
     protected static string $table = 'clients';
     protected static array $fillable = [
         'user_id', 'name', 'email', 'phone', 'company',
-        'address', 'tax_number', 'status', 'notes'
+        'address', 'tax_number', 'status', 'notes', 'currency', 'plan'
     ];
     
     public function withStats(array $client): array {

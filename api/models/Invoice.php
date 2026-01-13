@@ -3,9 +3,9 @@
 class Invoice extends Model {
     protected static string $table = 'invoices';
     protected static array $fillable = [
-        'user_id', 'client_id', 'template_id', 'invoice_number',
+        'user_id', 'client_id', 'template_id', 'recurring_invoice_id', 'invoice_number',
         'date', 'due_date', 'subtotal', 'tax', 'total',
-        'status', 'notes', 'terms'
+        'status', 'notes', 'terms', 'currency', 'exchange_rate', 'base_total'
     ];
     
     public function withRelations(array $invoice): array {
