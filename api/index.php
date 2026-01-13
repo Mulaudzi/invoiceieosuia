@@ -278,6 +278,14 @@ $router->put('/subscription/renewal-date', [SubscriptionController::class, 'upda
 $router->post('/subscription/process-renewals', [SubscriptionController::class, 'processRenewalReminders']); // Daily cron - sends 3-day reminders
 $router->post('/subscription/process-expired', [SubscriptionController::class, 'processExpired']); // Daily cron - handles expired subscriptions
 
+// Billing Portal Routes
+$router->get('/billing/portal', [BillingController::class, 'getPortal'], [AuthMiddleware::class]);
+$router->get('/billing/transactions', [BillingController::class, 'getTransactions'], [AuthMiddleware::class]);
+$router->post('/billing/payment-methods', [BillingController::class, 'addPaymentMethod'], [AuthMiddleware::class]);
+$router->post('/billing/payment-methods/{id}/default', [BillingController::class, 'setDefaultPaymentMethod'], [AuthMiddleware::class]);
+$router->delete('/billing/payment-methods/{id}', [BillingController::class, 'removePaymentMethod'], [AuthMiddleware::class]);
+$router->get('/billing/transactions/{id}/invoice', [BillingController::class, 'downloadInvoice'], [AuthMiddleware::class]);
+
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);
 $router->post('/webhooks/email-delivery', [WebhookController::class, 'handleDelivery']);
