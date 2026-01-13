@@ -105,6 +105,9 @@ class ContactController {
         // Send confirmation email to user
         $confirmationSent = $this->sendConfirmationEmail($email, $name, $purposeLabel, $submissionId);
         
+        // Send instant notification to admin team
+        $this->sendAdminNotification($submissionId, $name, $email, $purposeLabel, $message, $origin);
+        
         if ($notificationSent) {
             Response::json([
                 'success' => true,
@@ -120,6 +123,163 @@ class ContactController {
             ]);
         }
     }
+    
+    /**
+     * Send instant notification to all admin recipients
+     */
+    private function sendAdminNotification(
+        int $submissionId,
+        string $name,
+        string $email,
+        string $purpose,
+        string $message,
+        string $origin
+    ): void {
+        // Get notification recipients from database or use defaults
+        $recipients = $this->getAdminNotificationRecipients();
+        
+        if (empty($recipients)) {
+            return; // No recipients configured
+        }
+        
+        $subject = "🔔 [NEW] {$purpose} from {$name} - #{$submissionId}";
+        
+        $body = $this->getAdminNotificationTemplate([
+            'submission_id' => $submissionId,
+            'name' => htmlspecialchars($name),
+            'email' => htmlspecialchars($email),
+            'purpose' => $purpose,
+            'message' => nl2br(htmlspecialchars($message)),
+            'origin' => htmlspecialchars($origin),
+            'timestamp' => date('Y-m-d H:i:s T'),
+            'admin_url' => 'https://invoices.ieosuia.com/admin/submissions/' . $submissionId,
+        ]);
+        
+        foreach ($recipients as $recipient) {
+            try {
+                // Log the notification
+                $logId = $this->logEmail(
+                    $submissionId,
+                    $recipient,
+                    $subject,
+                    'admin_notification',
+                    'pending'
+                );
+                
+                $sent = Mailer::send($recipient, $subject, $body);
+                
+                if ($sent) {
+                    $this->updateEmailLog($logId, 'sent');
+                } else {
+                    $this->updateEmailLog($logId, 'failed', 'Mailer returned false');
+                }
+            } catch (\Exception $e) {
+                error_log("Admin notification failed for {$recipient}: " . $e->getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Get list of admin email recipients for notifications
+     */
+    private function getAdminNotificationRecipients(): array {
+        $db = Database::getConnection();
+        
+        try {
+            $stmt = $db->prepare("
+                SELECT email_recipients 
+                FROM admin_notification_settings 
+                WHERE notification_type = 'new_contact_submission' AND enabled = TRUE
+            ");
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && !empty($result['email_recipients'])) {
+                // Parse comma-separated list
+                $emails = array_map('trim', explode(',', $result['email_recipients']));
+                return array_filter($emails, fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL));
+            }
+        } catch (\Exception $e) {
+            // Table might not exist yet
+            error_log("Failed to get notification recipients: " . $e->getMessage());
+        }
+        
+        // Default fallback
+        return ['info@ieosuia.com'];
+    }
+    
+    /**
+     * Admin notification email template
+     */
+    private function getAdminNotificationTemplate(array $data): string {
+        return '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .header { background: linear-gradient(135deg, #10b981, #059669); padding: 20px; text-align: center; }
+                    .header h1 { color: #fff; margin: 0; font-size: 20px; }
+                    .alert-badge { display: inline-block; background: #fff; color: #059669; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }
+                    .content { padding: 24px; }
+                    .info-grid { display: grid; gap: 12px; margin: 16px 0; }
+                    .info-item { padding: 12px; background: #f9fafb; border-radius: 6px; border-left: 3px solid #10b981; }
+                    .info-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+                    .info-value { font-weight: 600; color: #111827; }
+                    .message-box { background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #bbf7d0; }
+                    .cta-button { display: inline-block; background: #10b981; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 16px; }
+                    .footer { background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #6b7280; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔔 New Contact Form Submission</h1>
+                        <span class="alert-badge">IMMEDIATE ATTENTION</span>
+                    </div>
+                    <div class="content">
+                        <p>A new message has been received and requires your attention.</p>
+                        
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Reference</div>
+                                <div class="info-value">#' . $data['submission_id'] . '</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">From</div>
+                                <div class="info-value">' . $data['name'] . ' &lt;' . $data['email'] . '&gt;</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Category</div>
+                                <div class="info-value">' . $data['purpose'] . '</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Source Page</div>
+                                <div class="info-value">' . $data['origin'] . '</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Received</div>
+                                <div class="info-value">' . $data['timestamp'] . '</div>
+                            </div>
+                        </div>
+                        
+                        <div class="message-box">
+                            <strong>Message:</strong><br>
+                            ' . $data['message'] . '
+                        </div>
+                        
+                        <a href="' . $data['admin_url'] . '" class="cta-button">View in Admin Dashboard →</a>
+                    </div>
+                    <div class="footer">
+                        <p>This is an automated notification from IEOSUIA Contact System.</p>
+                        <p>To adjust notification settings, visit the admin dashboard.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        ';
     
     private function saveSubmission(
         string $name, 

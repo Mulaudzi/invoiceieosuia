@@ -31,9 +31,13 @@ interface EmailLog {
   type: string;
   recipient_email: string;
   recipient_name: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
   subject: string;
   status: 'pending' | 'sent' | 'failed' | 'bounced';
   error_message: string | null;
+  bounce_type: string | null;
+  bounced_at: string | null;
   sent_at: string | null;
   created_at: string;
 }
@@ -163,6 +167,8 @@ const AdminEmailLogs = () => {
         return <Badge variant="outline" className="border-blue-300 text-blue-700">Contact Notification</Badge>;
       case 'contact_confirmation':
         return <Badge variant="outline" className="border-purple-300 text-purple-700">User Confirmation</Badge>;
+      case 'admin_notification':
+        return <Badge variant="outline" className="border-green-300 text-green-700">Admin Alert</Badge>;
       default:
         return <Badge variant="outline">{type}</Badge>;
     }
@@ -282,6 +288,7 @@ const AdminEmailLogs = () => {
                   <option value="all">All Types</option>
                   <option value="contact_notification">Contact Notification</option>
                   <option value="contact_confirmation">User Confirmation</option>
+                  <option value="admin_notification">Admin Alert</option>
                 </select>
               </div>
             </div>
@@ -325,8 +332,8 @@ const AdminEmailLogs = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div>
-                            {log.recipient_name && (
-                              <p className="font-medium text-sm">{log.recipient_name}</p>
+                            {(log.contact_name || log.recipient_name) && (
+                              <p className="font-medium text-sm">{log.contact_name || log.recipient_name}</p>
                             )}
                             <p className="text-sm text-muted-foreground">{log.recipient_email}</p>
                           </div>
@@ -344,9 +351,16 @@ const AdminEmailLogs = () => {
                         </td>
                         <td className="py-3 px-4">
                           {log.error_message ? (
-                            <p className="text-xs text-destructive max-w-xs truncate" title={log.error_message}>
-                              {log.error_message}
-                            </p>
+                            <div>
+                              <p className="text-xs text-destructive max-w-xs truncate" title={log.error_message}>
+                                {log.error_message}
+                              </p>
+                              {log.bounce_type && (
+                                <p className="text-xs text-orange-600 mt-1">
+                                  Bounce type: {log.bounce_type}
+                                </p>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
