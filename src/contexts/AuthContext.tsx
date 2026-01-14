@@ -24,12 +24,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initAuth = async () => {
       const token = getToken();
       if (token) {
+        // First, check localStorage for cached user (for immediate state)
+        const cachedUser = localStorage.getItem('auth_user');
+        if (cachedUser) {
+          try {
+            setUser(JSON.parse(cachedUser));
+          } catch {
+            // Invalid cached user, will fetch from API
+          }
+        }
+        
         try {
+          // Validate token and get fresh user data
           const currentUser = await authService.getCurrentUser();
           setUser(currentUser);
+          localStorage.setItem('auth_user', JSON.stringify(currentUser));
         } catch (error) {
           // Token is invalid or expired, clear it
+          console.log('Token invalid, clearing auth state');
           removeToken();
+          localStorage.removeItem('auth_user');
+          setUser(null);
         }
       }
       setIsLoading(false);

@@ -102,12 +102,20 @@ export const authService = {
         recaptcha_token: recaptchaToken 
       });
       setToken(response.data.token);
+      // Store user in localStorage for persistence across page reloads
+      localStorage.setItem('auth_user', JSON.stringify(response.data.user));
       return { user: response.data.user, token: response.data.token };
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      if (axios.isAxiosError(error)) {
+        // Handle 401 specifically with user-friendly message
+        if (error.response?.status === 401) {
+          throw new Error('Invalid credentials. Please check your email and password.');
+        }
+        if (error.response?.data?.message) {
+          throw new Error(error.response.data.message);
+        }
       }
-      throw error;
+      throw new Error('Login failed. Please try again.');
     }
   },
 

@@ -99,8 +99,9 @@ const Login = () => {
         title: "Login successful!",
         description: "Redirecting to dashboard...",
       });
-      // Navigation is handled by the useEffect that watches for user state changes
-      // This ensures ProtectedRoute sees the user before we navigate
+      // Use full page reload to ensure AuthProvider re-initializes with fresh localStorage
+      // This prevents race conditions with React state updates
+      window.location.href = '/dashboard';
     } else {
       toast({
         title: "Login failed",
@@ -109,7 +110,6 @@ const Login = () => {
       });
       setIsLoading(false);
     }
-    // Don't set isLoading to false on success - let the redirect happen first
   };
 
   return (
