@@ -1,0 +1,18 @@
+{
+  "testClient": {
+    "name": "Cypress Test Client",
+    "email": "cypress.client@example.com",
+    "phone": "+27123456789",
+    "company": "Cypress Testing Ltd",
+    "address": "123 Test Street",
+    "city": "Cape Town",
+    "state": "Western Cape",
+    "zip": "8001",
+    "country": "South Africa"
+  },
+  "updatedClient": {
+    "name": "Updated Cypress Client",
+    "email": "updated.cypress@example.com",
+    "company": "Updated Company"
+  }
+}

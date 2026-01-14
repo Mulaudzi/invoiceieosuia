@@ -1,0 +1,14 @@
+{
+  "testProduct": {
+    "name": "Cypress Test Product",
+    "description": "A product created for E2E testing",
+    "price": 299.99,
+    "sku": "CYP-TEST-001",
+    "category": "Testing",
+    "active": true
+  },
+  "updatedProduct": {
+    "name": "Updated Cypress Product",
+    "price": 349.99
+  }
+}
