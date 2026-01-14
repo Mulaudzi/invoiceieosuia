@@ -10,7 +10,6 @@ import {
   Play, 
   RefreshCw, 
   Copy, 
-  Download, 
   CheckCircle2, 
   XCircle, 
   AlertTriangle, 
@@ -26,7 +25,9 @@ import {
   FileJson,
   FileText,
   Trash2,
-  Home
+  Home,
+  TestTube2,
+  SkipForward
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -46,16 +47,17 @@ const statusIcons = {
   warning: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
   pending: <Clock className="h-4 w-4 text-muted-foreground" />,
   running: <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />,
-  skipped: <Clock className="h-4 w-4 text-muted-foreground" />,
+  skipped: <SkipForward className="h-4 w-4 text-muted-foreground" />,
 };
 
-const categoryIcons = {
+const categoryIcons: Record<string, React.ReactNode> = {
   api: <Globe className="h-4 w-4" />,
   auth: <Lock className="h-4 w-4" />,
   frontend: <Layers className="h-4 w-4" />,
   database: <Database className="h-4 w-4" />,
   security: <Shield className="h-4 w-4" />,
   integration: <Activity className="h-4 w-4" />,
+  crud: <TestTube2 className="h-4 w-4" />,
 };
 
 const verdictColors = {
@@ -385,6 +387,15 @@ export default function AutomatedTests() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Database className="h-4 w-4" />
+                  <span>Database:</span>
+                  {report.systemHealth.database ? (
+                    <Badge className="bg-green-500">CRUD Tested</Badge>
+                  ) : (
+                    <Badge variant="secondary">Not Tested</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
                   <span>Storage:</span>
                   {report.systemHealth.storage ? (
                     <Badge className="bg-green-500">Available</Badge>
@@ -393,6 +404,16 @@ export default function AutomatedTests() {
                   )}
                 </div>
               </div>
+              {report.cleanupStatus && (
+                <div className="mt-3 pt-3 border-t">
+                  <span className="text-sm text-muted-foreground">Cleanup Status: </span>
+                  <span className="text-sm">
+                    {report.cleanupStatus.clientsDeleted} clients, {' '}
+                    {report.cleanupStatus.productsDeleted} products, {' '}
+                    {report.cleanupStatus.invoicesDeleted} invoices cleaned up
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
