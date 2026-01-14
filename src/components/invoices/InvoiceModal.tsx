@@ -212,7 +212,7 @@ export function InvoiceModal({ open, onOpenChange, invoice }: InvoiceModalProps)
                       </FormControl>
                       <SelectContent>
                         {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
+                          <SelectItem key={client.id} value={String(client.id)}>
                             {client.name} - {client.company}
                           </SelectItem>
                         ))}
@@ -238,7 +238,7 @@ export function InvoiceModal({ open, onOpenChange, invoice }: InvoiceModalProps)
                       </FormControl>
                       <SelectContent>
                         {templates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
+                          <SelectItem key={template.id} value={String(template.id)}>
                             {template.name}
                           </SelectItem>
                         ))}
@@ -382,7 +382,7 @@ export function InvoiceModal({ open, onOpenChange, invoice }: InvoiceModalProps)
                                 </SelectTrigger>
                                 <SelectContent>
                                   {products.map((product) => (
-                                    <SelectItem key={product.id} value={product.id}>
+                                    <SelectItem key={product.id} value={String(product.id)}>
                                       {product.name} - {formatCurrency(product.price)}
                                     </SelectItem>
                                   ))}
