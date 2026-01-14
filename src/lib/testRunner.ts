@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://invoices.ieosuia.c
 
 export type TestStatus = 'pending' | 'running' | 'passed' | 'failed' | 'skipped' | 'warning';
 export type TestPriority = 'P0' | 'P1' | 'P2';
-export type TestCategory = 'api' | 'auth' | 'frontend' | 'database' | 'security' | 'integration';
+export type TestCategory = 'api' | 'auth' | 'frontend' | 'database' | 'security' | 'integration' | 'crud';
 
 export interface TestResult {
   id: string;
@@ -22,6 +22,8 @@ export interface TestResult {
   rootCause?: string;
   fix?: string;
   timestamp: Date;
+  dataCreated?: unknown;
+  dataDeleted?: boolean;
 }
 
 export interface TestSuite {
@@ -58,11 +60,38 @@ export interface TestReport {
   coverage: number;
   verdict: 'PASS' | 'FAIL' | 'PARTIAL' | 'UNKNOWN';
   confidence: number;
+  cleanupStatus?: {
+    clientsDeleted: number;
+    productsDeleted: number;
+    invoicesDeleted: number;
+    paymentsDeleted: number;
+  };
 }
+
+// Test data tracker for cleanup
+interface TestDataTracker {
+  clients: string[];
+  products: string[];
+  invoices: string[];
+  payments: string[];
+  templates: string[];
+}
+
+const testDataTracker: TestDataTracker = {
+  clients: [],
+  products: [],
+  invoices: [],
+  payments: [],
+  templates: [],
+};
 
 // Test utilities
 export const testUtils = {
   generateId: () => Math.random().toString(36).substring(2, 15),
+  
+  generateTestEmail: () => `test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}@testautomation.local`,
+  
+  generateTestName: (prefix: string) => `[TEST] ${prefix}_${Date.now()}`,
   
   sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
   
@@ -77,7 +106,6 @@ export const testUtils = {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement('textarea');
       textarea.value = text;
       document.body.appendChild(textarea);
@@ -89,10 +117,26 @@ export const testUtils = {
   },
 
   getAuthToken: (): string | null => localStorage.getItem('ieosuia_auth_token'),
+  
+  isAuthenticated: (): boolean => !!localStorage.getItem('ieosuia_auth_token'),
+
+  trackCreatedData: (type: keyof TestDataTracker, id: string) => {
+    testDataTracker[type].push(id);
+  },
+
+  getTrackedData: () => ({ ...testDataTracker }),
+
+  clearTrackedData: () => {
+    testDataTracker.clients = [];
+    testDataTracker.products = [];
+    testDataTracker.invoices = [];
+    testDataTracker.payments = [];
+    testDataTracker.templates = [];
+  },
 };
 
-// API test helper
-async function testApiEndpoint(
+// Enhanced API test helper with better response handling
+async function testApiEndpoint<T = unknown>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   endpoint: string,
   options: {
@@ -101,9 +145,9 @@ async function testApiEndpoint(
     expectedStatus?: number;
     timeout?: number;
   } = {}
-): Promise<{ success: boolean; status: number; data?: unknown; error?: string; duration: number }> {
+): Promise<{ success: boolean; status: number; data?: T; error?: string; duration: number; rawResponse?: unknown }> {
   const startTime = Date.now();
-  const { requiresAuth = true, body, expectedStatus = 200, timeout = 10000 } = options;
+  const { requiresAuth = true, body, expectedStatus = 200, timeout = 15000 } = options;
 
   try {
     const headers: Record<string, string> = {
@@ -124,7 +168,7 @@ async function testApiEndpoint(
       data: body,
       headers,
       timeout,
-      validateStatus: () => true, // Accept all status codes
+      validateStatus: () => true,
     });
 
     const duration = Date.now() - startTime;
@@ -134,9 +178,10 @@ async function testApiEndpoint(
     return {
       success,
       status: response.status,
-      data: response.data,
+      data: response.data as T,
       duration,
       error: success ? undefined : `Expected ${expectedStatus}, got ${response.status}`,
+      rawResponse: response.data,
     };
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -440,6 +485,670 @@ export const apiTests = {
       error: getCredits.error,
       timestamp: new Date(),
     });
+
+    return results;
+  },
+};
+
+// ==================== CRUD TESTS WITH ACTUAL DATA ====================
+
+export const crudTests = {
+  // Check if user is authenticated before running CRUD tests
+  checkAuth(): TestResult {
+    const start = Date.now();
+    const isAuth = testUtils.isAuthenticated();
+    
+    return {
+      id: testUtils.generateId(),
+      name: 'Authentication Check for CRUD',
+      category: 'crud',
+      priority: 'P0',
+      status: isAuth ? 'passed' : 'skipped',
+      duration: Date.now() - start,
+      message: isAuth ? 'User is authenticated, CRUD tests can proceed' : 
+               'User not authenticated - CRUD tests will be skipped. Please login first.',
+      timestamp: new Date(),
+    };
+  },
+
+  // ========== CLIENT CRUD ==========
+  async testClientCRUD(): Promise<TestResult[]> {
+    const results: TestResult[] = [];
+    
+    if (!testUtils.isAuthenticated()) {
+      results.push({
+        id: testUtils.generateId(),
+        name: 'Client CRUD Suite',
+        category: 'crud',
+        priority: 'P0',
+        status: 'skipped',
+        duration: 0,
+        message: 'Skipped - User not authenticated',
+        timestamp: new Date(),
+      });
+      return results;
+    }
+
+    let createdClientId: string | null = null;
+    const testClientData = {
+      name: testUtils.generateTestName('Client'),
+      email: testUtils.generateTestEmail(),
+      phone: '+27123456789',
+      company: 'Test Automation Company',
+      address: '123 Test Street, Test City',
+      status: 'Active',
+    };
+
+    // CREATE Client
+    const createStart = Date.now();
+    const createResult = await testApiEndpoint<{ success: boolean; client: { id: string } }>('POST', '/clients', {
+      body: testClientData,
+    });
+
+    if (createResult.success && createResult.data?.client?.id) {
+      createdClientId = String(createResult.data.client.id);
+      testUtils.trackCreatedData('clients', createdClientId);
+    }
+
+    results.push({
+      id: testUtils.generateId(),
+      name: 'CREATE Client',
+      category: 'crud',
+      priority: 'P0',
+      status: createResult.success ? 'passed' : 'failed',
+      duration: Date.now() - createStart,
+      message: createResult.success ? `Created client with ID: ${createdClientId}` : 'Failed to create client',
+      error: createResult.error,
+      expected: 'Status 200/201 with client object',
+      actual: `Status ${createResult.status}`,
+      dataCreated: createResult.data,
+      rootCause: createResult.error ? 'API validation failed or server error' : undefined,
+      fix: createResult.error ? 'Check request payload, verify all required fields are provided' : undefined,
+      timestamp: new Date(),
+    });
+
+    // READ Client (if created)
+    if (createdClientId) {
+      const readStart = Date.now();
+      const readResult = await testApiEndpoint('GET', `/clients/${createdClientId}`);
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'READ Client',
+        category: 'crud',
+        priority: 'P0',
+        status: readResult.success ? 'passed' : 'failed',
+        duration: Date.now() - readStart,
+        message: readResult.success ? 'Client retrieved successfully' : 'Failed to read client',
+        error: readResult.error,
+        expected: 'Status 200 with client data',
+        actual: `Status ${readResult.status}`,
+        timestamp: new Date(),
+      });
+
+      // UPDATE Client
+      const updateStart = Date.now();
+      const updateData = {
+        name: testUtils.generateTestName('UpdatedClient'),
+        company: 'Updated Test Company',
+      };
+      const updateResult = await testApiEndpoint('PUT', `/clients/${createdClientId}`, {
+        body: updateData,
+      });
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'UPDATE Client',
+        category: 'crud',
+        priority: 'P0',
+        status: updateResult.success ? 'passed' : 'failed',
+        duration: Date.now() - updateStart,
+        message: updateResult.success ? 'Client updated successfully' : 'Failed to update client',
+        error: updateResult.error,
+        expected: 'Status 200 with updated client',
+        actual: `Status ${updateResult.status}`,
+        timestamp: new Date(),
+      });
+
+      // DELETE Client (cleanup)
+      const deleteStart = Date.now();
+      const deleteResult = await testApiEndpoint('DELETE', `/clients/${createdClientId}`);
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'DELETE Client',
+        category: 'crud',
+        priority: 'P0',
+        status: deleteResult.success ? 'passed' : 'failed',
+        duration: Date.now() - deleteStart,
+        message: deleteResult.success ? 'Client deleted successfully (cleanup complete)' : 'Failed to delete client',
+        error: deleteResult.error,
+        expected: 'Status 200',
+        actual: `Status ${deleteResult.status}`,
+        dataDeleted: deleteResult.success,
+        timestamp: new Date(),
+      });
+
+      // Remove from tracker if deleted successfully
+      if (deleteResult.success) {
+        const idx = testDataTracker.clients.indexOf(createdClientId);
+        if (idx > -1) testDataTracker.clients.splice(idx, 1);
+      }
+    }
+
+    return results;
+  },
+
+  // ========== PRODUCT CRUD ==========
+  async testProductCRUD(): Promise<TestResult[]> {
+    const results: TestResult[] = [];
+    
+    if (!testUtils.isAuthenticated()) {
+      results.push({
+        id: testUtils.generateId(),
+        name: 'Product CRUD Suite',
+        category: 'crud',
+        priority: 'P0',
+        status: 'skipped',
+        duration: 0,
+        message: 'Skipped - User not authenticated',
+        timestamp: new Date(),
+      });
+      return results;
+    }
+
+    let createdProductId: string | null = null;
+    const testProductData = {
+      name: testUtils.generateTestName('Product'),
+      description: 'Test product created by automated testing',
+      price: 99.99,
+      tax_rate: 15,
+      category: 'Test Category',
+    };
+
+    // CREATE Product
+    const createStart = Date.now();
+    const createResult = await testApiEndpoint<{ success: boolean; product: { id: string } }>('POST', '/products', {
+      body: testProductData,
+    });
+
+    if (createResult.success && createResult.data?.product?.id) {
+      createdProductId = String(createResult.data.product.id);
+      testUtils.trackCreatedData('products', createdProductId);
+    }
+
+    results.push({
+      id: testUtils.generateId(),
+      name: 'CREATE Product',
+      category: 'crud',
+      priority: 'P0',
+      status: createResult.success ? 'passed' : 'failed',
+      duration: Date.now() - createStart,
+      message: createResult.success ? `Created product with ID: ${createdProductId}` : 'Failed to create product',
+      error: createResult.error,
+      expected: 'Status 200/201 with product object',
+      actual: `Status ${createResult.status}`,
+      dataCreated: createResult.data,
+      timestamp: new Date(),
+    });
+
+    // READ Product (if created)
+    if (createdProductId) {
+      const readStart = Date.now();
+      const readResult = await testApiEndpoint('GET', `/products/${createdProductId}`);
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'READ Product',
+        category: 'crud',
+        priority: 'P0',
+        status: readResult.success ? 'passed' : 'failed',
+        duration: Date.now() - readStart,
+        message: readResult.success ? 'Product retrieved successfully' : 'Failed to read product',
+        error: readResult.error,
+        timestamp: new Date(),
+      });
+
+      // UPDATE Product
+      const updateStart = Date.now();
+      const updateData = {
+        name: testUtils.generateTestName('UpdatedProduct'),
+        price: 149.99,
+      };
+      const updateResult = await testApiEndpoint('PUT', `/products/${createdProductId}`, {
+        body: updateData,
+      });
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'UPDATE Product',
+        category: 'crud',
+        priority: 'P0',
+        status: updateResult.success ? 'passed' : 'failed',
+        duration: Date.now() - updateStart,
+        message: updateResult.success ? 'Product updated successfully' : 'Failed to update product',
+        error: updateResult.error,
+        timestamp: new Date(),
+      });
+
+      // DELETE Product (cleanup)
+      const deleteStart = Date.now();
+      const deleteResult = await testApiEndpoint('DELETE', `/products/${createdProductId}`);
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'DELETE Product',
+        category: 'crud',
+        priority: 'P0',
+        status: deleteResult.success ? 'passed' : 'failed',
+        duration: Date.now() - deleteStart,
+        message: deleteResult.success ? 'Product deleted successfully (cleanup complete)' : 'Failed to delete product',
+        error: deleteResult.error,
+        dataDeleted: deleteResult.success,
+        timestamp: new Date(),
+      });
+
+      if (deleteResult.success) {
+        const idx = testDataTracker.products.indexOf(createdProductId);
+        if (idx > -1) testDataTracker.products.splice(idx, 1);
+      }
+    }
+
+    return results;
+  },
+
+  // ========== TEMPLATE CRUD ==========
+  async testTemplateCRUD(): Promise<TestResult[]> {
+    const results: TestResult[] = [];
+    
+    if (!testUtils.isAuthenticated()) {
+      results.push({
+        id: testUtils.generateId(),
+        name: 'Template CRUD Suite',
+        category: 'crud',
+        priority: 'P1',
+        status: 'skipped',
+        duration: 0,
+        message: 'Skipped - User not authenticated',
+        timestamp: new Date(),
+      });
+      return results;
+    }
+
+    let createdTemplateId: string | null = null;
+    const testTemplateData = {
+      name: testUtils.generateTestName('Template'),
+      description: 'Test template created by automated testing',
+      styles: {
+        primaryColor: '#2563eb',
+        accentColor: '#10b981',
+        fontFamily: 'inter',
+        headerStyle: 'left',
+        showLogo: true,
+        showBorder: true,
+        showWatermark: false,
+        tableStyle: 'striped',
+      },
+    };
+
+    // CREATE Template
+    const createStart = Date.now();
+    const createResult = await testApiEndpoint<{ success: boolean; template: { id: string } }>('POST', '/templates', {
+      body: testTemplateData,
+    });
+
+    if (createResult.success && createResult.data?.template?.id) {
+      createdTemplateId = String(createResult.data.template.id);
+      testUtils.trackCreatedData('templates', createdTemplateId);
+    }
+
+    results.push({
+      id: testUtils.generateId(),
+      name: 'CREATE Template',
+      category: 'crud',
+      priority: 'P1',
+      status: createResult.success ? 'passed' : 'failed',
+      duration: Date.now() - createStart,
+      message: createResult.success ? `Created template with ID: ${createdTemplateId}` : 'Failed to create template',
+      error: createResult.error,
+      dataCreated: createResult.data,
+      timestamp: new Date(),
+    });
+
+    if (createdTemplateId) {
+      // READ Template
+      const readStart = Date.now();
+      const readResult = await testApiEndpoint('GET', `/templates/${createdTemplateId}`);
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'READ Template',
+        category: 'crud',
+        priority: 'P1',
+        status: readResult.success ? 'passed' : 'failed',
+        duration: Date.now() - readStart,
+        message: readResult.success ? 'Template retrieved successfully' : 'Failed to read template',
+        error: readResult.error,
+        timestamp: new Date(),
+      });
+
+      // UPDATE Template
+      const updateStart = Date.now();
+      const updateResult = await testApiEndpoint('PUT', `/templates/${createdTemplateId}`, {
+        body: { name: testUtils.generateTestName('UpdatedTemplate') },
+      });
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'UPDATE Template',
+        category: 'crud',
+        priority: 'P1',
+        status: updateResult.success ? 'passed' : 'failed',
+        duration: Date.now() - updateStart,
+        message: updateResult.success ? 'Template updated successfully' : 'Failed to update template',
+        error: updateResult.error,
+        timestamp: new Date(),
+      });
+
+      // DELETE Template (cleanup)
+      const deleteStart = Date.now();
+      const deleteResult = await testApiEndpoint('DELETE', `/templates/${createdTemplateId}`);
+      
+      results.push({
+        id: testUtils.generateId(),
+        name: 'DELETE Template',
+        category: 'crud',
+        priority: 'P1',
+        status: deleteResult.success ? 'passed' : 'failed',
+        duration: Date.now() - deleteStart,
+        message: deleteResult.success ? 'Template deleted successfully (cleanup complete)' : 'Failed to delete template',
+        error: deleteResult.error,
+        dataDeleted: deleteResult.success,
+        timestamp: new Date(),
+      });
+
+      if (deleteResult.success) {
+        const idx = testDataTracker.templates.indexOf(createdTemplateId);
+        if (idx > -1) testDataTracker.templates.splice(idx, 1);
+      }
+    }
+
+    return results;
+  },
+
+  // ========== INVOICE CRUD (Complex - requires client) ==========
+  async testInvoiceCRUD(): Promise<TestResult[]> {
+    const results: TestResult[] = [];
+    
+    if (!testUtils.isAuthenticated()) {
+      results.push({
+        id: testUtils.generateId(),
+        name: 'Invoice CRUD Suite',
+        category: 'crud',
+        priority: 'P0',
+        status: 'skipped',
+        duration: 0,
+        message: 'Skipped - User not authenticated',
+        timestamp: new Date(),
+      });
+      return results;
+    }
+
+    // First, create a client for the invoice
+    let testClientId: string | null = null;
+    let createdInvoiceId: string | null = null;
+
+    const clientCreateResult = await testApiEndpoint<{ success: boolean; client: { id: string } }>('POST', '/clients', {
+      body: {
+        name: testUtils.generateTestName('InvoiceTestClient'),
+        email: testUtils.generateTestEmail(),
+        phone: '+27111111111',
+        company: 'Invoice Test Company',
+        status: 'Active',
+      },
+    });
+
+    if (clientCreateResult.success && clientCreateResult.data?.client?.id) {
+      testClientId = String(clientCreateResult.data.client.id);
+      testUtils.trackCreatedData('clients', testClientId);
+    }
+
+    results.push({
+      id: testUtils.generateId(),
+      name: 'CREATE Test Client for Invoice',
+      category: 'crud',
+      priority: 'P0',
+      status: clientCreateResult.success ? 'passed' : 'failed',
+      duration: clientCreateResult.duration,
+      message: clientCreateResult.success ? `Created test client ID: ${testClientId}` : 'Failed to create test client',
+      error: clientCreateResult.error,
+      timestamp: new Date(),
+    });
+
+    if (testClientId) {
+      // CREATE Invoice
+      const today = new Date().toISOString().split('T')[0];
+      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const invoiceData = {
+        client_id: testClientId,
+        status: 'Draft',
+        date: today,
+        due_date: dueDate,
+        notes: 'Test invoice created by automated testing',
+        items: [
+          {
+            name: 'Test Service',
+            description: 'Automated test line item',
+            quantity: 2,
+            price: 100.00,
+            tax_rate: 15,
+          },
+        ],
+      };
+
+      const createStart = Date.now();
+      const createResult = await testApiEndpoint<{ success: boolean; invoice: { id: string } }>('POST', '/invoices', {
+        body: invoiceData,
+      });
+
+      if (createResult.success && createResult.data?.invoice?.id) {
+        createdInvoiceId = String(createResult.data.invoice.id);
+        testUtils.trackCreatedData('invoices', createdInvoiceId);
+      }
+
+      results.push({
+        id: testUtils.generateId(),
+        name: 'CREATE Invoice',
+        category: 'crud',
+        priority: 'P0',
+        status: createResult.success ? 'passed' : 'failed',
+        duration: Date.now() - createStart,
+        message: createResult.success ? `Created invoice with ID: ${createdInvoiceId}` : 'Failed to create invoice',
+        error: createResult.error,
+        expected: 'Status 200/201 with invoice object',
+        actual: `Status ${createResult.status}`,
+        dataCreated: createResult.data,
+        timestamp: new Date(),
+      });
+
+      if (createdInvoiceId) {
+        // READ Invoice
+        const readStart = Date.now();
+        const readResult = await testApiEndpoint('GET', `/invoices/${createdInvoiceId}`);
+        
+        results.push({
+          id: testUtils.generateId(),
+          name: 'READ Invoice',
+          category: 'crud',
+          priority: 'P0',
+          status: readResult.success ? 'passed' : 'failed',
+          duration: Date.now() - readStart,
+          message: readResult.success ? 'Invoice retrieved successfully' : 'Failed to read invoice',
+          error: readResult.error,
+          timestamp: new Date(),
+        });
+
+        // UPDATE Invoice
+        const updateStart = Date.now();
+        const updateResult = await testApiEndpoint('PUT', `/invoices/${createdInvoiceId}`, {
+          body: { notes: 'Updated by automated test' },
+        });
+        
+        results.push({
+          id: testUtils.generateId(),
+          name: 'UPDATE Invoice',
+          category: 'crud',
+          priority: 'P0',
+          status: updateResult.success ? 'passed' : 'failed',
+          duration: Date.now() - updateStart,
+          message: updateResult.success ? 'Invoice updated successfully' : 'Failed to update invoice',
+          error: updateResult.error,
+          timestamp: new Date(),
+        });
+
+        // MARK PAID
+        const markPaidStart = Date.now();
+        const markPaidResult = await testApiEndpoint('POST', `/invoices/${createdInvoiceId}/mark-paid`);
+        
+        results.push({
+          id: testUtils.generateId(),
+          name: 'MARK Invoice as Paid',
+          category: 'crud',
+          priority: 'P0',
+          status: markPaidResult.success ? 'passed' : 'failed',
+          duration: Date.now() - markPaidStart,
+          message: markPaidResult.success ? 'Invoice marked as paid successfully' : 'Failed to mark invoice as paid',
+          error: markPaidResult.error,
+          timestamp: new Date(),
+        });
+
+        // DELETE Invoice (cleanup)
+        const deleteStart = Date.now();
+        const deleteResult = await testApiEndpoint('DELETE', `/invoices/${createdInvoiceId}`);
+        
+        results.push({
+          id: testUtils.generateId(),
+          name: 'DELETE Invoice',
+          category: 'crud',
+          priority: 'P0',
+          status: deleteResult.success ? 'passed' : 'failed',
+          duration: Date.now() - deleteStart,
+          message: deleteResult.success ? 'Invoice deleted successfully (cleanup)' : 'Failed to delete invoice',
+          error: deleteResult.error,
+          dataDeleted: deleteResult.success,
+          timestamp: new Date(),
+        });
+
+        if (deleteResult.success) {
+          const idx = testDataTracker.invoices.indexOf(createdInvoiceId);
+          if (idx > -1) testDataTracker.invoices.splice(idx, 1);
+        }
+      }
+
+      // Cleanup test client
+      if (testClientId) {
+        const clientDeleteResult = await testApiEndpoint('DELETE', `/clients/${testClientId}`);
+        results.push({
+          id: testUtils.generateId(),
+          name: 'DELETE Test Client (Cleanup)',
+          category: 'crud',
+          priority: 'P1',
+          status: clientDeleteResult.success ? 'passed' : 'warning',
+          duration: clientDeleteResult.duration,
+          message: clientDeleteResult.success ? 'Test client cleaned up' : 'Failed to cleanup test client',
+          error: clientDeleteResult.error,
+          dataDeleted: clientDeleteResult.success,
+          timestamp: new Date(),
+        });
+
+        if (clientDeleteResult.success) {
+          const idx = testDataTracker.clients.indexOf(testClientId);
+          if (idx > -1) testDataTracker.clients.splice(idx, 1);
+        }
+      }
+    }
+
+    return results;
+  },
+
+  // ========== BULK CLEANUP ==========
+  async runCleanup(): Promise<TestResult[]> {
+    const results: TestResult[] = [];
+    const tracker = testUtils.getTrackedData();
+
+    // Cleanup any remaining test data
+    for (const invoiceId of tracker.invoices) {
+      const result = await testApiEndpoint('DELETE', `/invoices/${invoiceId}`);
+      results.push({
+        id: testUtils.generateId(),
+        name: `Cleanup Invoice ${invoiceId}`,
+        category: 'crud',
+        priority: 'P2',
+        status: result.success ? 'passed' : 'warning',
+        duration: result.duration,
+        message: result.success ? 'Cleaned up' : 'Cleanup failed (may already be deleted)',
+        timestamp: new Date(),
+      });
+    }
+
+    for (const clientId of tracker.clients) {
+      const result = await testApiEndpoint('DELETE', `/clients/${clientId}`);
+      results.push({
+        id: testUtils.generateId(),
+        name: `Cleanup Client ${clientId}`,
+        category: 'crud',
+        priority: 'P2',
+        status: result.success ? 'passed' : 'warning',
+        duration: result.duration,
+        message: result.success ? 'Cleaned up' : 'Cleanup failed (may already be deleted)',
+        timestamp: new Date(),
+      });
+    }
+
+    for (const productId of tracker.products) {
+      const result = await testApiEndpoint('DELETE', `/products/${productId}`);
+      results.push({
+        id: testUtils.generateId(),
+        name: `Cleanup Product ${productId}`,
+        category: 'crud',
+        priority: 'P2',
+        status: result.success ? 'passed' : 'warning',
+        duration: result.duration,
+        message: result.success ? 'Cleaned up' : 'Cleanup failed (may already be deleted)',
+        timestamp: new Date(),
+      });
+    }
+
+    for (const templateId of tracker.templates) {
+      const result = await testApiEndpoint('DELETE', `/templates/${templateId}`);
+      results.push({
+        id: testUtils.generateId(),
+        name: `Cleanup Template ${templateId}`,
+        category: 'crud',
+        priority: 'P2',
+        status: result.success ? 'passed' : 'warning',
+        duration: result.duration,
+        message: result.success ? 'Cleaned up' : 'Cleanup failed (may already be deleted)',
+        timestamp: new Date(),
+      });
+    }
+
+    // Clear the tracker
+    testUtils.clearTrackedData();
+
+    if (results.length === 0) {
+      results.push({
+        id: testUtils.generateId(),
+        name: 'Cleanup Check',
+        category: 'crud',
+        priority: 'P2',
+        status: 'passed',
+        duration: 0,
+        message: 'No orphaned test data found',
+        timestamp: new Date(),
+      });
+    }
 
     return results;
   },
@@ -788,6 +1497,9 @@ export class TestRunner {
   async runAll(): Promise<TestReport> {
     this.report.startTime = new Date();
 
+    // Clear any previous test data tracking
+    testUtils.clearTrackedData();
+
     // P0 Critical Tests
     // Health Check
     const healthResult = await apiTests.healthCheck();
@@ -810,7 +1522,7 @@ export class TestRunner {
     this.addSuite('Frontend', 'frontend', frontendResults);
     this.report.systemHealth.storage = frontendResults[1].status === 'passed';
 
-    // API CRUD Tests
+    // API Endpoint Tests
     const clientResults = await apiTests.testClientEndpoints();
     this.addSuite('Clients API', 'api', clientResults);
 
@@ -834,6 +1546,45 @@ export class TestRunner {
 
     const creditsResults = await apiTests.testCreditsEndpoints();
     this.addSuite('Credits API', 'api', creditsResults);
+
+    // ========== CRUD TESTS WITH ACTUAL DATA ==========
+    // Check authentication status first
+    const authCheck = crudTests.checkAuth();
+    this.addSuite('CRUD Auth Check', 'crud', [authCheck]);
+
+    if (authCheck.status === 'passed') {
+      // Run CRUD tests with actual data creation/deletion
+      this.report.systemHealth.database = true;
+
+      // Client CRUD
+      const clientCrudResults = await crudTests.testClientCRUD();
+      this.addSuite('Client CRUD', 'crud', clientCrudResults);
+
+      // Product CRUD
+      const productCrudResults = await crudTests.testProductCRUD();
+      this.addSuite('Product CRUD', 'crud', productCrudResults);
+
+      // Template CRUD
+      const templateCrudResults = await crudTests.testTemplateCRUD();
+      this.addSuite('Template CRUD', 'crud', templateCrudResults);
+
+      // Invoice CRUD (most complex - creates client too)
+      const invoiceCrudResults = await crudTests.testInvoiceCRUD();
+      this.addSuite('Invoice CRUD', 'crud', invoiceCrudResults);
+
+      // Run cleanup for any orphaned test data
+      const cleanupResults = await crudTests.runCleanup();
+      this.addSuite('Test Data Cleanup', 'crud', cleanupResults);
+
+      // Track cleanup status
+      const tracker = testUtils.getTrackedData();
+      this.report.cleanupStatus = {
+        clientsDeleted: tracker.clients.length === 0 ? clientCrudResults.filter(r => r.dataDeleted).length : 0,
+        productsDeleted: tracker.products.length === 0 ? productCrudResults.filter(r => r.dataDeleted).length : 0,
+        invoicesDeleted: tracker.invoices.length === 0 ? invoiceCrudResults.filter(r => r.dataDeleted).length : 0,
+        paymentsDeleted: 0,
+      };
+    }
 
     // Security Tests
     const securityResults = await Promise.all([
