@@ -34,11 +34,21 @@ api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
     const isAdminRoute = window.location.pathname.startsWith('/admin');
+    const isAuthEndpoint = error.config?.url?.includes('/login') || 
+                           error.config?.url?.includes('/register') ||
+                           error.config?.url?.includes('/auth/google');
     
     if (error.response?.status === 401) {
+      // For auth endpoints (login, register, google), let the error propagate
+      // so the calling code can display the proper error message
+      if (isAuthEndpoint) {
+        return Promise.reject(error);
+      }
+      
       // Unauthorized: Don't auto-redirect for admin routes - let the page handle it
       if (!isAdminRoute) {
         removeToken();
+        localStorage.removeItem('auth_user');
         if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
           window.location.href = '/login';
         }
