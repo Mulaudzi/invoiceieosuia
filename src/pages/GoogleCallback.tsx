@@ -55,16 +55,16 @@ const GoogleCallback = () => {
       
       console.log("Google OAuth successful, user:", user?.email);
       
-      // Refresh the auth context to update user state
-      await refreshUser();
+      // Store user in localStorage for persistence
+      localStorage.setItem('auth_user', JSON.stringify(user));
       
       toast({
         title: "Login successful!",
         description: `Welcome${user?.name ? `, ${user.name}` : ''}!`,
       });
       
-      // Navigate to dashboard
-      navigate("/dashboard", { replace: true });
+      // Use full page reload to ensure AuthProvider re-initializes with fresh localStorage
+      window.location.href = '/dashboard';
     } catch (error) {
       console.error("Google OAuth callback error:", error);
       
@@ -78,7 +78,9 @@ const GoogleCallback = () => {
       });
       
       // Delay redirect so user can see the error
-      setTimeout(() => navigate("/login", { replace: true }), 2000);
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
     }
   };
 
