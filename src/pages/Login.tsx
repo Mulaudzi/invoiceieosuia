@@ -24,10 +24,11 @@ const Login = () => {
     password: "",
   });
 
-  // Redirect if already logged in
+  // Redirect if already logged in or just logged in
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      console.log('User detected in Login, redirecting to dashboard:', user.email);
+      navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);
 
@@ -98,16 +99,17 @@ const Login = () => {
         title: "Login successful!",
         description: "Redirecting to dashboard...",
       });
-      navigate("/dashboard");
+      // Navigation is handled by the useEffect that watches for user state changes
+      // This ensures ProtectedRoute sees the user before we navigate
     } else {
       toast({
         title: "Login failed",
         description: result.error,
         variant: "destructive",
       });
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
+    // Don't set isLoading to false on success - let the redirect happen first
   };
 
   return (
