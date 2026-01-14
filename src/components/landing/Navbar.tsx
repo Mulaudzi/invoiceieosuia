@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, TestTube2 } from "lucide-react";
 import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
 import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
@@ -106,6 +106,16 @@ const Navbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
+            <Link to="/tests">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className={useDarkStyling ? "text-white hover:bg-white/10 gap-1" : "gap-1"}
+              >
+                <TestTube2 className="w-4 h-4" />
+                Tests
+              </Button>
+            </Link>
             <Link to="/login">
               <Button 
                 variant="ghost" 
@@ -166,6 +176,12 @@ const Navbar = () => {
                 )
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
+                <Link to="/tests" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" size="sm" className={`w-full gap-1 ${useDarkStyling ? "text-white" : ""}`}>
+                    <TestTube2 className="w-4 h-4" />
+                    Run Tests
+                  </Button>
+                </Link>
                 <Link to="/login">
                   <Button variant="ghost" className={`w-full ${useDarkStyling ? "text-white" : ""}`}>
                     Login
