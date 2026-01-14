@@ -52,10 +52,10 @@ import AdminSetup from "./pages/AdminSetup";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
-import QaConsole from "./pages/QaConsole";
 import GoogleCallback from "./pages/GoogleCallback";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
+import AutomatedTests from "./pages/AutomatedTests";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,7 +130,7 @@ const App = () => (
               <Route path="/dashboard/email-templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
               <Route path="/dashboard/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
               <Route path="/dashboard/billing" element={<ProtectedRoute><BillingPortal /></ProtectedRoute>} />
-              <Route path="/dashboard/qa" element={<ProtectedRoute><QaConsole /></ProtectedRoute>} />
+              <Route path="/dashboard/tests" element={<ProtectedRoute><AutomatedTests /></ProtectedRoute>} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
