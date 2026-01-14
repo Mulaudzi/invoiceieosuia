@@ -56,6 +56,7 @@ import QaConsole from "./pages/QaConsole";
 import GoogleCallback from "./pages/GoogleCallback";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
+import AutomatedTests from "./pages/AutomatedTests";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/admin-setup" element={<AdminSetup />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failed" element={<PaymentFailed />} />
+              <Route path="/tests" element={<AutomatedTests />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminIndex />} />
