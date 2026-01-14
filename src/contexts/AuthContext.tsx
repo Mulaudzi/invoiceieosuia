@@ -40,10 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string, recaptchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      console.log('AuthContext: Starting login for:', email);
       const { user: loggedInUser } = await authService.login(email, password, recaptchaToken);
+      console.log('AuthContext: Login successful, setting user:', loggedInUser?.email);
       setUser(loggedInUser);
       return { success: true };
     } catch (error) {
+      console.error('AuthContext: Login failed:', error);
       const message = error instanceof Error ? error.message : 'Login failed. Please try again.';
       return { success: false, error: message };
     }
