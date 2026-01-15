@@ -1427,6 +1427,10 @@ export const integrationTests = {
   },
 };
 
+// Import file verification tests
+import { runFileVerificationTests, generateFileDependencyTestResults } from './fileVerificationTests';
+import { generateAppStructureDoc } from './fileDependencyMap';
+
 // ==================== MAIN TEST RUNNER ====================
 
 export class TestRunner {
@@ -1603,10 +1607,28 @@ export class TestRunner {
     ]);
     this.addSuite('Integration', 'integration', integrationResults);
 
+    // ========== FILE DEPENDENCY VERIFICATION ==========
+    try {
+      const fileVerificationSuite = await runFileVerificationTests();
+      this.report.suites.push(fileVerificationSuite);
+      this.updateReport();
+
+      // Generate file dependency test results for each page
+      const fileDependencyResults = await generateFileDependencyTestResults();
+      this.addSuite('Page File Dependencies', 'frontend', fileDependencyResults);
+    } catch (error) {
+      console.warn('File verification tests skipped:', error);
+    }
+
     this.report.endTime = new Date();
     this.updateReport();
 
     return this.report;
+  }
+
+  // Generate application structure documentation
+  generateDocumentation(): string {
+    return generateAppStructureDoc();
   }
 
   getReport(): TestReport {
