@@ -4,9 +4,10 @@ import { User, Client, Product, Invoice, Payment, Template, PlanType } from '@/l
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://invoices.ieosuia.com/api';
 
-// Create axios instance
+// Create axios instance with timeout
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 15000, // 15 second timeout for all requests
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
