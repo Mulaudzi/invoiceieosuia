@@ -58,13 +58,16 @@ const GoogleCallback = () => {
       // Store user in localStorage for persistence
       localStorage.setItem('auth_user', JSON.stringify(user));
       
+      // Update auth context directly to avoid race conditions
+      refreshUser();
+      
       toast({
         title: "Login successful!",
         description: `Welcome${user?.name ? `, ${user.name}` : ''}!`,
       });
       
-      // Use full page reload to ensure AuthProvider re-initializes with fresh localStorage
-      window.location.href = '/dashboard';
+      // Use React Router navigation instead of full page reload
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error("Google OAuth callback error:", error);
       
@@ -79,7 +82,7 @@ const GoogleCallback = () => {
       
       // Delay redirect so user can see the error
       setTimeout(() => {
-        window.location.href = '/login';
+        navigate('/login', { replace: true });
       }, 2000);
     }
   };

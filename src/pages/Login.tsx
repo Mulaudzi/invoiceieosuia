@@ -99,17 +99,17 @@ const Login = () => {
         title: "Login successful!",
         description: "Redirecting to dashboard...",
       });
-      // Use full page reload to ensure AuthProvider re-initializes with fresh localStorage
-      // This prevents race conditions with React state updates
-      window.location.href = '/dashboard';
+      // Use React Router navigation - the user state is already set in AuthContext
+      // No need for full page reload which causes re-initialization issues
+      navigate('/dashboard', { replace: true });
     } else {
       toast({
         title: "Login failed",
         description: result.error,
         variant: "destructive",
       });
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   return (
