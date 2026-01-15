@@ -23,9 +23,9 @@ const Dashboard = () => {
   const { data: recentInvoices = [], isLoading: invoicesLoading } = useRecentInvoices(5);
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(4);
 
-  const isLoading = statsLoading && invoicesLoading && clientsLoading;
+  const isInitialLoading = statsLoading || invoicesLoading || clientsLoading;
 
-  if (isLoading) {
+  if (isInitialLoading && !stats && recentInvoices.length === 0 && topClients.length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <DashboardSidebar />
