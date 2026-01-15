@@ -9,7 +9,7 @@ const GoogleCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const { setUserFromOAuth } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const processedRef = useRef(false);
 
@@ -55,11 +55,8 @@ const GoogleCallback = () => {
       
       console.log("Google OAuth successful, user:", user?.email);
       
-      // Store user in localStorage for persistence
-      localStorage.setItem('auth_user', JSON.stringify(user));
-      
-      // Update auth context directly to avoid race conditions
-      refreshUser();
+      // Update auth context directly - this also sets isLoading to false
+      setUserFromOAuth(user);
       
       toast({
         title: "Login successful!",

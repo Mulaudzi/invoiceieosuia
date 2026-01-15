@@ -1,79 +1,99 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getToken } from '@/services/api';
-import { useEffect, useState } from 'react';
+import { getToken, removeToken } from '@/services/api';
+import { useEffect, useState, useRef } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireVerified?: boolean;
 }
 
-const MAX_LOADING_TIME = 15000; // 15 seconds max wait
+const MAX_LOADING_TIME = 8000; // 8 seconds max wait
 
 export function ProtectedRoute({ children, requireVerified = true }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const location = useLocation();
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if we have a token in localStorage - this prevents redirect flicker during initial load
   const hasToken = !!getToken();
-
-  // Safety timeout to prevent infinite loading
-  useEffect(() => {
-    if (isLoading || (!user && hasToken)) {
-      const timeout = setTimeout(() => {
-        console.log('ProtectedRoute: Loading timed out after', MAX_LOADING_TIME, 'ms');
-        setLoadingTimedOut(true);
-      }, MAX_LOADING_TIME);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [isLoading, user, hasToken]);
 
   // Debug logging
   useEffect(() => {
-    console.log('ProtectedRoute state:', { isLoading, hasToken, hasUser: !!user, loadingTimedOut });
-  }, [isLoading, hasToken, user, loadingTimedOut]);
+    console.log('ProtectedRoute state:', { 
+      isLoading, 
+      hasToken, 
+      hasUser: !!user, 
+      userEmail: user?.email,
+      loadingTimedOut,
+      path: location.pathname 
+    });
+  }, [isLoading, hasToken, user, loadingTimedOut, location.pathname]);
 
-  // If loading timed out, redirect to login
-  if (loadingTimedOut && !user) {
-    console.log('ProtectedRoute: Timed out without user, redirecting to login');
+  // Safety timeout - only when actually loading without a user
+  useEffect(() => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    // If we have a user, no need for timeout
+    if (user) {
+      setLoadingTimedOut(false);
+      return;
+    }
+
+    // Only set timeout if we're in a loading state
+    if (isLoading && hasToken && !user) {
+      console.log('ProtectedRoute: Starting loading timeout...');
+      timeoutRef.current = setTimeout(() => {
+        console.log('ProtectedRoute: Loading timed out after', MAX_LOADING_TIME, 'ms');
+        setLoadingTimedOut(true);
+        // Clear token on timeout to prevent infinite loop
+        removeToken();
+        localStorage.removeItem('auth_user');
+      }, MAX_LOADING_TIME);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [isLoading, hasToken, user]);
+
+  // User is authenticated - render children immediately
+  if (user) {
+    // Check email verification if required
+    if (requireVerified && !user.emailVerified) {
+      return <Navigate to="/verify-email-reminder" replace />;
+    }
+    return <>{children}</>;
+  }
+
+  // Timed out without user - redirect to login
+  if (loadingTimedOut) {
+    console.log('ProtectedRoute: Timed out, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent mx-auto"></div>
-          <p className="mt-4 text-muted-foreground text-sm">Verifying session...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Only redirect to login if both user state is null AND no token exists
-  // This prevents redirect during the brief moment before AuthContext initializes
-  if (!user && !hasToken) {
+  // No token and no user - redirect to login
+  if (!hasToken && !isLoading) {
+    console.log('ProtectedRoute: No token, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If we have a token but no user yet, show loading (user will be fetched by AuthContext)
-  if (!user && hasToken) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent mx-auto"></div>
-          <p className="mt-4 text-muted-foreground text-sm">Loading your session...</p>
-        </div>
+  // Loading state - show spinner
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent mx-auto"></div>
+        <p className="mt-4 text-muted-foreground text-sm">
+          {isLoading ? 'Verifying session...' : 'Loading your session...'}
+        </p>
       </div>
-    );
-  }
-
-  // Check email verification if required
-  if (requireVerified && user && !user.emailVerified) {
-    return <Navigate to="/verify-email-reminder" replace />;
-  }
-
-  return <>{children}</>;
+    </div>
+  );
 }
