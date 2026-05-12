@@ -23,7 +23,13 @@ class ProductController {
             $products = array_values($products);
         }
         
-        Response::json($products);
+        Response::json([
+            'data' => $products,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($products),
+            'total' => count($products)
+        ]);
     }
     
     public function categories(): void {

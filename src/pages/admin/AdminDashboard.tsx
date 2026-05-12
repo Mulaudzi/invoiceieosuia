@@ -143,7 +143,9 @@ const AdminDashboard = () => {
       });
       setSessions(response.data.sessions || []);
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to fetch sessions:', error);
+      }
     } finally {
       setSessionsLoading(false);
     }

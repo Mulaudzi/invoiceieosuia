@@ -48,12 +48,16 @@ const GoogleCallback = () => {
 
   const handleGoogleCallback = async (code: string) => {
     try {
-      console.log("Processing Google OAuth callback...");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Processing Google OAuth callback...");
+      }
       
       // Call the backend to exchange code for token
       const { user, token } = await authService.googleCallback(code);
       
-      console.log("Google OAuth successful, user:", user?.email);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Google OAuth successful, user:", user?.email);
+      }
       
       // Update auth context directly - this also sets isLoading to false
       setUserFromOAuth(user);
@@ -66,7 +70,9 @@ const GoogleCallback = () => {
       // Use React Router navigation instead of full page reload
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      console.error("Google OAuth callback error:", error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Google OAuth callback error:", error);
+      }
       
       const message = error instanceof Error ? error.message : "Authentication failed. Please try again.";
       setError(message);

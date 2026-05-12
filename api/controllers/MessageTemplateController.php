@@ -16,7 +16,13 @@ class MessageTemplateController {
         
         $templates = $query->orderBy('category', 'ASC')->get();
         
-        Response::json($templates);
+        Response::json([
+            'data' => $templates,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($templates),
+            'total' => count($templates)
+        ]);
     }
     
     /**

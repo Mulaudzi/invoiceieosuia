@@ -305,4 +305,53 @@ class CreditsController {
         
         Response::json(['data' => $plans]);
     }
+    
+    public function balance(): void {
+        $userId = Auth::id() ?? Auth::getUserId();
+        
+        // Get user plan and credit information
+        $stmt = $this->db->prepare("
+            SELECT 
+                plan,
+                email_credits,
+                email_credits_used,
+                sms_credits,
+                sms_credits_used,
+                credits_reset_at
+            FROM users
+            WHERE id = ?
+        ");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            Response::error('User not found', 404);
+            return;
+        }
+        
+        // Get plan limits
+        $planLimits = $this->planLimits[$user['plan']] ?? $this->planLimits['free'];
+        
+        // Calculate remaining credits
+        $emailRemaining = $planLimits['email'] - (int)$user['email_credits_used'];
+        $smsRemaining = $planLimits['sms'] - (int)$user['sms_credits_used'];
+        
+        Response::json([
+            'plan' => $user['plan'],
+            'email' => [
+                'total' => $planLimits['email'],
+                'used' => (int)$user['email_credits_used'],
+                'remaining' => max(0, $emailRemaining),
+                'reset_at' => $user['credits_reset_at']
+            ],
+            'sms' => [
+                'total' => $planLimits['sms'],
+                'used' => (int)$user['sms_credits_used'],
+                'remaining' => max(0, $smsRemaining),
+                'reset_at' => $user['credits_reset_at']
+            ],
+            'unlimited_invoices' => $planLimits['invoices'] === null,
+            'expires_at' => null
+        ]);
+    }
 }

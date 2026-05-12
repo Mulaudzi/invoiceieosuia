@@ -27,7 +27,9 @@ const Login = () => {
   // Redirect if already logged in or just logged in
   useEffect(() => {
     if (user) {
-      console.log('User detected in Login, redirecting to dashboard:', user.email);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('User detected in Login, redirecting to dashboard:', user.email);
+      }
       navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);

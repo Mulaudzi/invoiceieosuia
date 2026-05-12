@@ -57,73 +57,115 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let isMounted = true;
+
     const initAuth = async () => {
       const token = getToken();
       
       if (!token) {
         console.log('AuthContext: No token found');
-        setIsLoading(false);
-        setAuthInitialized(true);
-        return;
-      }
-
-      // If we already have a user (from login or cache), just validate in background
-      if (user) {
-        console.log('AuthContext: User already set:', user.email);
-        setIsLoading(false);
-        setAuthInitialized(true);
-        
-        // Background validation - don't block UI
-        try {
-          console.log('AuthContext: Background validating user...');
-          const currentUser = await withTimeout(authService.getCurrentUser(), 10000);
-          console.log('AuthContext: User validated:', currentUser?.email);
-          setUser(currentUser);
-          localStorage.setItem('auth_user', JSON.stringify(currentUser));
-        } catch (error) {
-          console.error('AuthContext: Background validation failed:', error);
-          // Only clear on auth errors (401), not on timeout
-          if (error instanceof Error && error.message !== 'Request timeout') {
-            console.log('AuthContext: Clearing auth state due to validation failure');
-            removeToken();
-            localStorage.removeItem('auth_user');
-            setUser(null);
-          }
+        if (isMounted) {
+          setIsLoading(false);
+          setAuthInitialized(true);
         }
         return;
       }
 
-      // No cached user but have token - must fetch
+      // If we already have a user (from login or cache), use it immediately
+      if (user) {
+        console.log('AuthContext: User already set:', user.email);
+        if (isMounted) {
+          setIsLoading(false);
+          setAuthInitialized(true);
+        }
+        
+        // Background validation - don't block UI, with timeout
+        const validateInBackground = async () => {
+          try {
+            console.log('AuthContext: Background validating user...');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            const currentUser = await authService.getCurrentUser();
+            clearTimeout(timeoutId);
+            
+            console.log('AuthContext: User validated:', currentUser?.email);
+            if (isMounted) {
+              setUser(currentUser);
+              localStorage.setItem('auth_user', JSON.stringify(currentUser));
+            }
+          } catch (error) {
+            console.error('AuthContext: Background validation failed:', error);
+            // Silently fail in background - don't clear auth on timeout
+            if (error instanceof Error && error.message.includes('timeout')) {
+              console.log('AuthContext: Background validation timeout - keeping cached user');
+              return;
+            }
+            // Only clear on actual auth errors (401), not on timeout
+            if (isMounted && error instanceof Error && !error.message.includes('timeout')) {
+              console.log('AuthContext: Clearing auth state due to validation failure');
+              removeToken();
+              localStorage.removeItem('auth_user');
+              setUser(null);
+            }
+          }
+        };
+        
+        validateInBackground();
+        return;
+      }
+
+      // No cached user but have token - must fetch with timeout
       try {
         console.log('AuthContext: Fetching current user from API...');
-        const currentUser = await withTimeout(authService.getCurrentUser(), 10000);
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('User fetch timeout')), 5000)
+        );
+        
+        const userFetch = authService.getCurrentUser();
+        const currentUser = await Promise.race([userFetch, timeoutPromise]) as any;
+        
         console.log('AuthContext: User fetched successfully:', currentUser?.email);
-        setUser(currentUser);
-        localStorage.setItem('auth_user', JSON.stringify(currentUser));
+        if (isMounted) {
+          setUser(currentUser);
+          localStorage.setItem('auth_user', JSON.stringify(currentUser));
+        }
       } catch (error) {
         console.error('AuthContext: Failed to fetch user:', error);
         
-        if (error instanceof Error && error.message === 'Request timeout') {
-          console.log('AuthContext: Timeout - showing error');
-          toast({
-            title: "Connection slow",
-            description: "Unable to verify session. Please try again.",
-            variant: "destructive",
-          });
+        if (error instanceof Error && error.message.includes('timeout')) {
+          console.log('AuthContext: Timeout fetching user - showing error');
+          if (isMounted) {
+            toast({
+              title: "Connection slow",
+              description: "Unable to verify session. Please try again.",
+              variant: "destructive",
+            });
+          }
         }
-        // Clear auth state
+        // Clear auth state on error
         console.log('AuthContext: Clearing auth state');
-        removeToken();
-        localStorage.removeItem('auth_user');
-        setUser(null);
+        if (isMounted) {
+          removeToken();
+          localStorage.removeItem('auth_user');
+          setUser(null);
+        }
       } finally {
-        setIsLoading(false);
-        setAuthInitialized(true);
+        if (isMounted) {
+          setIsLoading(false);
+          setAuthInitialized(true);
+        }
       }
     };
 
     initAuth();
-  }, [toast, user, authInitialized]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [toast, authInitialized]);
 
   const login = async (email: string, password: string, recaptchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     try {

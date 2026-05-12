@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { contactService } from "@/services/api";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
+import { z } from "zod";
 import { 
   Mail, 
   Phone, 
@@ -19,15 +22,28 @@ import {
   ArrowRight
 } from "lucide-react";
 
+// Validation schema for support form
+const supportFormSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters"),
+  subject: z.string().trim().min(1, "Subject is required").max(200, "Subject must be less than 200 characters"),
+  message: z.string().trim().min(1, "Message is required").max(2000, "Message must be less than 2000 characters"),
+});
+
+type SupportFormData = z.infer<typeof supportFormSchema>;
+
 const Support = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
+  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof SupportFormData, string>>>({});
+  
+  const [formData, setFormData] = useState<SupportFormData>({
     name: "",
     email: "",
     subject: "",
     message: ""
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const contactMethods = [
     {
@@ -78,20 +94,73 @@ const Support = () => {
     }
   ];
 
+  const validateForm = (): boolean => {
+    try {
+      supportFormSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Partial<Record<keyof SupportFormData, string>> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0] as keyof SupportFormData] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Execute reCAPTCHA
+      let recaptchaToken = "";
+      if (recaptchaLoaded) {
+        recaptchaToken = await executeRecaptcha("contact_support");
+      }
 
-    toast({
-      title: "Message Sent",
-      description: "We'll get back to you within 24 hours.",
-    });
+      // Call the contact API with "support" purpose
+      await contactService.submit({
+        name: formData.name,
+        email: formData.email,
+        message: `Subject: ${formData.subject}\n\nMessage: ${formData.message}`,
+        purpose: "support",
+        recaptcha_token: recaptchaToken,
+      });
 
-    setFormData({ name: "", email: "", subject: "", message: "" });
-    setIsSubmitting(false);
+      toast({
+        title: "Message Sent Successfully",
+        description: "Thank you for reaching out. We'll get back to you within 24 hours.",
+      });
+
+      // Clear form
+      setFormData({ name: "", email: "", subject: "", message: "" });
+      setErrors({});
+    } catch (error) {
+      console.error("Contact form submission error:", error);
+      toast({
+        title: "Failed to Send Message",
+        description: error instanceof Error ? error.message : "An error occurred while sending your message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -231,7 +300,9 @@ const Support = () => {
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="Your name"
+                          className={errors.name ? "border-destructive" : ""}
                         />
+                        {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2">Email</label>
@@ -241,7 +312,9 @@ const Support = () => {
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           placeholder="your@email.com"
+                          className={errors.email ? "border-destructive" : ""}
                         />
+                        {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
                       </div>
                     </div>
                     <div>
@@ -251,7 +324,9 @@ const Support = () => {
                         value={formData.subject}
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                         placeholder="How can we help?"
+                        className={errors.subject ? "border-destructive" : ""}
                       />
+                      {errors.subject && <p className="text-xs text-destructive mt-1">{errors.subject}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">Message</label>
@@ -261,7 +336,9 @@ const Support = () => {
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         placeholder="Describe your issue or question..."
                         rows={5}
+                        className={errors.message ? "border-destructive" : ""}
                       />
+                      {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
                     </div>
                     <Button 
                       type="submit" 

@@ -4,29 +4,39 @@ class ReportController {
     public function dashboard(): void {
         $userId = Auth::id();
         
-        // Total revenue (paid invoices)
+        // Get all invoices for the user
         $invoices = Invoice::query()->where('user_id', $userId)->get();
         
         $totalRevenue = 0;
         $outstanding = 0;
         $overdue = 0;
         $overdueCount = 0;
+        $totalInvoices = count($invoices);
+        $paidInvoices = 0;
+        $pendingInvoices = 0;
+        $overdueInvoices = 0;
         
         $today = date('Y-m-d');
         
         foreach ($invoices as $inv) {
             if ($inv['status'] === 'Paid') {
                 $totalRevenue += (float) $inv['total'];
+                $paidInvoices++;
             } elseif (in_array($inv['status'], ['Pending', 'Sent'])) {
                 $outstanding += (float) $inv['total'];
+                $pendingInvoices++;
                 
                 if ($inv['due_date'] < $today) {
                     $overdue += (float) $inv['total'];
                     $overdueCount++;
+                    $overdueInvoices++;
                 }
             }
         }
         
+        // Get client counts
+        $allClients = Client::query()->where('user_id', $userId)->get();
+        $totalClients = count($allClients);
         $activeClients = Client::query()
             ->where('user_id', $userId)
             ->where('status', 'Active')
@@ -35,8 +45,12 @@ class ReportController {
         Response::json([
             'total_revenue' => $totalRevenue,
             'outstanding' => $outstanding,
-            'overdue' => $overdue,
             'overdue_count' => $overdueCount,
+            'total_invoices' => $totalInvoices,
+            'paid_invoices' => $paidInvoices,
+            'pending_invoices' => $pendingInvoices,
+            'overdue_invoices' => $overdueInvoices,
+            'total_clients' => $totalClients,
             'active_clients' => $activeClients
         ]);
     }
@@ -79,9 +93,10 @@ class ReportController {
         foreach ($invoices as $inv) {
             $status = $inv['status'];
             if (!isset($statusCounts[$status])) {
-                $statusCounts[$status] = ['status' => $status, 'count' => 0];
+                $statusCounts[$status] = ['status' => $status, 'count' => 0, 'amount' => 0];
             }
             $statusCounts[$status]['count']++;
+            $statusCounts[$status]['amount'] += (float) $inv['total'];
         }
         
         Response::json(array_values($statusCounts));
@@ -98,15 +113,28 @@ class ReportController {
         foreach ($clients as $client) {
             $invoices = Invoice::query()
                 ->where('client_id', $client['id'])
+                ->get();
+            
+            $paidInvoices = Invoice::query()
+                ->where('client_id', $client['id'])
                 ->where('status', 'Paid')
                 ->get();
             
-            $revenue = array_sum(array_column($invoices, 'total'));
+            $revenue = array_sum(array_column($paidInvoices, 'total'));
             
             $clientRevenues[] = [
-                'id' => $client['id'],
-                'name' => $client['name'],
-                'total' => $revenue
+                'client' => [
+                    'id' => $client['id'],
+                    'name' => $client['name'],
+                    'email' => $client['email'],
+                    'phone' => $client['phone'] ?? null,
+                    'company' => $client['company'] ?? null,
+                    'status' => $client['status'] ?? 'Active',
+                    'userId' => $client['user_id'],
+                    'createdAt' => $client['created_at']
+                ],
+                'total' => $revenue,
+                'invoices' => count($invoices)
             ];
         }
         
@@ -118,25 +146,55 @@ class ReportController {
     
     public function incomeExpense(): void {
         $request = new Request();
-        $year = (int) ($request->query('year') ?? date('Y'));
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
         $userId = Auth::id();
         
-        $invoices = Invoice::query()
+        // Get invoices based on date range
+        $query = Invoice::query()
             ->where('user_id', $userId)
-            ->where('status', 'Paid')
-            ->get();
+            ->where('status', 'Paid');
         
-        $income = 0;
-        foreach ($invoices as $inv) {
-            if (date('Y', strtotime($inv['date'])) == $year) {
-                $income += (float) $inv['total'];
-            }
+        if ($startDate) {
+            $query->where('date', '>=', $startDate);
         }
+        if ($endDate) {
+            $query->where('date', '<=', $endDate);
+        }
+        
+        $invoices = $query->get();
+        
+        // Calculate totals
+        $income = 0;
+        $expenses = 0; // Placeholder - no expense tracking yet
+        
+        // Group by month for by_month breakdown
+        $byMonth = [];
+        foreach ($invoices as $inv) {
+            $income += (float) $inv['total'];
+            
+            // Build monthly breakdown
+            $monthKey = date('Y-m', strtotime($inv['date']));
+            if (!isset($byMonth[$monthKey])) {
+                $byMonth[$monthKey] = [
+                    'month' => date('M Y', strtotime($inv['date'])),
+                    'income' => 0,
+                    'expenses' => 0
+                ];
+            }
+            $byMonth[$monthKey]['income'] += (float) $inv['total'];
+        }
+        
+        // Sort months chronologically
+        ksort($byMonth);
+        
+        $net = $income - $expenses;
         
         Response::json([
             'income' => $income,
-            'expenses' => 0, // Placeholder - no expense tracking yet
-            'profit' => $income
+            'expenses' => $expenses,
+            'net' => $net,
+            'by_month' => array_values($byMonth)
         ]);
     }
     
@@ -373,5 +431,100 @@ class ReportController {
         }
         
         Response::json(array_values($monthlyData));
+    }
+    
+    /**
+     * Export reports in various formats (PDF, Excel, CSV)
+     */
+    public function summary(): void {
+        $userId = Auth::id();
+        $request = new Request();
+        $days = (int) ($request->query('days') ?? 30);
+        
+        $startDate = date('Y-m-d', strtotime("-$days days"));
+        $today = date('Y-m-d');
+        
+        // Get invoices in date range
+        $invoices = Invoice::query()
+            ->where('user_id', $userId)
+            ->where('date', '>=', $startDate)
+            ->get();
+        
+        // Calculate summary metrics
+        $totalInvoiced = 0;
+        $totalPaid = 0;
+        $totalPending = 0;
+        $invoiceCount = 0;
+        $paidCount = 0;
+        $overdueCount = 0;
+        
+        foreach ($invoices as $inv) {
+            $invoiceCount++;
+            $total = (float) $inv['total'];
+            $totalInvoiced += $total;
+            
+            if ($inv['status'] === 'Paid') {
+                $totalPaid += $total;
+                $paidCount++;
+            } elseif (in_array($inv['status'], ['Pending', 'Sent'])) {
+                $totalPending += $total;
+                if ($inv['due_date'] < $today) {
+                    $overdueCount++;
+                }
+            }
+        }
+        
+        // Get client summary
+        $clientsQuery = Client::query()
+            ->where('user_id', $userId)
+            ->where('created_at', '>=', $startDate);
+        
+        $newClients = $clientsQuery->count();
+        $totalClients = Client::query()->where('user_id', $userId)->count();
+        
+        // Get payment summary
+        $payments = Payment::query()
+            ->where('user_id', $userId)
+            ->where('date', '>=', $startDate)
+            ->get();
+        
+        $totalPaymentsReceived = array_sum(array_map(function($p) {
+            return (float) $p['amount'];
+        }, $payments));
+        
+        Response::json([
+            'period_days' => $days,
+            'start_date' => $startDate,
+            'end_date' => $today,
+            'invoices' => [
+                'count' => $invoiceCount,
+                'total' => $totalInvoiced,
+                'paid' => $totalPaid,
+                'pending' => $totalPending,
+                'paid_count' => $paidCount,
+                'overdue_count' => $overdueCount
+            ],
+            'clients' => [
+                'new' => $newClients,
+                'total' => $totalClients
+            ],
+            'payments' => [
+                'count' => count($payments),
+                'total' => $totalPaymentsReceived
+            ]
+        ]);
+    }
+    
+    public function export(): void {
+        $request = new Request();
+        $type = $request->query('type') ?? 'pdf'; // pdf, excel, csv
+        $reportType = $request->query('report') ?? 'invoices'; // invoices, clients, payments
+        $userId = Auth::id();
+        
+        header('Content-Type: application/json');
+        
+        // For now, return error as export functionality requires additional libraries
+        // In production, implement using PhpSpreadsheet for Excel and FPDF for PDF
+        Response::error('Report export functionality is being prepared. Currently available via manual CSV export.', 503);
     }
 }

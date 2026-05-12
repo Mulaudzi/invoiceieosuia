@@ -1,0 +1,25 @@
+File,Line Number,Issue Type,Severity,Category,Description,Current Code,Recommended Fix,Status
+src/pages/Support.tsx,81-92,Simulated API Call,CRITICAL,Broken Feature,"Contact form shows success message but doesn't submit data to API","await new Promise(resolve => setTimeout(resolve, 1500))","Use contactService.submit() like Contact.tsx does",NEEDS_FIXING
+src/pages/Support.tsx,85,Comment,CRITICAL,Broken Feature,"'// Simulate API call' comment indicates fake implementation","// Simulate API call","Replace with actual API call implementation",NEEDS_FIXING
+src/pages/Careers.tsx,47,Placeholder Content,MEDIUM,Incomplete Feature,"'Coming Soon' section shows placeholder instead of actual job listings","{/* Coming Soon */}","Implement job listings or remove page from navigation",NEEDS_FIXING
+src/lib/mockData.ts,1-451,Unused Code,INFO,Code Quality,"mockData.ts file exists but is never imported or used in production","export const STORAGE_KEYS = {...}","Either document as test-only or move to test utilities folder",SAFE_TO_CLEANUP
+src/components/landing/HeroSection.tsx,136,Comment,INFO,Code Quality,"{/* Chart placeholder */} - just a comment for a functional visualization","Chart placeholder visualization code","No action needed - visualization works",NO_ACTION_NEEDED
+
+Notes:
+- "NEEDS_FIXING": Critical issues that should be addressed before production
+- "SAFE_TO_CLEANUP": Code that's safe but could be cleaned up for better maintainability
+- "NO_ACTION_NEEDED": Items that are fine as-is (comments, working code, etc.)
+
+Audit Scope:
+- Searched all files in: src/pages/, src/components/, src/services/, src/hooks/, src/contexts/
+- Search patterns: mockData, fake data, placeholder, Coming soon, TODO, FIXME, simulated API calls, empty handlers
+- Total files checked: 49 page files, 96 component files, multiple service files
+- Result: 2 issues found (1 critical, 1 medium), all others verified as safe
+
+Critical Findings:
+1. Support.tsx contact form uses fake delay (new Promise + setTimeout) instead of API call
+2. Careers.tsx shows "Coming Soon" placeholder content to users
+3. No mock data is actually used in production code
+4. All other API services properly use axios and backend endpoints
+5. No hardcoded arrays pretending to be API responses
+6. No broken onClick handlers or placeholder links

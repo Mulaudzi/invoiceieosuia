@@ -12,7 +12,13 @@ class ClientGroupController {
         $groupModel = new ClientGroup();
         $groups = array_map(fn($g) => $groupModel->withStats($g), $groups);
         
-        Response::json($groups);
+        Response::json([
+            'data' => $groups,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($groups),
+            'total' => count($groups)
+        ]);
     }
     
     /**

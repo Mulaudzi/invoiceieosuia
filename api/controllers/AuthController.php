@@ -963,6 +963,84 @@ class AuthController {
     }
     
     /**
+     * Create a new admin user (authenticated admins only)
+     */
+    public function createAdminUser(): void {
+        // Verify admin token
+        if (!AdminController::verifyAdminToken()) {
+            return;
+        }
+        
+        $request = new Request();
+        $data = $request->validate([
+            'name' => 'required|max:255',
+            'email' => 'required|email|max:255',
+            'password_1' => 'required|min:8',
+            'password_2' => 'required|min:8',
+            'password_3' => 'required|min:8',
+        ]);
+        
+        $db = Database::getConnection();
+        
+        // Check if email already exists
+        $stmt = $db->prepare("SELECT id FROM admin_users WHERE email = ?");
+        $stmt->execute([strtolower(trim($data['email']))]);
+        if ($stmt->fetch()) {
+            Response::error('Email already registered as admin', 422);
+            return;
+        }
+        
+        // Validate password strength for all three passwords
+        foreach (['password_1', 'password_2', 'password_3'] as $field) {
+            $passCheck = $this->validatePasswordStrength($data[$field]);
+            if (!$passCheck['valid']) {
+                Response::error("${field}: " . $passCheck['error'], 422);
+                return;
+            }
+        }
+        
+        // Hash the three passwords
+        $hashedPasswords = [
+            'password_1' => password_hash($data['password_1'], PASSWORD_ARGON2ID),
+            'password_2' => password_hash($data['password_2'], PASSWORD_ARGON2ID),
+            'password_3' => password_hash($data['password_3'], PASSWORD_ARGON2ID)
+        ];
+        
+        try {
+            // Insert admin user
+            $stmt = $db->prepare("
+                INSERT INTO admin_users (name, email, password_1, password_2, password_3, status, created_at)
+                VALUES (?, ?, ?, ?, ?, 'active', NOW())
+            ");
+            $stmt->execute([
+                $data['name'],
+                strtolower(trim($data['email'])),
+                $hashedPasswords['password_1'],
+                $hashedPasswords['password_2'],
+                $hashedPasswords['password_3']
+            ]);
+            
+            $adminId = $db->lastInsertId();
+            
+            // Log activity
+            AdminActivityLogger::logSubmission('admin_user_created', (int)$adminId, [
+                'admin_name' => $data['name'],
+                'admin_email' => $data['email']
+            ]);
+            
+            Response::json([
+                'success' => true,
+                'message' => 'Admin user created successfully',
+                'admin_id' => $adminId,
+                'email' => $data['email']
+            ], 201);
+        } catch (Exception $e) {
+            error_log("Error creating admin user: " . $e->getMessage());
+            Response::error('Failed to create admin user', 500);
+        }
+    }
+    
+    /**
      * Get list of admin users (for admin management)
      */
     public function getAdminUsers(): void {

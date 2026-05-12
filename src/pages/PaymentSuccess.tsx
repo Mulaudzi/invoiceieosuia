@@ -33,7 +33,9 @@ const PaymentSuccess = () => {
             });
           }
         } catch (error) {
-          console.error('Payment verification failed:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Payment verification failed:', error);
+          }
         }
       } else if (plan) {
         setPaymentDetails({ plan });

@@ -17,7 +17,14 @@ class ReminderController {
         $stmt->execute([Auth::id()]);
         $reminders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        Response::json(['data' => $reminders]);
+        Response::json([
+            'data' => $reminders,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($reminders),
+            'total' => count($reminders)
+        ]);
+    }
     }
     
     public function store(): void {

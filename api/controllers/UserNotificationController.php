@@ -31,11 +31,12 @@ class UserNotificationController {
             ];
         }, $notifications);
         
-        $unreadCount = count(array_filter($formatted, fn($n) => !$n['read']));
-        
         Response::json([
-            'notifications' => $formatted,
-            'unread_count' => $unreadCount
+            'data' => $formatted,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($formatted),
+            'total' => count($formatted)
         ]);
     }
     

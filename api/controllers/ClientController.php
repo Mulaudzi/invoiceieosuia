@@ -32,7 +32,13 @@ class ClientController {
         $clientModel = new Client();
         $clients = array_map(fn($c) => $clientModel->withStats($c), $clients);
         
-        Response::json($clients);
+        Response::json([
+            'data' => $clients,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($clients),
+            'total' => count($clients)
+        ]);
     }
     
     public function store(): void {

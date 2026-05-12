@@ -338,7 +338,7 @@ const Invoices = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenEditModal(invoice)}>
                                 <Eye className="w-4 h-4 mr-2" />
                                 View
                               </DropdownMenuItem>

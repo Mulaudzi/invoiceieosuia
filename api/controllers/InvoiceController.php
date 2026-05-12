@@ -35,7 +35,13 @@ class InvoiceController {
             return $inv;
         }, $invoices);
         
-        Response::json($invoices);
+        Response::json([
+            'data' => $invoices,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($invoices),
+            'total' => count($invoices)
+        ]);
     }
     
     public function store(): void {

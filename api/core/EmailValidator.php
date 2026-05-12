@@ -60,7 +60,7 @@ class EmailValidator {
         // Try DB first
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare("SELECT 1 FROM blocked_email_domains WHERE domain = ? AND type = 'disposable' LIMIT 1");
+            $stmt = $db->prepare("SELECT 1 FROM blocked_email_domains WHERE domain = ? LIMIT 1");
             $stmt->execute([$domain]);
             if ($stmt->fetch()) {
                 return true;
@@ -87,27 +87,13 @@ class EmailValidator {
     /**
      * Check if local part is a role-based email
      */
+    /**
+     * Check if local part is a role-based email
+     */
     public static function isRoleBasedEmail(string $localPart): bool {
         $localPart = strtolower(trim($localPart));
         
-        // Try DB first
-        try {
-            $db = Database::getConnection();
-            $stmt = $db->prepare("SELECT domain FROM blocked_email_domains WHERE type = 'role'");
-            $stmt->execute();
-            $rolePrefixes = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            
-            foreach ($rolePrefixes as $prefix) {
-                if ($localPart === $prefix || str_starts_with($localPart, $prefix . '.') || str_starts_with($localPart, $prefix . '+')) {
-                    return true;
-                }
-            }
-        } catch (Exception $e) {
-            // Fallback to hardcoded list
-            error_log("EmailValidator role check DB error, using fallback: " . $e->getMessage());
-        }
-        
-        // Fallback: Common role prefixes
+        // Hardcoded common role prefixes (doesn't need DB lookup)
         if (self::$rolePrefixes === null) {
             self::$rolePrefixes = [
                 'admin', 'administrator', 'info', 'support', 'sales', 
@@ -158,7 +144,7 @@ class EmailValidator {
         }
         
         $db = Database::getConnection();
-        $stmt = $db->prepare("INSERT IGNORE INTO blocked_email_domains (domain, type) VALUES (?, 'disposable')");
+        $stmt = $db->prepare("INSERT IGNORE INTO blocked_email_domains (domain, reason, created_at) VALUES (?, 'Disposable email provider', NOW())");
         
         $count = 0;
         foreach ($domains as $domain) {

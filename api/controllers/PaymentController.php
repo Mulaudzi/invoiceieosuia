@@ -34,7 +34,13 @@ class PaymentController {
             $payments = array_values($payments);
         }
         
-        Response::json($payments);
+        Response::json([
+            'data' => $payments,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($payments),
+            'total' => count($payments)
+        ]);
     }
     
     public function store(): void {

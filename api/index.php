@@ -156,6 +156,8 @@ $router->get('/reports/payment-timeline', [ReportController::class, 'paymentTime
 $router->get('/reports/billing-history', [ReportController::class, 'billingHistory'], [AuthMiddleware::class]);
 $router->get('/reports/extended-stats', [ReportController::class, 'extendedStats'], [AuthMiddleware::class]);
 $router->get('/reports/monthly-stats', [ReportController::class, 'monthlyStats'], [AuthMiddleware::class]);
+$router->get('/reports/summary', [ReportController::class, 'summary'], [AuthMiddleware::class]);
+$router->get('/reports/export', [ReportController::class, 'export'], [AuthMiddleware::class]);
 
 // Templates (Invoice)
 $router->get('/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
@@ -164,6 +166,8 @@ $router->get('/templates/{id}', [TemplateController::class, 'show'], [AuthMiddle
 $router->put('/templates/{id}', [TemplateController::class, 'update'], [AuthMiddleware::class]);
 $router->delete('/templates/{id}', [TemplateController::class, 'destroy'], [AuthMiddleware::class]);
 $router->post('/templates/{id}/set-default', [TemplateController::class, 'setDefault'], [AuthMiddleware::class]);
+$router->get('/templates/system/all', [TemplateController::class, 'getSystemTemplates']);
+$router->post('/templates/admin/seed', [TemplateController::class, 'seedDefaultTemplates']);
 
 // Message Templates (Email/SMS)
 $router->get('/message-templates', [MessageTemplateController::class, 'index'], [AuthMiddleware::class]);
@@ -234,6 +238,7 @@ $router->get('/credits/check', [CreditsController::class, 'checkCredits'], [Auth
 $router->post('/credits/use', [CreditsController::class, 'useCredits'], [AuthMiddleware::class]);
 $router->get('/credits/logs', [CreditsController::class, 'getNotificationLogs'], [AuthMiddleware::class]);
 $router->get('/credits/plans', [CreditsController::class, 'getPlans']);
+$router->get('/credits/balance', [CreditsController::class, 'balance'], [AuthMiddleware::class]);
 $router->post('/credits/reset', [CreditsController::class, 'resetMonthlyCredits']); // For cron job
 
 // User Notifications Routes
@@ -277,6 +282,7 @@ $router->delete('/admin/sessions', [AdminController::class, 'terminateAllSession
 
 // Admin User Management Routes
 $router->get('/admin/users', [AuthController::class, 'getAdminUsers']);
+$router->post('/admin/users', [AuthController::class, 'createAdminUser']);
 $router->put('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);
 $router->patch('/admin/users/{id}/toggle', [AuthController::class, 'toggleAdminStatus']);
 $router->delete('/admin/users/{id}', [AuthController::class, 'deleteAdminUser']);
@@ -315,6 +321,28 @@ $router->post('/payments/manual-retry', [PaymentRetryController::class, 'manualR
 // Payment Retry Cron Routes (for scheduled tasks)
 $router->post('/payments/process-retries', [PaymentRetryController::class, 'processRetries']); // Daily cron - retries failed payments
 $router->post('/payments/process-grace-periods', [PaymentRetryController::class, 'processGracePeriods']); // Daily cron - handles grace period warnings/expirations
+
+// Settings Routes (Admin only)
+$router->get('/settings', [SettingsController::class, 'getSettings']);
+$router->put('/settings/{key}', [SettingsController::class, 'updateSetting']);
+$router->post('/settings/batch', [SettingsController::class, 'batchUpdateSettings']);
+$router->delete('/settings/{key}', [SettingsController::class, 'deleteSetting']);
+$router->get('/settings/mail', [SettingsController::class, 'getMailSettings']);
+$router->put('/settings/mail', [SettingsController::class, 'updateMailSettings']);
+$router->get('/settings/payment', [SettingsController::class, 'getPaymentSettings']);
+$router->put('/settings/payment', [SettingsController::class, 'updatePaymentSettings']);
+$router->post('/settings/reset', [SettingsController::class, 'resetToDefaults']);
+
+// Blocked Domains Routes (Admin only)
+$router->get('/blocked-domains', [BlockedDomainsController::class, 'getAll']);
+$router->get('/blocked-domains/{id}', [BlockedDomainsController::class, 'get']);
+$router->post('/blocked-domains', [BlockedDomainsController::class, 'add']);
+$router->post('/blocked-domains/bulk-add', [BlockedDomainsController::class, 'bulkAdd']);
+$router->put('/blocked-domains/{id}', [BlockedDomainsController::class, 'update']);
+$router->delete('/blocked-domains/{id}', [BlockedDomainsController::class, 'remove']);
+$router->post('/blocked-domains/bulk-remove', [BlockedDomainsController::class, 'bulkRemove']);
+$router->get('/blocked-domains/check', [BlockedDomainsController::class, 'isBlocked']); // Public - for email validation
+$router->get('/blocked-domains/export', [BlockedDomainsController::class, 'export']);
 
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);

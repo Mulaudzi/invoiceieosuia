@@ -15,7 +15,13 @@ class TemplateController {
             return $t;
         }, $templates);
         
-        Response::json($templates);
+        Response::json([
+            'data' => $templates,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($templates),
+            'total' => count($templates)
+        ]);
     }
     
     public function store(): void {
@@ -153,4 +159,47 @@ class TemplateController {
         $updated = $templateModel->findWithParsedStyles($template['id']);
         Response::json($updated);
     }
+    
+    public function seedDefaultTemplates(): void {
+        // Admin only - check if user is admin
+        if (Auth::role() !== 'admin') {
+            Response::error('Unauthorized. Admin access required.', 403);
+            return;
+        }
+        
+        require_once __DIR__ . '/../seeders/TemplateSeeder.php';
+        
+        $results = TemplateSeeder::seed();
+        
+        Response::json([
+            'message' => 'Templates seeded successfully',
+            'created' => $results,
+            'total' => count($results)
+        ], 201);
+    }
+    
+    public function getSystemTemplates(): void {
+        // Get all system templates (user_id = 0)
+        $templates = Template::query()
+            ->where('user_id', 0)
+            ->orderBy('name', 'ASC')
+            ->get();
+        
+        // Parse styles JSON
+        $templates = array_map(function($t) {
+            if (isset($t['styles'])) {
+                $t['styles'] = json_decode($t['styles'], true);
+            }
+            return $t;
+        }, $templates);
+        
+        Response::json([
+            'data' => $templates,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($templates),
+            'total' => count($templates)
+        ]);
+    }
 }
+

@@ -15,7 +15,6 @@ import {
   MoreHorizontal,
   Eye,
   Edit,
-  Mail,
   Trash2,
   Building2,
   Phone,
@@ -146,17 +145,13 @@ const Clients = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenEditModal(client)}>
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleOpenEditModal(client)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Mail className="w-4 h-4 mr-2" />
-                          Send Email
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"

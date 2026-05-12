@@ -25,7 +25,13 @@ class CurrencyController {
             ];
         }
         
-        Response::json(['currencies' => $currencies]);
+        Response::json([
+            'data' => $currencies,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => count($currencies),
+            'total' => count($currencies)
+        ]);
     }
     
     public function rates(): void {
