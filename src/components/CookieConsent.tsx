@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { X, Cookie } from "lucide-react";
+import { X, Cookie } from "@/lib/icons";
 
 const COOKIE_CONSENT_KEY = "cookie_consent";
 

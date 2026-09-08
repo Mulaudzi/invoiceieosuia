@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, Mail, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
+import { FileText, Mail, ArrowLeft, RefreshCw, LogOut } from "@/lib/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/api";
 
 const VerifyEmailReminder = () => {
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [isResending, setIsResending] = useState(false);
 
   const handleResend = async () => {
     setIsResending(true);
     try {
-      await authService.resendVerification();
+      const result = await authService.resendVerification();
+      if (result.already_verified) {
+        await refreshUser();
+        toast({ title: "Email already verified", description: "Your account is ready to use." });
+        navigate("/dashboard", { replace: true });
+        return;
+      }
       toast({
         title: "Email sent!",
         description: "We've sent a new verification email to your inbox.",

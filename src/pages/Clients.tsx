@@ -4,6 +4,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useClients } from "@/hooks/useClients";
+import { useInvoices } from "@/hooks/useInvoices";
 import { Client } from "@/lib/types";
 import { ClientModal } from "@/components/clients/ClientModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
@@ -18,7 +19,8 @@ import {
   Trash2,
   Building2,
   Phone,
-} from "lucide-react";
+  Mail,
+} from "@/lib/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +35,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getDocumentTitle } from "@/lib/invoiceArchitecture";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -42,8 +46,14 @@ const Clients = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [detailsClient, setDetailsClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading, error, refetch } = useClients();
+  const { data: invoices = [] } = useInvoices();
+  const clientDocuments = detailsClient ? invoices.filter(invoice => invoice.clientId === detailsClient.id) : [];
+  const clientOutstanding = (clientId: string) => invoices
+    .filter(invoice => invoice.clientId === clientId && !['credit_note', 'debit_note', 'receipt'].includes(invoice.documentType || 'standard_invoice'))
+    .reduce((sum, invoice) => sum + invoice.balanceDue, 0);
 
   const filteredClients = clients.filter(
     (client) =>
@@ -145,7 +155,7 @@ const Clients = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenEditModal(client)}>
+                        <DropdownMenuItem onClick={() => setDetailsClient(client)}>
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
@@ -188,6 +198,7 @@ const Clients = () => {
                       Active
                     </span>
                   </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm"><span className="text-muted-foreground">Outstanding</span><strong>{new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(clientOutstanding(client.id))}</strong></div>
                 </div>
               ))}
             </div>
@@ -254,6 +265,13 @@ const Clients = () => {
         onOpenChange={setDeleteDialogOpen}
         client={selectedClient}
       />
+      <Dialog open={!!detailsClient} onOpenChange={(open) => !open && setDetailsClient(null)}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader><DialogTitle>{detailsClient?.name} — Documents / Transaction History</DialogTitle></DialogHeader>
+          <div className="rounded-lg bg-muted/40 p-4"><span className="text-sm text-muted-foreground">Overall outstanding balance</span><p className="text-2xl font-bold">{new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(detailsClient ? clientOutstanding(detailsClient.id) : 0)}</p></div>
+          <div className="space-y-2">{clientDocuments.length === 0 ? <p className="py-6 text-center text-muted-foreground">No documents recorded for this client.</p> : clientDocuments.map(document => <div key={document.id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"><div><strong>{getDocumentTitle(document.documentType || 'standard_invoice')} {document.invoiceNumber}</strong>{document.metadata?.original_invoice_number && <p className="text-xs text-muted-foreground">Linked to {String(document.metadata.original_invoice_number)}</p>}</div><span className="text-sm">{new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(document.total)}</span><span className="text-xs font-medium">{document.status}</span></div>)}</div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, Lock, Eye, UserCheck, FileText, Server, Bell, Trash2, Download, MapPin, Mail, Phone } from "lucide-react";
+import { Shield, Lock, Eye, UserCheck, FileText, Server, Bell, Trash2, Download, MapPin, Mail, Phone } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
@@ -51,7 +51,7 @@ const PopiaCompliance = () => {
 • Business information for invoice generation
 
 **Transaction Data**
-• Invoice details, payment records, and client information you enter
+• Invoice details and client information you enter
 • This data is essential for providing our invoicing and bookkeeping services
 
 **Usage Data**
@@ -75,7 +75,7 @@ const PopiaCompliance = () => {
       title: "Third-Party Sharing",
       content: `We limit third-party access to your data:
 • We do **not** sell your personal information to any third party
-• We share data only with service providers necessary to operate our platform (e.g., payment processors, email services)
+• We share data only with service providers necessary to operate our platform (for example, email services)
 • All third parties are bound by confidentiality agreements and POPIA compliance requirements
 • We share information when legally required to do so by court order or regulatory request`
     },
@@ -153,6 +153,7 @@ Requests will be processed within 30 days as required by POPIA.`
 
           {/* Sections */}
           <div className="space-y-10">
+            <section><h2 className="text-2xl font-semibold text-foreground mb-4">Responsible party</h2><p className="text-muted-foreground leading-relaxed">IEOSUIA, 26 Rock Alder, Naturena, Johannesburg, 2095, South Africa.</p></section>
             {sections.map((section, index) => (
               <section key={index} className="border-b border-border pb-8 last:border-0">
                 <div className="flex items-start gap-4 mb-4">

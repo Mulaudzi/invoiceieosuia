@@ -6,25 +6,18 @@ import {
   Package,
   BarChart3,
   Palette,
-  CreditCard,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   UserCircle,
-  Bell,
   RefreshCw,
-  Mail,
-  FileEdit,
-  Crown,
   TrendingUp,
-  FlaskConical,
-  History,
-  Receipt,
-} from "lucide-react";
+  Menu,
+} from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
@@ -33,26 +26,27 @@ const DashboardSidebar = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const toggle = () => setMobileOpen(value => !value);
+    const close = () => setMobileOpen(false);
+    window.addEventListener('dashboard-menu-toggle', toggle);
+    window.addEventListener('dashboard-menu-close', close);
+    return () => { window.removeEventListener('dashboard-menu-toggle', toggle); window.removeEventListener('dashboard-menu-close', close); };
+  }, []);
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
     { name: "Invoices", icon: FileText, href: "/dashboard/invoices" },
-    { name: "Recurring", icon: RefreshCw, href: "/dashboard/recurring" },
+    { name: "Billing Schedules", icon: RefreshCw, href: "/dashboard/recurring" },
     { name: "Clients", icon: Users, href: "/dashboard/clients" },
     { name: "Products", icon: Package, href: "/dashboard/products" },
     { name: "Reports", icon: BarChart3, href: "/dashboard/reports" },
     { name: "Analytics", icon: TrendingUp, href: "/dashboard/analytics" },
     { name: "Templates", icon: Palette, href: "/dashboard/templates" },
-    { name: "Message Templates", icon: FileEdit, href: "/dashboard/email-templates" },
-    { name: "Payments", icon: CreditCard, href: "/dashboard/payments" },
-    { name: "Payment History", icon: History, href: "/dashboard/payment-history" },
-    { name: "Billing Portal", icon: Receipt, href: "/dashboard/billing" },
-    { name: "Reminders", icon: Bell, href: "/dashboard/reminders" },
-    { name: "Notifications", icon: Mail, href: "/dashboard/notifications" },
-    { name: "Subscription", icon: Crown, href: "/dashboard/subscription" },
     { name: "Profile", icon: UserCircle, href: "/dashboard/profile" },
     { name: "Settings", icon: Settings, href: "/dashboard/settings" },
-    { name: "Tests", icon: FlaskConical, href: "/dashboard/tests" },
   ];
 
   const handleLogout = () => {
@@ -60,11 +54,13 @@ const DashboardSidebar = () => {
     navigate("/");
   };
 
-  return (
+  return (<>
+    {mobileOpen && <button aria-label="Close navigation" className="fixed inset-0 z-40 bg-black/45 md:hidden" onClick={() => setMobileOpen(false)} />}
     <aside
+      data-mobile-open={mobileOpen ? 'true' : 'false'}
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-300 z-40",
-        collapsed ? "w-16" : "w-64"
+        "dashboard-sidebar fixed left-0 top-0 h-[100dvh] bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-300 z-50 w-64",
+        collapsed ? "md:w-16" : "md:w-64"
       )}
     >
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
@@ -80,7 +76,7 @@ const DashboardSidebar = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => window.innerWidth < 768 ? setMobileOpen(false) : setCollapsed(!collapsed)}
           className="text-sidebar-foreground hover:bg-sidebar-accent"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -95,6 +91,7 @@ const DashboardSidebar = () => {
               <li key={item.name}>
                 <Link
                   to={item.href}
+                  onClick={() => setMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
                     isActive
@@ -121,6 +118,34 @@ const DashboardSidebar = () => {
         </button>
       </div>
     </aside>
+
+    <nav aria-label="Mobile dashboard navigation" className="dashboard-mobile-nav md:hidden">
+      {menuItems.slice(0, 4).map((item) => {
+        const isActive = item.href === "/dashboard"
+          ? location.pathname === item.href
+          : location.pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            to={item.href}
+            className={cn("dashboard-mobile-nav-item", isActive && "is-active")}
+          >
+            <item.icon className="h-5 w-5" />
+            <span>{item.name === "Billing Schedules" ? "Schedules" : item.name}</span>
+          </Link>
+        );
+      })}
+      <button
+        type="button"
+        className="dashboard-mobile-nav-item"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open all navigation"
+      >
+        <Menu className="h-5 w-5" />
+        <span>More</span>
+      </button>
+    </nav>
+  </>
   );
 };
 

@@ -1,15 +1,11 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowRight, CheckCircle2, PlayCircle, Sparkles, Globe, Zap, Shield, TrendingUp } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles, Globe, Zap, Shield, TrendingUp } from "@/lib/icons";
 
 const HeroSection = () => {
-  const [showDemo, setShowDemo] = useState(false);
-  
   const highlights = [
-    "No credit card required",
-    "Free forever plan",
+    "Every feature included",
+    "Free",
     "Setup in 2 minutes",
   ];
 
@@ -57,7 +53,7 @@ const HeroSection = () => {
 
               {/* Subheadline */}
               <p className="text-lg md:text-xl text-white/80 mb-8 max-w-3xl mx-auto animate-fade-in leading-relaxed" style={{ animationDelay: "0.2s" }}>
-                IEOSUIA Invoices helps freelancers, businesses, and teams automate, track, and customize invoices in ZAR or your preferred currency—with email & SMS reminders built-in.
+                IEOSUIA Invoices helps freelancers, businesses, and teams create, track, and customize professional invoices in ZAR or their preferred currency.
               </p>
 
               {/* CTA Buttons */}
@@ -68,10 +64,6 @@ const HeroSection = () => {
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
-                <Button size="xl" variant="hero-outline" className="group text-base px-8 py-6" onClick={() => setShowDemo(true)}>
-                  <PlayCircle className="w-5 h-5" />
-                  Watch Demo
-                </Button>
               </div>
 
               {/* Highlights */}
@@ -88,7 +80,7 @@ const HeroSection = () => {
               <div className="flex flex-wrap items-center justify-center gap-3 mb-16 animate-fade-in" style={{ animationDelay: "0.5s" }}>
                 {[
                   { icon: Globe, label: "Multi-Currency" },
-                  { icon: Zap, label: "Auto Reminders" },
+                  { icon: Zap, label: "Fast PDF Invoices" },
                   { icon: Shield, label: "Bank-Grade Security" },
                   { icon: TrendingUp, label: "Smart Reports" },
                 ].map((feature) => (
@@ -161,23 +153,6 @@ const HeroSection = () => {
         </div>
       </section>
 
-      {/* Demo Video Modal */}
-      <Dialog open={showDemo} onOpenChange={setShowDemo}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <DialogHeader className="p-4 pb-0">
-            <DialogTitle>See IEOSUIA in Action</DialogTitle>
-          </DialogHeader>
-          <div className="aspect-video w-full">
-            <iframe
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-              title="IEOSUIA Demo Video"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

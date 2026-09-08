@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw, WifiOff } from "lucide-react";
+import { AlertCircle, RefreshCw, WifiOff } from "@/lib/icons";
 
 interface ApiErrorFallbackProps {
   error?: Error | null;

@@ -18,7 +18,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -39,9 +39,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
-import { format } from "date-fns";
+import { formatDateSafe } from "@/lib/dateUtils";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 interface ActivityLog {
@@ -88,7 +88,7 @@ const AdminActivityLogs = () => {
   const fetchLogs = async (page = 1) => {
     const token = getAdminToken();
     if (!token) {
-      navigate('/admin/login');
+      navigate('/guymhan/login');
       return;
     }
 
@@ -103,7 +103,7 @@ const AdminActivityLogs = () => {
       if (startDate) params.append('start_date', startDate);
       if (endDate) params.append('end_date', endDate);
 
-      const response = await api.get(`/admin/activity-logs?${params.toString()}`, {
+      const response = await api.get(`/guymhan/activity-logs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -117,7 +117,7 @@ const AdminActivityLogs = () => {
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate('/admin/login');
+        navigate('/guymhan/login');
       } else {
         toast({
           title: "Error",
@@ -308,7 +308,7 @@ const AdminActivityLogs = () => {
                           <TableCell className="text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <Clock className="h-3 w-3" />
-                              {format(new Date(log.created_at), "MMM d, HH:mm:ss")}
+                              {formatDateSafe(log.created_at, "MMM d, HH:mm:ss")}
                             </div>
                           </TableCell>
                           <TableCell>

@@ -20,15 +20,12 @@ class WebhookController {
      */
     public function handleBounce(): void {
         $request = new Request();
-        
-        // Log the incoming webhook
-        $this->logWebhook('bounce', $request->all());
-        
-        // Verify webhook signature if secret is set
-        if (!empty($this->webhookSecret) && !$this->verifySignature($request)) {
+
+        if (!$this->verifySignature($request)) {
             Response::error('Invalid webhook signature', 401);
             return;
         }
+        $this->logWebhook('bounce', $request->all());
         
         $provider = $this->detectProvider($request);
         
@@ -59,12 +56,11 @@ class WebhookController {
     public function handleDelivery(): void {
         $request = new Request();
         
-        $this->logWebhook('delivery', $request->all());
-        
-        if (!empty($this->webhookSecret) && !$this->verifySignature($request)) {
+        if (!$this->verifySignature($request)) {
             Response::error('Invalid webhook signature', 401);
             return;
         }
+        $this->logWebhook('delivery', $request->all());
         
         $provider = $this->detectProvider($request);
         
@@ -94,7 +90,10 @@ class WebhookController {
      */
     public function handleComplaint(): void {
         $request = new Request();
-        
+        if (!$this->verifySignature($request)) {
+            Response::error('Invalid webhook signature', 401);
+            return;
+        }
         $this->logWebhook('complaint', $request->all());
         
         $data = $request->all();
@@ -442,12 +441,14 @@ class WebhookController {
      * Verify webhook signature
      */
     private function verifySignature(Request $request): bool {
+        if ($this->webhookSecret === '') {
+            return false;
+        }
         $headers = getallheaders();
         
         // SendGrid signature verification
         if (isset($headers['X-Twilio-Email-Event-Webhook-Signature'])) {
-            // Implement SendGrid signature verification if needed
-            return true; // Skip for now
+            return false; // Configure provider-native verification before enabling this path.
         }
         
         // Mailgun signature verification
@@ -471,7 +472,7 @@ class WebhookController {
             return hash_equals($this->webhookSecret, str_replace('Bearer ', '', $providedToken));
         }
         
-        return true; // Allow if no signature mechanism detected
+        return false;
     }
     
     /**

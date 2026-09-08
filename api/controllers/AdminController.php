@@ -6,12 +6,12 @@
  */
 class AdminController {
     
-    // Hardcoded admin credentials - 3 passwords required in sequence
-    private const ADMIN_USERNAME = 'I Am God In Human Form';
+    // Legacy multi-step handlers are intentionally unreachable; live admin auth is database-backed.
+    private const ADMIN_USERNAME = '';
     private const ADMIN_PASSWORDS = [
-        'billionaires',
-        'Mu1@udz!',
-        '7211018830'
+        '',
+        '',
+        ''
     ];
     
     /**
@@ -169,26 +169,27 @@ class AdminController {
         }
         
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        
         $db = Database::getConnection();
+        $tokenHash = hash('sha256', $token);
         $stmt = $db->prepare("
             SELECT * FROM admin_sessions 
             WHERE session_token = ? 
             AND ip_address = ?
-            AND step = 3 
+            AND step IN (3, 99)
             AND expires_at > NOW()
+            AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
         ");
-        $stmt->execute([$token, $ip]);
+        $stmt->execute([$tokenHash, $ip]);
         $session = $stmt->fetch();
         
         if (!$session) {
-            Response::error('Invalid or expired admin session', 401);
+            Response::error('Your administrator session has expired after five minutes of inactivity. Please sign in again.', 401);
             return false;
         }
         
         // Update last activity
         $stmt = $db->prepare("UPDATE admin_sessions SET last_activity = NOW() WHERE session_token = ?");
-        $stmt->execute([$token]);
+        $stmt->execute([$tokenHash]);
         
         return true;
     }
@@ -254,10 +255,10 @@ class AdminController {
     /**
      * Get single submission
      */
-    public function getSubmission(): void {
+    public function getSubmission(array $params): void {
         if (!self::verifyAdminToken()) return;
         
-        $id = Request::param('id');
+        $id = (int) ($params['id'] ?? 0);
         $db = Database::getConnection();
         
         $stmt = $db->prepare("SELECT * FROM contact_submissions WHERE id = ?");
@@ -286,10 +287,10 @@ class AdminController {
     /**
      * Update submission status
      */
-    public function updateSubmission(): void {
+    public function updateSubmission(array $params): void {
         if (!self::verifyAdminToken()) return;
         
-        $id = Request::param('id');
+        $id = (int) ($params['id'] ?? 0);
         $request = new Request();
         $data = $request->all();
         
@@ -332,10 +333,10 @@ class AdminController {
     /**
      * Delete submission
      */
-    public function deleteSubmission(): void {
+    public function deleteSubmission(array $params): void {
         if (!self::verifyAdminToken()) return;
         
-        $id = Request::param('id');
+        $id = (int) ($params['id'] ?? 0);
         $db = Database::getConnection();
         
         // Get submission info before deletion for logging
@@ -363,10 +364,10 @@ class AdminController {
     /**
      * Mark submission as read
      */
-    public function markAsRead(): void {
+    public function markAsRead(array $params): void {
         if (!self::verifyAdminToken()) return;
         
-        $id = Request::param('id');
+        $id = (int) ($params['id'] ?? 0);
         $db = Database::getConnection();
         
         $stmt = $db->prepare("
@@ -905,7 +906,7 @@ class AdminController {
     private function deleteAdminSession(string $token): void {
         $db = Database::getConnection();
         $stmt = $db->prepare("DELETE FROM admin_sessions WHERE session_token = ?");
-        $stmt->execute([$token]);
+        $stmt->execute([hash('sha256', $token)]);
     }
     
     // ==================== Session Management ====================
@@ -932,14 +933,16 @@ class AdminController {
                 created_at,
                 expires_at
             FROM admin_sessions 
-            WHERE step = 3 AND expires_at > NOW()
+            WHERE step IN (3, 99)
+              AND expires_at > NOW()
+              AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
             ORDER BY last_activity DESC
         ");
         $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Add current session flag and admin user info
         foreach ($sessions as &$session) {
-            $session['is_current'] = $session['session_token'] === $currentToken;
+            $session['is_current'] = hash_equals($session['session_token'], hash('sha256', (string) $currentToken));
             // Mask the token for security
             $session['session_token_masked'] = substr($session['session_token'], 0, 8) . '...' . substr($session['session_token'], -8);
             unset($session['session_token']); // Don't expose full token
@@ -976,11 +979,11 @@ class AdminController {
     /**
      * Terminate a specific admin session
      */
-    public function terminateSession(): void {
+    public function terminateSession(array $params): void {
         if (!self::verifyAdminToken()) return;
         
         $request = new Request();
-        $sessionId = Request::param('id');
+        $sessionId = (int) ($params['id'] ?? 0);
         $currentToken = $request->bearerToken();
         
         if (!$sessionId) {
@@ -1001,7 +1004,7 @@ class AdminController {
         }
         
         // Don't allow terminating own session
-        if ($session['session_token'] === $currentToken) {
+        if (hash_equals($session['session_token'], hash('sha256', (string) $currentToken))) {
             Response::error('Cannot terminate your own session. Use logout instead.', 400);
             return;
         }

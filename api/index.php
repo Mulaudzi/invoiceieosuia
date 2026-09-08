@@ -4,13 +4,35 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
+// Load environment variables before applying configuration-dependent headers.
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos($line, '#') === 0 || strpos($line, '=') === false) continue;
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value);
+        if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+            (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
+            $value = substr($value, 1, -1);
+        }
+        $_ENV[$key] = $value;
+    }
+}
+
 // Security headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 1; mode=block');
 
-// CORS headers
-header('Access-Control-Allow-Origin: *');
+// CORS headers: only echo explicitly configured browser origins.
+$configuredOrigins = array_filter(array_map('trim', explode(',', $_ENV['CORS_ALLOWED_ORIGINS'] ?? 'https://invoices.ieosuia.com')));
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($requestOrigin !== '' && in_array($requestOrigin, $configuredOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $requestOrigin);
+    header('Vary: Origin');
+}
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
@@ -22,27 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Core includes
 require_once __DIR__ . '/core/EmailValidator.php';
-require_once __DIR__ . '/core/Recaptcha.php';
-
-// Load environment variables
-$envFile = __DIR__ . '/.env';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos($line, '#') === 0) continue;
-        if (strpos($line, '=') !== false) {
-            list($key, $value) = explode('=', $line, 2);
-            $key = trim($key);
-            $value = trim($value);
-            // Strip surrounding quotes (single or double)
-            if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
-                (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
-                $value = substr($value, 1, -1);
-            }
-            $_ENV[$key] = $value;
-        }
-    }
-}
 
 // Autoload classes
 spl_autoload_register(function ($class) {
@@ -65,41 +66,41 @@ spl_autoload_register(function ($class) {
 
 // Initialize router
 $router = new Router();
+$router->get('/auth/ieosuia/start', [IeosuiaAuthController::class, 'start']);
+$router->get('/auth/ieosuia/callback', [IeosuiaAuthController::class, 'callback']);
 
 // Health check routes (public)
 $router->get('/health', [HealthController::class, 'check']);
 $router->get('/health/debug', [HealthController::class, 'debug']);
 
 // Public routes
-$router->post('/register', [AuthController::class, 'register']);
-$router->post('/login', [AuthController::class, 'login']);
-$router->post('/verify-email', [AuthController::class, 'verifyEmail']);
-$router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
-$router->post('/reset-password', [AuthController::class, 'resetPassword']);
+$router->post('/register', [IeosuiaAuthController::class, 'disabled']);
+$router->post('/login', [IeosuiaAuthController::class, 'disabled']);
+$router->post('/verify-email', [IeosuiaAuthController::class, 'disabled']);
+$router->post('/forgot-password', [IeosuiaAuthController::class, 'disabled']);
+$router->post('/reset-password', [IeosuiaAuthController::class, 'disabled']);
 
 // Admin setup route (temporary - disable after initial setup)
-$router->post('/admin/setup', [AuthController::class, 'createAdmin']);
+$router->post('/guymhan/setup', [IeosuiaAuthController::class, 'disabled']);
 
 // Admin email check (public - for login page detection)
-$router->post('/admin/check-email', [AuthController::class, 'checkAdminEmail']);
+$router->post('/guymhan/check-email', [AuthController::class, 'checkAdminEmail']);
 
 // Admin batch login (all 3 passwords at once)
-$router->post('/admin/login/batch', [AuthController::class, 'adminLoginBatch']);
-
-// Google OAuth routes
-$router->get('/auth/google', [GoogleAuthController::class, 'getAuthUrl']);
-$router->post('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+$router->post('/guymhan/login/batch', [IeosuiaAuthController::class, 'disabled']);
+$router->post('/guymhan/login/pin', [IeosuiaAuthController::class, 'disabled']);
 
 // Protected routes
 $router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class]);
 $router->get('/user', [AuthController::class, 'user'], [AuthMiddleware::class]);
 $router->put('/profile', [AuthController::class, 'updateProfile'], [AuthMiddleware::class]);
-$router->put('/password', [AuthController::class, 'updatePassword'], [AuthMiddleware::class]);
+$router->put('/password', [IeosuiaAuthController::class, 'disabled'], [AuthMiddleware::class]);
 $router->post('/avatar', [AuthController::class, 'uploadAvatar'], [AuthMiddleware::class]);
 $router->delete('/avatar', [AuthController::class, 'deleteAvatar'], [AuthMiddleware::class]);
-$router->put('/plan', [AuthController::class, 'updatePlan'], [AuthMiddleware::class]);
 $router->post('/resend-verification', [AuthController::class, 'resendVerification'], [AuthMiddleware::class]);
 $router->post('/upload-logo', [AuthController::class, 'uploadLogo'], [AuthMiddleware::class]);
+$router->post('/upload-invoice-logo', [AuthController::class, 'uploadInvoiceLogo'], [AuthMiddleware::class]);
+$router->get('/media/{type}/{filename}', [MediaController::class, 'show'], [AuthMiddleware::class]);
 $router->delete('/logo', [AuthController::class, 'deleteLogo'], [AuthMiddleware::class]);
 
 // Clients
@@ -133,17 +134,10 @@ $router->get('/invoices/{id}', [InvoiceController::class, 'show'], [AuthMiddlewa
 $router->put('/invoices/{id}', [InvoiceController::class, 'update'], [AuthMiddleware::class]);
 $router->delete('/invoices/{id}', [InvoiceController::class, 'destroy'], [AuthMiddleware::class]);
 $router->post('/invoices/{id}/mark-paid', [InvoiceController::class, 'markPaid'], [AuthMiddleware::class]);
-
-// Payments
-$router->get('/payments', [PaymentController::class, 'index'], [AuthMiddleware::class]);
-$router->post('/payments', [PaymentController::class, 'store'], [AuthMiddleware::class]);
-$router->get('/payments/summary', [PaymentController::class, 'summary'], [AuthMiddleware::class]);
-$router->get('/payments/{id}', [PaymentController::class, 'show'], [AuthMiddleware::class]);
-$router->delete('/payments/{id}', [PaymentController::class, 'destroy'], [AuthMiddleware::class]);
-
-// Payment History
-$router->get('/payment-history', [PaymentHistoryController::class, 'index'], [AuthMiddleware::class]);
-$router->get('/payment-history/summary', [PaymentHistoryController::class, 'summary'], [AuthMiddleware::class]);
+$router->post('/invoices/{id}/payments', [InvoiceController::class, 'recordPayment'], [AuthMiddleware::class]);
+$router->post('/invoices/{id}/issue', [InvoiceController::class, 'issue'], [AuthMiddleware::class]);
+$router->put('/invoices/{id}/payments/{paymentId}', [InvoiceController::class, 'updatePayment'], [AuthMiddleware::class]);
+$router->delete('/invoices/{id}/payments/{paymentId}', [InvoiceController::class, 'voidPayment'], [AuthMiddleware::class]);
 
 // Reports
 $router->get('/reports/dashboard', [ReportController::class, 'dashboard'], [AuthMiddleware::class]);
@@ -152,8 +146,6 @@ $router->get('/reports/invoice-status', [ReportController::class, 'invoiceStatus
 $router->get('/reports/top-clients', [ReportController::class, 'topClients'], [AuthMiddleware::class]);
 $router->get('/reports/income-expense', [ReportController::class, 'incomeExpense'], [AuthMiddleware::class]);
 $router->get('/reports/recent-invoices', [ReportController::class, 'recentInvoices'], [AuthMiddleware::class]);
-$router->get('/reports/payment-timeline', [ReportController::class, 'paymentTimeline'], [AuthMiddleware::class]);
-$router->get('/reports/billing-history', [ReportController::class, 'billingHistory'], [AuthMiddleware::class]);
 $router->get('/reports/extended-stats', [ReportController::class, 'extendedStats'], [AuthMiddleware::class]);
 $router->get('/reports/monthly-stats', [ReportController::class, 'monthlyStats'], [AuthMiddleware::class]);
 $router->get('/reports/summary', [ReportController::class, 'summary'], [AuthMiddleware::class]);
@@ -167,23 +159,7 @@ $router->put('/templates/{id}', [TemplateController::class, 'update'], [AuthMidd
 $router->delete('/templates/{id}', [TemplateController::class, 'destroy'], [AuthMiddleware::class]);
 $router->post('/templates/{id}/set-default', [TemplateController::class, 'setDefault'], [AuthMiddleware::class]);
 $router->get('/templates/system/all', [TemplateController::class, 'getSystemTemplates']);
-$router->post('/templates/admin/seed', [TemplateController::class, 'seedDefaultTemplates']);
-
-// Message Templates (Email/SMS)
-$router->get('/message-templates', [MessageTemplateController::class, 'index'], [AuthMiddleware::class]);
-$router->get('/message-templates/email', [MessageTemplateController::class, 'getEmailTemplates'], [AuthMiddleware::class]);
-$router->get('/message-templates/sms', [MessageTemplateController::class, 'getSmsTemplates'], [AuthMiddleware::class]);
-$router->post('/message-templates/email', [MessageTemplateController::class, 'saveEmailTemplate'], [AuthMiddleware::class]);
-$router->post('/message-templates/sms', [MessageTemplateController::class, 'saveSmsTemplate'], [AuthMiddleware::class]);
-$router->get('/message-templates/{id}', [MessageTemplateController::class, 'show'], [AuthMiddleware::class]);
-$router->put('/message-templates/{id}', [MessageTemplateController::class, 'update'], [AuthMiddleware::class]);
-$router->delete('/message-templates/{id}', [MessageTemplateController::class, 'destroy'], [AuthMiddleware::class]);
-$router->post('/message-templates/reset', [MessageTemplateController::class, 'resetToDefaults'], [AuthMiddleware::class]);
-
-// Notifications
-$router->post('/invoices/{id}/send', [NotificationController::class, 'sendEmail'], [AuthMiddleware::class]);
-$router->get('/invoices/{id}/email-preview', [NotificationController::class, 'emailPreview'], [AuthMiddleware::class]);
-$router->post('/invoices/{id}/send-sms', [NotificationController::class, 'sendSms'], [AuthMiddleware::class]);
+$router->post('/templates/guymhan/seed', [TemplateController::class, 'seedDefaultTemplates'], [AdminAuthMiddleware::class]);
 
 // PDF Generation
 $router->get('/invoices/{id}/pdf', [PdfController::class, 'generate'], [AuthMiddleware::class]);
@@ -193,34 +169,11 @@ $router->get('/invoices/{id}/pdf/download', [PdfController::class, 'download'], 
 $router->get('/gdpr/export', [GdprController::class, 'export'], [AuthMiddleware::class]);
 $router->delete('/gdpr/delete', [GdprController::class, 'delete'], [AuthMiddleware::class]);
 
-// PayFast Routes
-$router->post('/payfast/checkout', [PayfastController::class, 'checkout'], [AuthMiddleware::class]);
-$router->post('/payfast/invoice', [PayfastController::class, 'invoicePayment'], [AuthMiddleware::class]);
-$router->post('/payfast/webhook', [PayfastController::class, 'webhook']);
-$router->post('/payfast/invoice-webhook', [PayfastController::class, 'invoiceWebhook']);
-$router->post('/payfast/subscription-webhook', [PayfastController::class, 'subscriptionWebhook']);
-$router->post('/payfast/cancel-subscription', [PayfastController::class, 'cancelSubscription'], [AuthMiddleware::class]);
-
-// Paystack Routes
-$router->post('/paystack/initialize', [PaystackController::class, 'initialize'], [AuthMiddleware::class]);
-$router->get('/paystack/verify/{reference}', [PaystackController::class, 'verify'], [AuthMiddleware::class]);
-$router->post('/paystack/webhook', [PaystackController::class, 'webhook']);
-$router->get('/paystack/config', [PaystackController::class, 'config']);
-
 // Currency Routes
 $router->get('/currencies', [CurrencyController::class, 'index']);
 $router->get('/currencies/rates', [CurrencyController::class, 'rates']);
 $router->post('/currencies/convert', [CurrencyController::class, 'convert']);
 $router->post('/currencies/update-rates', [CurrencyController::class, 'updateRates'], [AuthMiddleware::class]);
-
-// Reminder Routes
-$router->get('/reminders', [ReminderController::class, 'index'], [AuthMiddleware::class]);
-$router->post('/reminders', [ReminderController::class, 'store'], [AuthMiddleware::class]);
-$router->delete('/reminders/{id}', [ReminderController::class, 'destroy'], [AuthMiddleware::class]);
-$router->post('/invoices/{id}/reminders', [ReminderController::class, 'scheduleForInvoice'], [AuthMiddleware::class]);
-$router->get('/reminders/settings', [ReminderController::class, 'getSettings'], [AuthMiddleware::class]);
-$router->put('/reminders/settings', [ReminderController::class, 'updateSettings'], [AuthMiddleware::class]);
-$router->post('/reminders/process', [ReminderController::class, 'processPending']); // For cron job
 
 // Recurring Invoice Routes
 $router->get('/recurring-invoices', [RecurringInvoiceController::class, 'getAll'], [AuthMiddleware::class]);
@@ -229,120 +182,64 @@ $router->post('/recurring-invoices', [RecurringInvoiceController::class, 'create
 $router->put('/recurring-invoices/{id}', [RecurringInvoiceController::class, 'update'], [AuthMiddleware::class]);
 $router->delete('/recurring-invoices/{id}', [RecurringInvoiceController::class, 'delete'], [AuthMiddleware::class]);
 $router->patch('/recurring-invoices/{id}/status', [RecurringInvoiceController::class, 'updateStatus'], [AuthMiddleware::class]);
-$router->post('/recurring-invoices/{id}/generate', [RecurringInvoiceController::class, 'generate'], [AuthMiddleware::class]);
-$router->post('/recurring-invoices/process', [RecurringInvoiceController::class, 'processDue']); // For cron job
-
-// Credits Routes
-$router->get('/credits/usage', [CreditsController::class, 'getUsage'], [AuthMiddleware::class]);
-$router->get('/credits/check', [CreditsController::class, 'checkCredits'], [AuthMiddleware::class]);
-$router->post('/credits/use', [CreditsController::class, 'useCredits'], [AuthMiddleware::class]);
-$router->get('/credits/logs', [CreditsController::class, 'getNotificationLogs'], [AuthMiddleware::class]);
-$router->get('/credits/plans', [CreditsController::class, 'getPlans']);
-$router->get('/credits/balance', [CreditsController::class, 'balance'], [AuthMiddleware::class]);
-$router->post('/credits/reset', [CreditsController::class, 'resetMonthlyCredits']); // For cron job
-
-// User Notifications Routes
-$router->get('/notifications', [UserNotificationController::class, 'index'], [AuthMiddleware::class]);
-$router->patch('/notifications/{id}/read', [UserNotificationController::class, 'markAsRead'], [AuthMiddleware::class]);
-$router->post('/notifications/mark-all-read', [UserNotificationController::class, 'markAllAsRead'], [AuthMiddleware::class]);
-$router->delete('/notifications/{id}', [UserNotificationController::class, 'delete'], [AuthMiddleware::class]);
-$router->delete('/notifications', [UserNotificationController::class, 'clearAll'], [AuthMiddleware::class]);
 
 // Contact Form Route (public with rate limiting)
 $router->post('/contact', [ContactController::class, 'submit']);
 
-// Admin Routes (3-step authentication)
-$router->post('/admin/login/step1', [AdminController::class, 'loginStep1']);
-$router->post('/admin/login/step2', [AdminController::class, 'loginStep2']);
-$router->post('/admin/login/step3', [AdminController::class, 'loginStep3']);
-$router->post('/admin/logout', [AdminController::class, 'logout']);
+// Admin authentication
+$router->post('/guymhan/logout', [AdminController::class, 'logout']);
 
 // Admin Protected Routes
-$router->get('/admin/dashboard', [AdminController::class, 'getDashboard']);
-$router->get('/admin/submissions', [AdminController::class, 'getSubmissions']);
-$router->get('/admin/submissions/{id}', [AdminController::class, 'getSubmission']);
-$router->put('/admin/submissions/{id}', [AdminController::class, 'updateSubmission']);
-$router->delete('/admin/submissions/{id}', [AdminController::class, 'deleteSubmission']);
-$router->post('/admin/submissions/{id}/read', [AdminController::class, 'markAsRead']);
-$router->get('/admin/email-logs', [AdminController::class, 'getEmailLogs']);
-$router->get('/admin/notification-settings', [AdminController::class, 'getNotificationSettings']);
-$router->put('/admin/notification-settings', [AdminController::class, 'updateNotificationSettings']);
-$router->get('/admin/export/email-logs', [AdminController::class, 'exportEmailLogs']);
-$router->get('/admin/export/submissions', [AdminController::class, 'exportSubmissions']);
-$router->get('/admin/reports/statistics', [AdminController::class, 'getStatisticsReport']);
+$router->get('/guymhan/dashboard', [AdminController::class, 'getDashboard'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/system', [AdminSystemController::class, 'index'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/submissions', [AdminController::class, 'getSubmissions'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/submissions/{id}', [AdminController::class, 'getSubmission'], [AdminAuthMiddleware::class]);
+$router->put('/guymhan/submissions/{id}', [AdminController::class, 'updateSubmission'], [AdminAuthMiddleware::class]);
+$router->delete('/guymhan/submissions/{id}', [AdminController::class, 'deleteSubmission'], [AdminAuthMiddleware::class]);
+$router->post('/guymhan/submissions/{id}/read', [AdminController::class, 'markAsRead'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/email-logs', [AdminController::class, 'getEmailLogs'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/notification-settings', [AdminController::class, 'getNotificationSettings'], [AdminAuthMiddleware::class]);
+$router->put('/guymhan/notification-settings', [AdminController::class, 'updateNotificationSettings'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/export/email-logs', [AdminController::class, 'exportEmailLogs'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/export/submissions', [AdminController::class, 'exportSubmissions'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/reports/statistics', [AdminController::class, 'getStatisticsReport'], [AdminAuthMiddleware::class]);
 
 // Admin Activity Logs Routes
-$router->get('/admin/activity-logs', [AdminController::class, 'getActivityLogs']);
-$router->get('/admin/export/activity-logs', [AdminController::class, 'exportActivityLogs']);
+$router->get('/guymhan/activity-logs', [AdminController::class, 'getActivityLogs'], [AdminAuthMiddleware::class]);
+$router->get('/guymhan/export/activity-logs', [AdminController::class, 'exportActivityLogs'], [AdminAuthMiddleware::class]);
 
 // Admin Session Management Routes
-$router->get('/admin/sessions', [AdminController::class, 'getActiveSessions']);
-$router->delete('/admin/sessions/{id}', [AdminController::class, 'terminateSession']);
-$router->delete('/admin/sessions', [AdminController::class, 'terminateAllSessions']);
+$router->get('/guymhan/sessions', [AdminController::class, 'getActiveSessions'], [AdminAuthMiddleware::class]);
+$router->delete('/guymhan/sessions/{id}', [AdminController::class, 'terminateSession'], [AdminAuthMiddleware::class]);
+$router->delete('/guymhan/sessions', [AdminController::class, 'terminateAllSessions'], [AdminAuthMiddleware::class]);
 
 // Admin User Management Routes
-$router->get('/admin/users', [AuthController::class, 'getAdminUsers']);
-$router->post('/admin/users', [AuthController::class, 'createAdminUser']);
-$router->put('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);
-$router->patch('/admin/users/{id}/toggle', [AuthController::class, 'toggleAdminStatus']);
-$router->delete('/admin/users/{id}', [AuthController::class, 'deleteAdminUser']);
-
-// Admin Subscription Metrics Route
-$router->get('/admin/subscription-metrics', [AdminController::class, 'getSubscriptionMetrics']);
-
-// QA Console Routes (Admin only)
-$router->post('/admin/qa/seed', [QaController::class, 'seed']);
-$router->delete('/admin/qa/cleanup', [QaController::class, 'cleanup']);
-$router->get('/admin/qa/status', [QaController::class, 'status']);
-$router->get('/admin/qa/health', [QaController::class, 'healthCheck']);
-
-// Subscription Routes
-$router->get('/subscription', [SubscriptionController::class, 'getSubscription'], [AuthMiddleware::class]);
-$router->put('/subscription/renewal-date', [SubscriptionController::class, 'updateRenewalDate'], [AuthMiddleware::class]);
-
-// Subscription Cron Routes (for scheduled tasks)
-$router->post('/subscription/process-renewals', [SubscriptionController::class, 'processRenewalReminders']); // Daily cron - sends 3-day reminders
-$router->post('/subscription/process-expired', [SubscriptionController::class, 'processExpired']); // Daily cron - handles expired subscriptions
-
-// Billing Portal Routes
-$router->get('/billing/portal', [BillingController::class, 'getPortal'], [AuthMiddleware::class]);
-$router->get('/billing/transactions', [BillingController::class, 'getTransactions'], [AuthMiddleware::class]);
-$router->post('/billing/payment-methods', [BillingController::class, 'addPaymentMethod'], [AuthMiddleware::class]);
-$router->post('/billing/payment-methods/{id}/default', [BillingController::class, 'setDefaultPaymentMethod'], [AuthMiddleware::class]);
-$router->delete('/billing/payment-methods/{id}', [BillingController::class, 'removePaymentMethod'], [AuthMiddleware::class]);
-$router->get('/billing/transactions/{id}/invoice', [BillingController::class, 'downloadInvoice'], [AuthMiddleware::class]);
-$router->get('/billing/retry-status', [BillingController::class, 'getRetryStatus'], [AuthMiddleware::class]);
-
-// Payment Retry Routes
-$router->post('/payments/record-failure', [PaymentRetryController::class, 'recordFailure'], [AuthMiddleware::class]);
-$router->get('/payments/retry-status', [PaymentRetryController::class, 'getRetryStatus'], [AuthMiddleware::class]);
-$router->post('/payments/manual-retry', [PaymentRetryController::class, 'manualRetry'], [AuthMiddleware::class]);
-
-// Payment Retry Cron Routes (for scheduled tasks)
-$router->post('/payments/process-retries', [PaymentRetryController::class, 'processRetries']); // Daily cron - retries failed payments
-$router->post('/payments/process-grace-periods', [PaymentRetryController::class, 'processGracePeriods']); // Daily cron - handles grace period warnings/expirations
+$router->get('/guymhan/users', [AuthController::class, 'getAdminUsers'], [AdminAuthMiddleware::class]);
+$router->put('/guymhan/pin', [AuthController::class, 'changeAdminPin'], [AdminAuthMiddleware::class]);
+$router->post('/guymhan/users', [AuthController::class, 'createAdminUser'], [AdminAuthMiddleware::class]);
+$router->put('/guymhan/users/{id}', [AuthController::class, 'updateAdminUser'], [AdminAuthMiddleware::class]);
+$router->patch('/guymhan/users/{id}/toggle', [AuthController::class, 'toggleAdminStatus'], [AdminAuthMiddleware::class]);
+$router->delete('/guymhan/users/{id}', [AuthController::class, 'deleteAdminUser'], [AdminAuthMiddleware::class]);
 
 // Settings Routes (Admin only)
-$router->get('/settings', [SettingsController::class, 'getSettings']);
-$router->put('/settings/{key}', [SettingsController::class, 'updateSetting']);
-$router->post('/settings/batch', [SettingsController::class, 'batchUpdateSettings']);
-$router->delete('/settings/{key}', [SettingsController::class, 'deleteSetting']);
-$router->get('/settings/mail', [SettingsController::class, 'getMailSettings']);
-$router->put('/settings/mail', [SettingsController::class, 'updateMailSettings']);
-$router->get('/settings/payment', [SettingsController::class, 'getPaymentSettings']);
-$router->put('/settings/payment', [SettingsController::class, 'updatePaymentSettings']);
-$router->post('/settings/reset', [SettingsController::class, 'resetToDefaults']);
+$router->get('/settings', [SettingsController::class, 'getSettings'], [AdminAuthMiddleware::class]);
+$router->post('/settings/batch', [SettingsController::class, 'batchUpdateSettings'], [AdminAuthMiddleware::class]);
+$router->get('/settings/mail', [SettingsController::class, 'getMailSettings'], [AdminAuthMiddleware::class]);
+$router->put('/settings/mail', [SettingsController::class, 'updateMailSettings'], [AdminAuthMiddleware::class]);
+$router->post('/settings/reset', [SettingsController::class, 'resetToDefaults'], [AdminAuthMiddleware::class]);
+$router->put('/settings/{key}', [SettingsController::class, 'updateSetting'], [AdminAuthMiddleware::class]);
+$router->delete('/settings/{key}', [SettingsController::class, 'deleteSetting'], [AdminAuthMiddleware::class]);
 
 // Blocked Domains Routes (Admin only)
-$router->get('/blocked-domains', [BlockedDomainsController::class, 'getAll']);
-$router->get('/blocked-domains/{id}', [BlockedDomainsController::class, 'get']);
-$router->post('/blocked-domains', [BlockedDomainsController::class, 'add']);
-$router->post('/blocked-domains/bulk-add', [BlockedDomainsController::class, 'bulkAdd']);
-$router->put('/blocked-domains/{id}', [BlockedDomainsController::class, 'update']);
-$router->delete('/blocked-domains/{id}', [BlockedDomainsController::class, 'remove']);
-$router->post('/blocked-domains/bulk-remove', [BlockedDomainsController::class, 'bulkRemove']);
+$router->get('/blocked-domains', [BlockedDomainsController::class, 'getAll'], [AdminAuthMiddleware::class]);
+$router->post('/blocked-domains', [BlockedDomainsController::class, 'add'], [AdminAuthMiddleware::class]);
+$router->post('/blocked-domains/bulk-add', [BlockedDomainsController::class, 'bulkAdd'], [AdminAuthMiddleware::class]);
+$router->post('/blocked-domains/bulk-remove', [BlockedDomainsController::class, 'bulkRemove'], [AdminAuthMiddleware::class]);
 $router->get('/blocked-domains/check', [BlockedDomainsController::class, 'isBlocked']); // Public - for email validation
-$router->get('/blocked-domains/export', [BlockedDomainsController::class, 'export']);
+$router->get('/blocked-domains/export', [BlockedDomainsController::class, 'export'], [AdminAuthMiddleware::class]);
+$router->get('/blocked-domains/{id}', [BlockedDomainsController::class, 'get'], [AdminAuthMiddleware::class]);
+$router->put('/blocked-domains/{id}', [BlockedDomainsController::class, 'update'], [AdminAuthMiddleware::class]);
+$router->delete('/blocked-domains/{id}', [BlockedDomainsController::class, 'remove'], [AdminAuthMiddleware::class]);
 
 // Webhook Routes (public - called by email providers)
 $router->post('/webhooks/email-bounce', [WebhookController::class, 'handleBounce']);
@@ -354,5 +251,9 @@ $uri = $_SERVER['REQUEST_URI'];
 try {
     $router->dispatch($method, $uri);
 } catch (Exception $e) {
-    Response::error($e->getMessage(), 500);
+    error_log('Unhandled API exception: ' . $e->getMessage());
+    $message = (($_ENV['APP_ENV'] ?? 'production') === 'development')
+        ? $e->getMessage()
+        : 'An unexpected server error occurred';
+    Response::error($message, 500);
 }

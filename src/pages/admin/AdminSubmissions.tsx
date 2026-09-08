@@ -8,7 +8,7 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
 import AdminLayout from "@/components/admin/AdminLayout";
 
@@ -63,7 +63,7 @@ const AdminSubmissions = () => {
   const fetchSubmissions = async (page = 1) => {
     const token = getAdminToken();
     if (!token) {
-      navigate('/admin/login');
+      navigate('/guymhan/login');
       return;
     }
 
@@ -74,7 +74,7 @@ const AdminSubmissions = () => {
       if (filters.status) params.append('status', filters.status);
       if (filters.purpose) params.append('purpose', filters.purpose);
 
-      const response = await api.get<PaginatedResponse>(`/admin/submissions?${params}`, {
+      const response = await api.get<PaginatedResponse>(`/guymhan/submissions?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -87,7 +87,7 @@ const AdminSubmissions = () => {
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate('/admin/login');
+        navigate('/guymhan/login');
       }
     } finally {
       setIsLoading(false);
@@ -100,13 +100,13 @@ const AdminSubmissions = () => {
 
   const handleLogout = () => {
     removeAdminToken();
-    navigate('/admin/login');
+    navigate('/guymhan/login');
   };
 
   const handleMarkAsRead = async (id: number) => {
     const token = getAdminToken();
     try {
-      await api.post(`/admin/submissions/${id}/read`, {}, {
+      await api.post(`/guymhan/submissions/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchSubmissions(pagination.currentPage);
@@ -124,7 +124,7 @@ const AdminSubmissions = () => {
     
     const token = getAdminToken();
     try {
-      await api.delete(`/admin/submissions/${id}`, {
+      await api.delete(`/guymhan/submissions/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast({
@@ -280,7 +280,7 @@ const AdminSubmissions = () => {
                             Mark Read
                           </Button>
                         )}
-                        <Link to={`/admin/submissions/${sub.id}`}>
+                        <Link to={`/guymhan/submissions/${sub.id}`}>
                           <Button variant="outline" size="sm">
                             <Eye className="w-4 h-4 mr-1" />
                             View

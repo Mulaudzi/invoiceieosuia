@@ -3,7 +3,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, Heart, Rocket, Users, Mail } from "lucide-react";
+import { Briefcase, Heart, Rocket, Users, Mail } from "@/lib/icons";
 
 const Careers = () => {
   const values = [

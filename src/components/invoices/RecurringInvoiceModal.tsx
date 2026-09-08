@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useCreateRecurringInvoice, useUpdateRecurringInvoice, RecurringInvoice } from "@/hooks/useRecurringInvoices";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "@/lib/icons";
 import { format } from "date-fns";
 
 const formSchema = z.object({
@@ -56,6 +56,7 @@ interface LineItem {
   description: string;
   quantity: number;
   unit_price: number;
+  tax_rate: number;
 }
 
 export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: RecurringInvoiceModalProps) {
@@ -66,7 +67,7 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
   const updateRecurring = useUpdateRecurringInvoice();
   
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 }
+    { id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0, tax_rate: 0 }
   ]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -101,6 +102,7 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
+          tax_rate: Number(item.tax_rate) || 0,
         })));
       }
     } else {
@@ -113,12 +115,12 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
         notes: "",
         terms: "",
       });
-      setLineItems([{ id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 }]);
+      setLineItems([{ id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0, tax_rate: 0 }]);
     }
   }, [recurringInvoice, form, open]);
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 }]);
+    setLineItems([...lineItems, { id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0, tax_rate: 0 }]);
   };
 
   const removeLineItem = (id: string) => {
@@ -146,6 +148,7 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
             product_id: typeof product.id === 'string' ? parseInt(product.id) : product.id,
             description: product.name,
             unit_price: product.price,
+            tax_rate: Number(product.taxRate) || 0,
           };
         }
         return item;
@@ -154,7 +157,10 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
   };
 
   const calculateTotal = () => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    return lineItems.reduce((sum, item) => {
+      const subtotal = item.quantity * item.unit_price;
+      return sum + subtotal + subtotal * item.tax_rate / 100;
+    }, 0);
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -172,6 +178,7 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
+          tax_rate: item.tax_rate,
         })),
       };
 
@@ -202,7 +209,7 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{recurringInvoice ? "Edit Recurring Invoice" : "Create Recurring Invoice"}</DialogTitle>
+          <DialogTitle>{recurringInvoice ? "Edit Billing Schedule" : "Create Billing Schedule"}</DialogTitle>
           <DialogDescription>
             Set up automatic invoice generation on a schedule
           </DialogDescription>
@@ -359,8 +366,20 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
                         step="0.01"
                       />
                     </div>
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        aria-label={`Tax rate for item ${index + 1}`}
+                        placeholder="Tax %"
+                        value={item.tax_rate}
+                        onChange={(e) => updateLineItem(item.id, 'tax_rate', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                        min={0}
+                        max={100}
+                        step="0.01"
+                      />
+                    </div>
                     <div className="w-24 text-right pt-2 font-medium">
-                      {formatCurrency(item.quantity * item.unit_price)}
+                      {formatCurrency(item.quantity * item.unit_price * (1 + item.tax_rate / 100))}
                     </div>
                     <Button
                       type="button"
@@ -419,7 +438,7 @@ export function RecurringInvoiceModal({ open, onOpenChange, recurringInvoice }: 
               </Button>
               <Button type="submit" variant="accent" disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {recurringInvoice ? "Update" : "Create"} Recurring Invoice
+                {recurringInvoice ? "Update" : "Create"} Billing Schedule
               </Button>
             </div>
           </form>

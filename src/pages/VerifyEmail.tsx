@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Mail } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { authService } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';

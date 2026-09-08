@@ -1,0 +1,13 @@
+START TRANSACTION;
+ALTER TABLE ejetffbz_invoices.users MODIFY password VARCHAR(255) NULL;
+UPDATE ejetffbz_invoices.users SET password=NULL,google_id=NULL;
+ALTER TABLE ejetffbz_invoices.admin_users MODIFY password VARCHAR(255) NULL,MODIFY pin_hash VARCHAR(255) NULL;
+UPDATE ejetffbz_invoices.admin_users SET password=NULL,pin_hash=NULL;
+DELETE FROM ejetffbz_invoices.password_resets;
+DELETE FROM ejetffbz_invoices.email_verifications;
+DELETE FROM ejetffbz_invoices.admin_sessions;
+COMMIT;
+SELECT COUNT(*) AS customer_credentials_remaining FROM ejetffbz_invoices.users WHERE password IS NOT NULL OR google_id IS NOT NULL;
+SELECT COUNT(*) AS admin_credentials_remaining FROM ejetffbz_invoices.admin_users WHERE password IS NOT NULL OR pin_hash IS NOT NULL;
+SELECT COUNT(*) AS linked_active_customers FROM ejetffbz_invoices.users WHERE identity_uuid IS NOT NULL AND status='active';
+SELECT COUNT(*) AS linked_active_admins FROM ejetffbz_invoices.admin_users WHERE identity_uuid IS NOT NULL AND status='active';

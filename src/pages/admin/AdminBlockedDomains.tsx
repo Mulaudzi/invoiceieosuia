@@ -8,7 +8,7 @@ import {
   Download,
   AlertCircle,
   X,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,10 +42,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { format } from "date-fns";
+import { formatDateSafe } from "@/lib/dateUtils";
 
 interface BlockedDomain {
   id: number;
@@ -74,7 +74,7 @@ const AdminBlockedDomains = () => {
   const fetchDomains = async () => {
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -87,7 +87,7 @@ const AdminBlockedDomains = () => {
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate("/admin/login");
+        navigate("/guymhan/login");
       }
       toast({
         title: "Error",
@@ -120,7 +120,7 @@ const AdminBlockedDomains = () => {
 
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -172,7 +172,7 @@ const AdminBlockedDomains = () => {
 
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -206,7 +206,7 @@ const AdminBlockedDomains = () => {
   const handleDelete = async (id: number) => {
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -232,7 +232,7 @@ const AdminBlockedDomains = () => {
   const handleExport = async (format: "csv" | "json") => {
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -383,7 +383,7 @@ const AdminBlockedDomains = () => {
                           {domain.reason || "-"}
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
-                          {format(new Date(domain.created_at), "MMM d, yyyy")}
+                          {formatDateSafe(domain.created_at, "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
                           <Button

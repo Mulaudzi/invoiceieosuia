@@ -37,9 +37,9 @@ class BlockedDomainsController {
         $params[] = $perPage;
         $params[] = $offset;
         $stmt = $db->prepare("
-            SELECT * FROM blocked_email_domains 
+            SELECT id, domain, type AS reason, added_at AS created_at FROM blocked_email_domains
             $whereClause 
-            ORDER BY created_at DESC 
+            ORDER BY added_at DESC
             LIMIT ? OFFSET ?
         ");
         $stmt->execute($params);
@@ -57,11 +57,11 @@ class BlockedDomainsController {
     /**
      * Get single blocked domain
      */
-    public function get(): void {
-        $id = Request::param('id');
+    public function get(array $params): void {
+        $id = (int) ($params['id'] ?? 0);
         $db = Database::getConnection();
         
-        $stmt = $db->prepare("SELECT * FROM blocked_email_domains WHERE id = ?");
+        $stmt = $db->prepare("SELECT id, domain, type AS reason, added_at AS created_at FROM blocked_email_domains WHERE id = ?");
         $stmt->execute([$id]);
         $domain = $stmt->fetch();
         
@@ -84,7 +84,8 @@ class BlockedDomainsController {
         
         $request = new Request();
         $domain = trim($request->input('domain') ?? '');
-        $reason = trim($request->input('reason') ?? '');
+        $reason = strtolower(trim($request->input('reason') ?? 'disposable'));
+        $type = in_array($reason, ['disposable', 'role'], true) ? $reason : 'disposable';
         
         if (!$domain) {
             Response::error('Domain is required', 422);
@@ -109,10 +110,10 @@ class BlockedDomainsController {
         
         try {
             $stmt = $db->prepare("
-                INSERT INTO blocked_email_domains (domain, reason, created_at)
+                INSERT INTO blocked_email_domains (domain, type, added_at)
                 VALUES (?, ?, NOW())
             ");
-            $stmt->execute([strtolower($domain), $reason]);
+            $stmt->execute([strtolower($domain), $type]);
             
             $domainId = $db->lastInsertId();
             
@@ -159,7 +160,8 @@ class BlockedDomainsController {
         try {
             foreach ($domains as $entry) {
                 $domain = trim($entry['domain'] ?? $entry ?? '');
-                $reason = trim($entry['reason'] ?? 'Bulk import') ?? '';
+                $reason = strtolower(trim($entry['reason'] ?? 'disposable'));
+                $type = in_array($reason, ['disposable', 'role'], true) ? $reason : 'disposable';
                 
                 if (!$domain) {
                     $skipped++;
@@ -183,10 +185,10 @@ class BlockedDomainsController {
                 
                 // Add the domain
                 $stmt = $db->prepare("
-                    INSERT INTO blocked_email_domains (domain, reason, created_at)
+                    INSERT INTO blocked_email_domains (domain, type, added_at)
                     VALUES (?, ?, NOW())
                 ");
-                $stmt->execute([strtolower($domain), $reason]);
+                $stmt->execute([strtolower($domain), $type]);
                 $added++;
             }
             
@@ -212,20 +214,21 @@ class BlockedDomainsController {
     /**
      * Update blocked domain reason
      */
-    public function update(): void {
+    public function update(array $params): void {
         // Verify admin token
         if (!AdminController::verifyAdminToken()) {
             return;
         }
         
-        $id = Request::param('id');
+        $id = (int) ($params['id'] ?? 0);
         $request = new Request();
-        $reason = trim($request->input('reason') ?? '');
+        $reason = strtolower(trim($request->input('reason') ?? 'disposable'));
+        $type = in_array($reason, ['disposable', 'role'], true) ? $reason : 'disposable';
         
         $db = Database::getConnection();
         
         // Check if domain exists
-        $stmt = $db->prepare("SELECT * FROM blocked_email_domains WHERE id = ?");
+        $stmt = $db->prepare("SELECT id, domain, type AS reason, added_at AS created_at FROM blocked_email_domains WHERE id = ?");
         $stmt->execute([$id]);
         $domain = $stmt->fetch();
         
@@ -237,10 +240,10 @@ class BlockedDomainsController {
         try {
             $stmt = $db->prepare("
                 UPDATE blocked_email_domains 
-                SET reason = ?, updated_at = NOW()
+                SET type = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$reason, $id]);
+            $stmt->execute([$type, $id]);
             
             // Log the update
             AdminActivityLogger::logSubmission('blocked_domain_updated', (int)$id, [
@@ -261,13 +264,13 @@ class BlockedDomainsController {
     /**
      * Remove a blocked domain
      */
-    public function remove(): void {
+    public function remove(array $params): void {
         // Verify admin token
         if (!AdminController::verifyAdminToken()) {
             return;
         }
         
-        $id = Request::param('id');
+        $id = (int) ($params['id'] ?? 0);
         $db = Database::getConnection();
         
         // Get domain info for logging
@@ -348,6 +351,7 @@ class BlockedDomainsController {
      * Check if a domain is blocked
      */
     public function isBlocked(): void {
+        $request = new Request();
         $domain = $request->query('domain') ?? $request->input('domain');
         
         if (!$domain) {
@@ -357,7 +361,7 @@ class BlockedDomainsController {
         
         $db = Database::getConnection();
         
-        $stmt = $db->prepare("SELECT id, reason FROM blocked_email_domains WHERE domain = ?");
+        $stmt = $db->prepare("SELECT id, type AS reason FROM blocked_email_domains WHERE domain = ?");
         $stmt->execute([strtolower(trim($domain))]);
         $blockedDomain = $stmt->fetch();
         
@@ -381,7 +385,7 @@ class BlockedDomainsController {
         
         $db = Database::getConnection();
         
-        $stmt = $db->query("SELECT domain, reason, created_at FROM blocked_email_domains ORDER BY domain ASC");
+        $stmt = $db->query("SELECT domain, type AS reason, added_at AS created_at FROM blocked_email_domains ORDER BY domain ASC");
         $domains = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         if ($format === 'csv') {

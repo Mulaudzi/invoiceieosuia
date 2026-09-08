@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Star, MoreHorizontal, Edit, Trash2, Check, FileText } from "lucide-react";
+import { Star, MoreHorizontal, Edit, Trash2, Check, FileText } from "@/lib/icons";
 
 interface TemplateCardProps {
   template: Template;

@@ -122,7 +122,7 @@ class AdminActivityLogger {
                 AND ass.step IN (3, 99)
                 AND ass.expires_at > NOW()
             ");
-            $stmt->execute([$token, $ip]);
+            $stmt->execute([hash('sha256', $token), $ip]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             return [

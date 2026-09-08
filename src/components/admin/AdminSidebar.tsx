@@ -5,31 +5,29 @@ import {
   Mail,
   Users,
   Settings,
-  Bug,
   Activity,
   LogOut,
   Shield,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
-} from "lucide-react";
+  Server,
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { removeAdminToken } from "@/pages/admin/AdminLogin";
+import { removeAdminToken } from "@/services/adminAuth";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
-import { getAdminToken } from "@/pages/admin/AdminLogin";
+import { getAdminToken } from "@/services/adminAuth";
 
 const menuItems = [
-  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Submissions", href: "/admin/submissions", icon: Inbox, badge: true },
-  { name: "Email Logs", href: "/admin/email-logs", icon: Mail },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
-  { name: "Activity Logs", href: "/admin/activity-logs", icon: Activity },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-  { name: "QA Console", href: "/admin/qa", icon: Bug },
+  { name: "Dashboard", href: "/guymhan", icon: LayoutDashboard },
+  { name: "System", href: "/guymhan/system", icon: Server },
+  { name: "Submissions", href: "/guymhan/submissions", icon: Inbox, badge: true },
+  { name: "Email Logs", href: "/guymhan/email-logs", icon: Mail },
+  { name: "Admins", href: "/guymhan/users", icon: Users },
+  { name: "Activity Logs", href: "/guymhan/activity-logs", icon: Activity },
+  { name: "Settings", href: "/guymhan/settings", icon: Settings },
 ];
 
 export default function AdminSidebar() {
@@ -38,8 +36,8 @@ export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (href: string) => {
-    if (href === "/admin") {
-      return location.pathname === "/admin" || location.pathname === "/admin/dashboard";
+    if (href === "/guymhan") {
+      return location.pathname === "/guymhan" || location.pathname === "/guymhan/dashboard";
     }
     return location.pathname.startsWith(href);
   };
@@ -47,18 +45,18 @@ export default function AdminSidebar() {
   const handleLogout = async () => {
     const token = getAdminToken();
     try {
-      await api.post('/admin/logout', { admin_token: token });
+      await api.post('/guymhan/logout', { admin_token: token });
     } catch (e) {
       // Ignore errors
     }
     removeAdminToken();
-    navigate('/admin/login');
+    navigate('/guymhan/login');
   };
 
-  return (
+  return (<>
     <div
       className={cn(
-        "fixed left-0 top-0 h-full bg-primary text-primary-foreground flex flex-col transition-all duration-300 z-50",
+        "hidden lg:flex fixed left-0 top-0 h-full bg-primary text-primary-foreground flex-col transition-all duration-300 z-50",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -67,7 +65,7 @@ export default function AdminSidebar() {
         <div className="flex items-center justify-between">
           <div className={cn("flex items-center gap-2", collapsed && "justify-center w-full")}>
             <Shield className="w-8 h-8" />
-            {!collapsed && <span className="font-bold text-lg">Admin Panel</span>}
+            {!collapsed && <span className="font-bold text-lg">Admin</span>}
           </div>
         </div>
       </div>
@@ -134,5 +132,9 @@ export default function AdminSidebar() {
         </Button>
       </div>
     </div>
+    <nav className="lg:hidden fixed inset-x-0 bottom-0 z-50 border-t bg-primary text-primary-foreground pb-[env(safe-area-inset-bottom)] shadow-2xl">
+      <div className="flex overflow-x-auto px-2 py-2 gap-1">{menuItems.map(item=>{const Icon=item.icon;const active=isActive(item.href);return <Link key={item.href} to={item.href} className={cn('flex min-w-[72px] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px]',active?'bg-primary-foreground/20':'text-primary-foreground/70')}><Icon className="h-5 w-5"/><span>{item.name}</span></Link>})}<button onClick={handleLogout} className="flex min-w-[72px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] text-primary-foreground/70"><LogOut className="h-5 w-5"/>Logout</button></div>
+    </nav>
+    </>
   );
 }

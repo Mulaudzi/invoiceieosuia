@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -43,9 +43,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
-import { format } from "date-fns";
+import { formatDateSafe } from "@/lib/dateUtils";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 interface AdminUser {
@@ -71,44 +71,34 @@ const AdminUsers = () => {
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
-    password_1: "",
-    password_2: "",
-    password_3: "",
+    password: "",
   });
   
   const [addForm, setAddForm] = useState({
     name: "",
     email: "",
-    password_1: "",
-    password_2: "",
-    password_3: "",
-    setup_key: "",
+    password: "",
   });
   
-  const [showPasswords, setShowPasswords] = useState({
-    password_1: false,
-    password_2: false,
-    password_3: false,
-    setup_key: false,
-  });
+  const [showPassword, setShowPassword] = useState(false);
 
   const fetchAdmins = async () => {
     const token = getAdminToken();
     if (!token) {
-      navigate('/admin/login');
+      navigate('/guymhan/login');
       return;
     }
 
     try {
       setIsLoading(true);
-      const response = await api.get('/admin/users', {
+      const response = await api.get('/guymhan/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAdmins(response.data.data || []);
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate('/admin/login');
+        navigate('/guymhan/login');
       } else {
         toast({
           title: "Error",
@@ -130,9 +120,7 @@ const AdminUsers = () => {
     setEditForm({
       name: admin.name,
       email: admin.email,
-      password_1: "",
-      password_2: "",
-      password_3: "",
+      password: "",
     });
     setIsEditModalOpen(true);
   };
@@ -148,11 +136,7 @@ const AdminUsers = () => {
       const updateData: any = {};
       if (editForm.name !== selectedAdmin.name) updateData.name = editForm.name;
       if (editForm.email !== selectedAdmin.email) updateData.email = editForm.email;
-      if (editForm.password_1 && editForm.password_2 && editForm.password_3) {
-        updateData.password_1 = editForm.password_1;
-        updateData.password_2 = editForm.password_2;
-        updateData.password_3 = editForm.password_3;
-      }
+      if (editForm.password) updateData.password = editForm.password;
 
       if (Object.keys(updateData).length === 0) {
         toast({ title: "No changes", description: "No fields were modified" });
@@ -160,7 +144,7 @@ const AdminUsers = () => {
         return;
       }
 
-      await api.put(`/admin/users/${selectedAdmin.id}`, updateData, {
+      await api.put(`/guymhan/users/${selectedAdmin.id}`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -183,7 +167,7 @@ const AdminUsers = () => {
     if (!token) return;
 
     try {
-      await api.patch(`/admin/users/${admin.id}/toggle`, {}, {
+      await api.patch(`/guymhan/users/${admin.id}/toggle`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -213,7 +197,7 @@ const AdminUsers = () => {
     if (!token) return;
 
     try {
-      await api.delete(`/admin/users/${selectedAdmin.id}`, {
+      await api.delete(`/guymhan/users/${selectedAdmin.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -230,24 +214,29 @@ const AdminUsers = () => {
   };
 
   const handleAddAdmin = async () => {
-    if (!addForm.email || !addForm.name || !addForm.password_1 || !addForm.password_2 || !addForm.password_3 || !addForm.setup_key) {
+    if (!addForm.email || !addForm.name || !addForm.password) {
       toast({ title: "Error", description: "All fields are required", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await api.post('/admin/setup', addForm);
+      const token = getAdminToken();
+      if (!token) {
+        navigate('/guymhan/login');
+        return;
+      }
+
+      await api.post('/guymhan/users', addForm, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       toast({ title: "Success", description: "Admin user created successfully" });
       setIsAddModalOpen(false);
       setAddForm({
         name: "",
         email: "",
-        password_1: "",
-        password_2: "",
-        password_3: "",
-        setup_key: "",
+        password: "",
       });
       fetchAdmins();
     } catch (error: any) {
@@ -259,10 +248,6 @@ const AdminUsers = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
-    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
   return (
@@ -327,12 +312,12 @@ const AdminUsers = () => {
                         </TableCell>
                         <TableCell>
                           {admin.last_login_at
-                            ? format(new Date(admin.last_login_at), "MMM d, yyyy HH:mm")
+                            ? formatDateSafe(admin.last_login_at, "MMM d, yyyy HH:mm")
                             : "Never"
                           }
                         </TableCell>
                         <TableCell>
-                          {format(new Date(admin.created_at), "MMM d, yyyy")}
+                          {formatDateSafe(admin.created_at, "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -383,7 +368,7 @@ const AdminUsers = () => {
           <DialogHeader>
             <DialogTitle>Edit Admin User</DialogTitle>
             <DialogDescription>
-              Update admin details. Leave password fields empty to keep current passwords.
+              Update admin details. Leave the password empty to keep the current password.
             </DialogDescription>
           </DialogHeader>
           
@@ -409,18 +394,17 @@ const AdminUsers = () => {
             
             <div className="border-t pt-4">
               <p className="text-sm text-muted-foreground mb-4">
-                Change passwords (all three required to update)
+                Change password
               </p>
               
-              {[1, 2, 3].map((num) => (
-                <div key={num} className="space-y-2 mb-3">
-                  <Label htmlFor={`edit-password-${num}`}>Password {num}</Label>
+                <div className="space-y-2 mb-3">
+                  <Label htmlFor="edit-password">Password</Label>
                   <div className="relative">
                     <Input
-                      id={`edit-password-${num}`}
-                      type={showPasswords[`password_${num}` as keyof typeof showPasswords] ? "text" : "password"}
-                      value={editForm[`password_${num}` as keyof typeof editForm]}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, [`password_${num}`]: e.target.value }))}
+                      id="edit-password"
+                      type={showPassword ? "text" : "password"}
+                      value={editForm.password}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="Leave empty to keep current"
                     />
                     <Button
@@ -428,9 +412,9 @@ const AdminUsers = () => {
                       variant="ghost"
                       size="icon"
                       className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                      onClick={() => togglePasswordVisibility(`password_${num}` as keyof typeof showPasswords)}
+                      onClick={() => setShowPassword((visible) => !visible)}
                     >
-                      {showPasswords[`password_${num}` as keyof typeof showPasswords] ? (
+                      {showPassword ? (
                         <EyeOff className="h-4 w-4" />
                       ) : (
                         <Eye className="h-4 w-4" />
@@ -438,7 +422,6 @@ const AdminUsers = () => {
                     </Button>
                   </div>
                 </div>
-              ))}
             </div>
           </div>
           
@@ -483,24 +466,23 @@ const AdminUsers = () => {
               />
             </div>
             
-            {[1, 2, 3].map((num) => (
-              <div key={num} className="space-y-2">
-                <Label htmlFor={`add-password-${num}`}>Password {num}</Label>
+              <div className="space-y-2">
+                <Label htmlFor="add-password">Password</Label>
                 <div className="relative">
                   <Input
-                    id={`add-password-${num}`}
-                    type={showPasswords[`password_${num}` as keyof typeof showPasswords] ? "text" : "password"}
-                    value={addForm[`password_${num}` as keyof typeof addForm]}
-                    onChange={(e) => setAddForm(prev => ({ ...prev, [`password_${num}`]: e.target.value }))}
+                    id="add-password"
+                    type={showPassword ? "text" : "password"}
+                    value={addForm.password}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, password: e.target.value }))}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={() => togglePasswordVisibility(`password_${num}` as keyof typeof showPasswords)}
+                    onClick={() => setShowPassword((visible) => !visible)}
                   >
-                    {showPasswords[`password_${num}` as keyof typeof showPasswords] ? (
+                    {showPassword ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
@@ -508,32 +490,7 @@ const AdminUsers = () => {
                   </Button>
                 </div>
               </div>
-            ))}
             
-            <div className="space-y-2">
-              <Label htmlFor="add-setup-key">Setup Key</Label>
-              <div className="relative">
-                <Input
-                  id="add-setup-key"
-                  type={showPasswords.setup_key ? "text" : "password"}
-                  value={addForm.setup_key}
-                  onChange={(e) => setAddForm(prev => ({ ...prev, setup_key: e.target.value }))}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => togglePasswordVisibility('setup_key')}
-                >
-                  {showPasswords.setup_key ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
           </div>
           
           <DialogFooter>

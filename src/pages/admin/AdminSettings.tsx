@@ -5,8 +5,9 @@ import {
   Bell,
   Plus,
   X,
-  AlertCircle
-} from "lucide-react";
+  AlertCircle,
+  KeyRound
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
 import AdminLayout from "@/components/admin/AdminLayout";
 
@@ -46,24 +47,53 @@ const AdminSettings = () => {
   const [settings, setSettings] = useState<NotificationSetting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newEmails, setNewEmails] = useState<Record<string, string>>({});
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
+
+  const handleChangePin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!/^\d{6,12}$/.test(newPin)) {
+      toast({ title: "Check the new PIN", description: "The new PIN must contain 6 to 12 digits.", variant: "destructive" });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast({ title: "PINs do not match", description: "Re-enter the same new PIN in both fields.", variant: "destructive" });
+      return;
+    }
+    setPinSaving(true);
+    try {
+      const token = getAdminToken();
+      const response = await api.put('/guymhan/pin', { current_pin: currentPin, new_pin: newPin }, { headers: { Authorization: `Bearer ${token}` } });
+      setCurrentPin("");
+      setNewPin("");
+      setConfirmPin("");
+      toast({ title: "PIN changed", description: response.data?.message || "Your administrator PIN was updated." });
+    } catch (error: any) {
+      toast({ title: "PIN was not changed", description: error.response?.data?.message || "Check the current PIN and try again.", variant: "destructive" });
+    } finally {
+      setPinSaving(false);
+    }
+  };
 
   const fetchSettings = async () => {
     const token = getAdminToken();
     if (!token) {
-      navigate('/admin/login');
+      navigate('/guymhan/login');
       return;
     }
 
     try {
       setIsLoading(true);
-      const response = await api.get('/admin/notification-settings', {
+      const response = await api.get('/guymhan/notification-settings', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSettings(response.data.settings || []);
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate('/admin/login');
+        navigate('/guymhan/login');
       } else {
         toast({
           title: "Error",
@@ -84,7 +114,7 @@ const AdminSettings = () => {
     const token = getAdminToken();
     
     try {
-      await api.put('/admin/notification-settings', 
+      await api.put('/guymhan/notification-settings', 
         { notification_type: settingType, enabled },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -133,7 +163,7 @@ const AdminSettings = () => {
     const updatedEmails = [...currentEmails, email].join(', ');
 
     try {
-      await api.put('/admin/notification-settings', 
+      await api.put('/guymhan/notification-settings', 
         { notification_type: settingType, email_recipients: updatedEmails },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -163,7 +193,7 @@ const AdminSettings = () => {
     const updatedEmails = currentEmails.filter(e => e !== emailToRemove).join(', ');
 
     try {
-      await api.put('/admin/notification-settings', 
+      await api.put('/guymhan/notification-settings', 
         { notification_type: settingType, email_recipients: updatedEmails },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -214,6 +244,23 @@ const AdminSettings = () => {
             </div>
           ) : (
             <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><KeyRound className="h-5 w-5" /> Administrator PIN</CardTitle>
+                  <CardDescription>Change the PIN required after administrator password authentication.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleChangePin} className="space-y-4">
+                    <div><Label htmlFor="current-admin-pin">Current PIN</Label><Input id="current-admin-pin" type="password" inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 12))} required /></div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div><Label htmlFor="new-admin-pin">New PIN</Label><Input id="new-admin-pin" type="password" inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 12))} required /></div>
+                      <div><Label htmlFor="confirm-admin-pin">Confirm new PIN</Label><Input id="confirm-admin-pin" type="password" inputMode="numeric" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 12))} required /></div>
+                    </div>
+                    <Button type="submit" disabled={pinSaving || !currentPin || !newPin || !confirmPin}>{pinSaving ? "Changing PIN..." : "Change PIN"}</Button>
+                  </form>
+                </CardContent>
+              </Card>
+
               {settings.map((setting) => {
                 const typeInfo = notificationTypeLabels[setting.notification_type];
                 const emails = getEmailList(setting.email_recipients);

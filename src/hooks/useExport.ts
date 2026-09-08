@@ -5,7 +5,6 @@ import {
   downloadCsv,
   generateTextReport,
   downloadTextFile,
-  isFreePlan,
   formatCurrencyForExport,
   formatDateForExport,
 } from '@/lib/exportUtils';
@@ -21,7 +20,6 @@ interface ExportOptions {
 export const useExport = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const isFree = isFreePlan(user);
 
   const exportToCsv = (options: ExportOptions) => {
     try {
@@ -35,9 +33,7 @@ export const useExport = () => {
       
       toast({
         title: 'Export successful',
-        description: isFree 
-          ? 'CSV exported with IEOSUIA branding. Upgrade to remove branding.'
-          : 'Your CSV file has been downloaded.',
+        description: 'Your CSV file has been downloaded.',
       });
     } catch (error) {
       toast({
@@ -60,9 +56,7 @@ export const useExport = () => {
       
       toast({
         title: 'Export successful',
-        description: isFree 
-          ? 'Report exported with IEOSUIA branding. Upgrade to remove branding.'
-          : 'Your report has been downloaded.',
+        description: 'Your report has been downloaded.',
       });
     } catch (error) {
       toast({
@@ -78,9 +72,7 @@ export const useExport = () => {
       await reportService.exportReport('pdf', reportType);
       toast({
         title: 'PDF Export successful',
-        description: isFree 
-          ? 'PDF exported with IEOSUIA branding. Upgrade to remove branding.'
-          : 'Your PDF has been downloaded.',
+        description: 'Your PDF has been downloaded.',
       });
     } catch (error) {
       toast({
@@ -96,9 +88,7 @@ export const useExport = () => {
       await reportService.exportReport('excel', reportType);
       toast({
         title: 'Excel Export successful',
-        description: isFree 
-          ? 'Excel exported with IEOSUIA branding. Upgrade to remove branding.'
-          : 'Your Excel file has been downloaded.',
+        description: 'Your Excel file has been downloaded.',
       });
     } catch (error) {
       toast({
@@ -114,7 +104,6 @@ export const useExport = () => {
     exportToText,
     exportToPdf,
     exportToExcel,
-    isFree,
     formatCurrencyForExport,
     formatDateForExport,
   };

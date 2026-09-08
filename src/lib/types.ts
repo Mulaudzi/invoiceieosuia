@@ -1,6 +1,6 @@
 // Core types for the invoicing app
 
-export type PlanType = 'free' | 'solo' | 'pro' | 'business' | 'enterprise';
+export type PlanType = 'free';
 
 export interface User {
   id: string;
@@ -12,10 +12,19 @@ export interface User {
   phone?: string;
   address?: string;
   taxNumber?: string;
+  registrationNumber?: string;
+  website?: string;
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  branchCode?: string;
+  swiftCode?: string;
+  paymentInstructions?: string;
+  logoPath?: string;
+  logo_path?: string;
   avatar?: string;
   emailVerified: boolean;
   emailVerifiedAt?: string;
-  subscription_renewal_date?: string;
   createdAt: string;
 }
 
@@ -45,15 +54,39 @@ export interface Product {
 export interface InvoiceItem {
   productId: string;
   name: string;
+  description?: string;
+  sku?: string;
+  unit?: string;
+  group?: string;
   quantity: number;
   price: number;
   taxRate: number;
+  discountRate?: number;
 }
 
-export type InvoiceStatus = 'Draft' | 'Pending' | 'Paid' | 'Overdue';
+export type InvoiceStatus = 'Draft' | 'Unpaid' | 'Pending' | 'Partially Paid' | 'Paid' | 'Applied' | 'Overdue' | 'Cancelled' | 'Voided';
+
+export interface InvoicePayment {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  reference?: string;
+  voidedAt?: string;
+  updatedAt?: string;
+}
+
+export interface LinkedInvoiceDocument {
+  id: string;
+  invoiceNumber: string;
+  documentType: string;
+  status: InvoiceStatus;
+  date: string;
+  total: number;
+}
 
 export interface Invoice {
   id: string;
+  invoiceNumber: string;
   userId: string;
   clientId: string;
   clientName: string;
@@ -62,22 +95,26 @@ export interface Invoice {
   subtotal: number;
   tax: number;
   total: number;
+  amountPaid: number;
+  balanceDue: number;
+  baseSubtotal?: number;
+  baseTax?: number;
+  baseTotal?: number;
+  creditTotal?: number;
+  debitTotal?: number;
+  linkedDocuments?: LinkedInvoiceDocument[];
+  paymentHistory: InvoicePayment[];
   status: InvoiceStatus;
   date: string;
   dueDate: string;
   notes?: string;
-  createdAt: string;
-}
-
-export interface Payment {
-  id: string;
-  userId: string;
-  invoiceId: string;
-  invoiceNumber: string;
-  clientName: string;
-  amount: number;
-  method: 'Bank Transfer' | 'Credit Card' | 'Cash' | 'PayPal' | 'Other';
-  date: string;
+  templateId?: string;
+  category?: string;
+  documentType?: string;
+  recurringInvoiceId?: string;
+  templateSlug?: string;
+  templateVersion?: number;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 }
 

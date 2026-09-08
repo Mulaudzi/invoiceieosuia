@@ -3,11 +3,12 @@ import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-im
 import "react-image-crop/dist/ReactCrop.css";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Camera, Trash2, Loader2, Upload, ImageIcon } from "lucide-react";
+import { Camera, Trash2, Loader2, Upload, ImageIcon } from "@/lib/icons";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
 import { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePrivateMediaUrl } from "@/hooks/usePrivateMediaUrl";
 
 interface AvatarUploadProps {
   user: User | null;
@@ -85,15 +86,8 @@ const AvatarUpload = ({ user, onUpdate }: AvatarUploadProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  const getAvatarUrl = () => {
-    if (user?.avatar) {
-      if (user.avatar.startsWith("/")) {
-        return `https://invoices.ieosuia.com${user.avatar}`;
-      }
-      return user.avatar;
-    }
-    return null;
-  };
+  const privateAvatarUrl = usePrivateMediaUrl(user?.avatar);
+  const getAvatarUrl = () => privateAvatarUrl || null;
 
   const getInitials = (name: string) => {
     return name

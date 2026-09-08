@@ -26,12 +26,12 @@ import {
   XCircle,
   Shield,
   Trash2
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
@@ -106,20 +106,20 @@ const AdminDashboard = () => {
   const fetchDashboard = async () => {
     const token = getAdminToken();
     if (!token) {
-      navigate('/admin/login');
+      navigate('/guymhan/login');
       return;
     }
 
     try {
       setIsLoading(true);
-      const response = await api.get('/admin/dashboard', {
+      const response = await api.get('/guymhan/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(response.data);
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate('/admin/login');
+        navigate('/guymhan/login');
       } else {
         toast({
           title: "Error",
@@ -138,7 +138,7 @@ const AdminDashboard = () => {
 
     try {
       setSessionsLoading(true);
-      const response = await api.get('/admin/sessions', {
+      const response = await api.get('/guymhan/sessions', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSessions(response.data.sessions || []);
@@ -157,7 +157,7 @@ const AdminDashboard = () => {
 
     try {
       setTerminatingId(sessionId);
-      await api.delete(`/admin/sessions/${sessionId}`, {
+      await api.delete(`/guymhan/sessions/${sessionId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast({
@@ -181,7 +181,7 @@ const AdminDashboard = () => {
     if (!token) return;
 
     try {
-      const response = await api.delete('/admin/sessions', {
+      const response = await api.delete('/guymhan/sessions', {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast({
@@ -206,12 +206,12 @@ const AdminDashboard = () => {
   const handleLogout = async () => {
     const token = getAdminToken();
     try {
-      await api.post('/admin/logout', { admin_token: token });
+      await api.post('/guymhan/logout', { admin_token: token });
     } catch (e) {
       // Ignore errors
     }
     removeAdminToken();
-    navigate('/admin/login');
+    navigate('/guymhan/login');
   };
 
   const formatDate = (dateString: string) => {
@@ -580,7 +580,7 @@ const AdminDashboard = () => {
                   {stats.recent_submissions.map((sub: any) => (
                     <Link 
                       key={sub.id} 
-                      to={`/admin/submissions/${sub.id}`}
+                      to={`/guymhan/submissions/${sub.id}`}
                       className="block p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                     >
                       <div className="flex items-start justify-between">
@@ -617,7 +617,7 @@ const AdminDashboard = () => {
                   No submissions yet
                 </p>
               )}
-              <Link to="/admin/submissions">
+              <Link to="/guymhan/submissions">
                 <Button variant="outline" size="sm" className="w-full mt-4">
                   View All Submissions
                 </Button>
@@ -663,7 +663,7 @@ const AdminDashboard = () => {
                   </p>
                 </div>
               )}
-              <Link to="/admin/email-logs">
+              <Link to="/guymhan/email-logs">
                 <Button variant="outline" size="sm" className="w-full mt-4">
                   View All Email Logs
                 </Button>

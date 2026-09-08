@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
-import { User, Building2, CreditCard, LogOut, Loader2, Check, Download, Trash2, AlertTriangle, Shield } from "lucide-react";
+import { User, LogOut, Loader2, Download, Trash2, AlertTriangle, Shield, Infinity as InfinityIcon } from "@/lib/icons";
 import { Label } from "@/components/ui/label";
-import { PlanType } from "@/lib/types";
 import { LogoUpload } from "@/components/profile/LogoUpload";
-import { PaymentRetryStatus } from "@/components/billing/PaymentRetryStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +26,6 @@ const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -66,58 +63,6 @@ const Settings = () => {
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleUpgrade = async (plan: PlanType) => {
-    if (plan === 'free') {
-      // Downgrade to free
-      setIsUpgrading(plan);
-      try {
-        const updatedUser = await authService.updatePlan(plan);
-        updateUser(updatedUser);
-        toast({
-          title: "Plan updated!",
-          description: "You are now on the Free plan.",
-        });
-      } catch (error) {
-        toast({
-          title: "Failed to update plan",
-          description: error instanceof Error ? error.message : "An error occurred",
-          variant: "destructive",
-        });
-      } finally {
-        setIsUpgrading(null);
-      }
-    } else {
-      // Redirect to PayFast for Pro/Business
-      setIsUpgrading(plan);
-      try {
-        const response = await authService.initiatePayment(plan);
-        if (response.payment_url) {
-          window.location.href = response.payment_url;
-        } else {
-          throw new Error('No payment URL received');
-        }
-      } catch (error) {
-        // Fallback: update plan directly (for demo purposes)
-        try {
-          const updatedUser = await authService.updatePlan(plan);
-          updateUser(updatedUser);
-          toast({
-            title: "Plan updated!",
-            description: `You are now on the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.`,
-          });
-        } catch (updateError) {
-          toast({
-            title: "Payment gateway unavailable",
-            description: "Please try again later or contact support.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        setIsUpgrading(null);
-      }
     }
   };
 
@@ -192,35 +137,6 @@ const Settings = () => {
     }
   };
 
-  const plans = [
-    {
-      value: "free",
-      label: "Free",
-      price: "R0",
-      features: ["30 invoices/month", "3 templates", "IEOSUIA branding"],
-    },
-    {
-      value: "solo",
-      label: "Solo",
-      price: "R149",
-      features: ["Unlimited invoices", "Custom templates", "10 SMS/month", "Remove branding"],
-    },
-    {
-      value: "pro",
-      label: "Pro",
-      price: "R299",
-      features: ["Everything in Solo", "Auto reminders", "25 SMS/month", "Priority support"],
-    },
-    {
-      value: "business",
-      label: "Business",
-      price: "R599",
-      features: ["Everything in Pro", "Multi-user access", "50 SMS/month", "Dedicated manager"],
-    },
-  ];
-
-  const currentPlanIndex = plans.findIndex((p) => p.value === user?.plan);
-
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar />
@@ -272,73 +188,15 @@ const Settings = () => {
           {/* Logo Upload Section */}
           <LogoUpload />
 
-          {/* Plan Section */}
           <div className="bg-card rounded-xl border border-border p-6 shadow-soft mb-6 mt-6">
             <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Subscription Plan
+              <InfinityIcon className="w-5 h-5" />
+              Free Access
             </h3>
-            
-            {/* Payment Retry Warning */}
-            <PaymentRetryStatus variant="full" />
-            
-            <p className="text-muted-foreground mb-4">
-              Current plan:{" "}
-              <span className="font-medium text-accent capitalize">{user?.plan}</span>
+            <p className="text-muted-foreground mb-2">
+              Your workspace includes the complete invoicing experience for free.
             </p>
-            <div className="grid md:grid-cols-3 gap-4">
-              {plans.map((plan, index) => {
-                const isCurrentPlan = user?.plan === plan.value;
-                const isUpgrade = index > currentPlanIndex;
-                const isDowngrade = index < currentPlanIndex;
-
-                return (
-                  <div
-                    key={plan.value}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      isCurrentPlan
-                        ? "border-accent bg-accent/5"
-                        : "border-border hover:border-accent/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-foreground">{plan.label}</h4>
-                      {isCurrentPlan && (
-                        <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full">
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-2xl font-bold text-foreground mb-2">
-                      {plan.price}
-                      <span className="text-sm text-muted-foreground">/mo</span>
-                    </p>
-                    <ul className="text-sm text-muted-foreground space-y-1 mb-4">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-success" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    {!isCurrentPlan && (
-                      <Button
-                        variant={isUpgrade ? "accent" : "outline"}
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleUpgrade(plan.value as PlanType)}
-                        disabled={isUpgrading === plan.value}
-                      >
-                        {isUpgrading === plan.value && (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        )}
-                        {isUpgrade ? "Upgrade" : "Downgrade"}
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-sm text-accent font-medium">Current access: free with full features enabled.</p>
           </div>
 
           {/* GDPR Data Export/Deletion */}
@@ -426,7 +284,6 @@ const Settings = () => {
                 <li>All invoices and invoice history</li>
                 <li>All clients and their data</li>
                 <li>All products and services</li>
-                <li>All payment records</li>
                 <li>All templates</li>
               </ul>
               <p className="font-medium text-destructive">

@@ -21,6 +21,7 @@ export interface RecurringInvoice {
   terms: string | null;
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   items: RecurringInvoiceItem[];
+  generated_invoices?: GeneratedRecurringInvoice[];
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +33,21 @@ export interface RecurringInvoiceItem {
   description: string;
   quantity: number;
   unit_price: number;
+  tax_rate: number;
   total: number;
+}
+
+export interface GeneratedRecurringInvoice {
+  id: number;
+  invoice_number: string;
+  date: string;
+  due_date: string;
+  status: string;
+  total: number;
+  payment_date?: string | null;
+  amount_paid: number;
+  balance_due: number;
+  payment_history?: Array<{ id: string; amount: number; payment_date: string; reference?: string }>;
 }
 
 export interface CreateRecurringInvoiceData {
@@ -49,6 +64,7 @@ export interface CreateRecurringInvoiceData {
     description: string;
     quantity: number;
     unit_price: number;
+    tax_rate: number;
   }>;
 }
 
@@ -129,17 +145,3 @@ export const useToggleRecurringStatus = () => {
   });
 };
 
-export const useGenerateRecurringInvoice = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: number) => {
-      const response = await api.post(`/recurring-invoices/${id}/generate`);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    },
-  });
-};

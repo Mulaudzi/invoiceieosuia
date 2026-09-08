@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "@/lib/icons";
 import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
 import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
 
@@ -45,7 +45,7 @@ const Navbar = () => {
   const navLinks = [
     { name: "Features", href: "/#features", isRoute: true },
     { name: "How It Works", href: "/#how-it-works", isRoute: true },
-    { name: "Pricing", href: "/#pricing", isRoute: true },
+    { name: "Free", href: "/#free", isRoute: true },
     { name: "Contact", href: "/contact", isRoute: true },
   ];
 

@@ -10,7 +10,7 @@ import {
   Copy,
   Check,
   AlertCircle
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
 import AdminLayout from "@/components/admin/AdminLayout";
 
@@ -78,12 +78,12 @@ const AdminSettingsManager = () => {
     description: "",
   });
 
-  const categories = ["general", "mail", "payment", "notification", "security"];
+  const categories = ["general", "mail", "notification", "security"];
 
   const fetchSettings = async () => {
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -96,7 +96,7 @@ const AdminSettingsManager = () => {
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate("/admin/login");
+        navigate("/guymhan/login");
       }
       toast({
         title: "Error",
@@ -146,7 +146,7 @@ const AdminSettingsManager = () => {
 
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 
@@ -164,7 +164,7 @@ const AdminSettingsManager = () => {
         });
       } else {
         // Create new
-        await api.post("/settings", formData, {
+        await api.put(`/settings/${encodeURIComponent(formData.key)}`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast({
@@ -189,7 +189,7 @@ const AdminSettingsManager = () => {
   const handleDelete = async (key: string) => {
     const token = getAdminToken();
     if (!token) {
-      navigate("/admin/login");
+      navigate("/guymhan/login");
       return;
     }
 

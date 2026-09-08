@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
-import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
+import { Lock, Loader2, Eye, EyeOff } from "@/lib/icons";
 
 const PasswordChange = () => {
   const { toast } = useToast();

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import PageHeader from "@/components/landing/PageHeader";
-import { Cookie } from "lucide-react";
+import { Cookie } from "@/lib/icons";
 
 const CookiePolicy = () => {
   return (
@@ -18,6 +18,7 @@ const CookiePolicy = () => {
         
         <div className="container mx-auto px-4 max-w-4xl py-16">
           <div className="prose prose-gray dark:prose-invert max-w-none space-y-8">
+            <section><h2 className="text-2xl font-semibold text-foreground mb-4">Who operates this service</h2><p className="text-muted-foreground leading-relaxed">IEOSUIA, 26 Rock Alder, Naturena, Johannesburg, 2095, South Africa.</p></section>
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. What Are Cookies</h2>
               <p className="text-muted-foreground leading-relaxed">
@@ -71,9 +72,7 @@ const CookiePolicy = () => {
                 We may use third-party services that set their own cookies:
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                <li><strong>Google reCAPTCHA</strong> - For security and spam prevention</li>
                 <li><strong>Google Analytics</strong> - For website analytics (anonymized)</li>
-                <li><strong>Payment Processors</strong> - For secure payment processing</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-4">
                 These third parties have their own privacy policies regarding how they use such information.

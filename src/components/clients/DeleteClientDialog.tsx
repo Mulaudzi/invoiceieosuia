@@ -11,7 +11,7 @@ import {
 import { useDeleteClient } from "@/hooks/useClients";
 import { useToast } from "@/hooks/use-toast";
 import { Client } from "@/lib/types";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons";
 
 interface DeleteClientDialogProps {
   open: boolean;

@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, XCircle } from "@/lib/icons";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
 import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
 
 const ResetPassword = () => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   
@@ -33,10 +32,10 @@ const ResetPassword = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (formData.password.length < 8) {
       toast({
         title: "Password too short",
-        description: "Password must be at least 6 characters.",
+        description: "Password must be at least 8 characters.",
         variant: "destructive",
       });
       return;
@@ -119,7 +118,7 @@ const ResetPassword = () => {
             <>
               <h1 className="text-3xl font-bold text-foreground mb-2">Set new password</h1>
               <p className="text-muted-foreground mb-8">
-                Your new password must be at least 6 characters.
+                Your new password must be at least 8 characters.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-5">

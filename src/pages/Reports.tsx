@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
 import { ApiErrorFallback } from "@/components/ApiErrorFallback";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { FileText, TrendingUp, Users, DollarSign, Calendar } from "lucide-react";
+import { FileText, TrendingUp, Users, DollarSign, Calendar } from "@/lib/icons";
 import { ExportDropdown } from "@/components/exports/ExportDropdown";
 import { useExport } from "@/hooks/useExport";
 import { reportColumns } from "@/lib/exportUtils";

@@ -2,16 +2,13 @@ import {
   FileText, 
   Users, 
   BarChart3, 
-  Bell, 
   CreditCard, 
   Shield, 
   Zap, 
   Globe,
-  Mail,
-  MessageSquare,
   Palette,
   RefreshCw,
-} from "lucide-react";
+} from "@/lib/icons";
 
 const FeaturesSection = () => {
   const mainFeatures = [
@@ -24,12 +21,12 @@ const FeaturesSection = () => {
     {
       icon: Palette,
       title: "Custom Templates & Branding",
-      description: "Paid plans let you create fully branded invoices that match your business identity perfectly.",
+      description: "Create fully branded invoices that match your business identity perfectly.",
     },
     {
-      icon: Bell,
-      title: "Automated Reminders",
-      description: "Never chase payments again. Email and SMS notifications ensure clients never miss a payment.",
+      icon: Users,
+      title: "Client Management",
+      description: "Keep client details, billing information, and invoice history organized in one workspace.",
     },
     {
       icon: Globe,
@@ -60,19 +57,19 @@ const FeaturesSection = () => {
       description: "Your data is always protected with enterprise-level encryption and security.",
     },
     {
-      icon: Mail,
-      title: "Email Notifications",
-      description: "Send professional invoice emails directly to clients with custom messages.",
+      icon: FileText,
+      title: "PDF Downloads",
+      description: "Generate polished PDF invoices ready to download, print, or share using your preferred method.",
     },
     {
-      icon: MessageSquare,
-      title: "SMS Reminders",
-      description: "Reach clients instantly with SMS payment reminders for faster payments.",
+      icon: Palette,
+      title: "Flexible Designs",
+      description: "Choose from professional invoice designs and tailor colors, typography, and layout.",
     },
     {
       icon: RefreshCw,
       title: "Recurring Invoices",
-      description: "Automate billing with scheduled recurring invoices for retainer clients.",
+      description: "Track repeat billing dates and receive in-app reminders when it is time to create an invoice.",
     },
     {
       icon: Zap,
@@ -98,7 +95,7 @@ const FeaturesSection = () => {
             <span className="text-accent">Get Paid Faster</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            From creating invoices to tracking payments, we've got all the tools to streamline your billing workflow and grow your business.
+            From creating invoices to managing clients and reports, you have the tools to streamline your workflow and grow your business.
           </p>
         </div>
 

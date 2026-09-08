@@ -11,6 +11,17 @@ node_modules
 dist
 dist-ssr
 *.local
+.private/
+.env
+.env.*
+!.env.example
+api/.env
+api/.env.*
+!api/.env.example
+*.zip
+.build-zip-temp/
+vite.config.ts.timestamp-*.mjs
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*

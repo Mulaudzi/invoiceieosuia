@@ -18,7 +18,7 @@ class SettingsController {
         
         if ($key) {
             // Get specific setting
-            $stmt = $db->prepare("SELECT * FROM settings WHERE key = ?");
+            $stmt = $db->prepare("SELECT id, setting_key AS `key`, setting_value AS `value`, setting_group AS category, description, created_at, updated_at FROM settings WHERE setting_key = ?");
             $stmt->execute([$key]);
             $setting = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -38,7 +38,7 @@ class SettingsController {
             Response::json($setting);
         } else {
             // Get all settings grouped by category
-            $stmt = $db->query("SELECT * FROM settings ORDER BY category, key ASC");
+            $stmt = $db->query("SELECT id, setting_key AS `key`, setting_value AS `value`, setting_group AS category, description, created_at, updated_at FROM settings ORDER BY setting_group, setting_key ASC");
             $settings = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Group by category
@@ -67,14 +67,14 @@ class SettingsController {
     /**
      * Update a setting
      */
-    public function updateSetting(): void {
+    public function updateSetting(array $params): void {
         // Verify admin token
         if (!AdminController::verifyAdminToken()) {
             return;
         }
         
         $request = new Request();
-        $key = Request::param('key');
+        $key = (string) ($params['key'] ?? '');
         
         if (!$key) {
             Response::error('Setting key required', 400);
@@ -99,7 +99,7 @@ class SettingsController {
         $db = Database::getConnection();
         
         // Check if setting exists
-        $stmt = $db->prepare("SELECT id FROM settings WHERE key = ?");
+        $stmt = $db->prepare("SELECT id FROM settings WHERE setting_key = ?");
         $stmt->execute([$key]);
         $existing = $stmt->fetch();
         
@@ -108,14 +108,14 @@ class SettingsController {
                 // Update existing
                 $stmt = $db->prepare("
                     UPDATE settings 
-                    SET value = ?, category = ?, description = ?, updated_at = NOW()
-                    WHERE key = ?
+                    SET setting_value = ?, setting_group = ?, description = ?, updated_at = NOW()
+                    WHERE setting_key = ?
                 ");
                 $stmt->execute([$value, $category, $description, $key]);
             } else {
                 // Create new
                 $stmt = $db->prepare("
-                    INSERT INTO settings (key, value, category, description, created_at)
+                    INSERT INTO settings (setting_key, setting_value, setting_group, description, created_at)
                     VALUES (?, ?, ?, ?, NOW())
                 ");
                 $stmt->execute([$key, $value, $category, $description]);
@@ -128,7 +128,7 @@ class SettingsController {
             ]);
             
             // Return updated setting
-            $stmt = $db->prepare("SELECT * FROM settings WHERE key = ?");
+            $stmt = $db->prepare("SELECT id, setting_key AS `key`, setting_value AS `value`, setting_group AS category, description, created_at, updated_at FROM settings WHERE setting_key = ?");
             $stmt->execute([$key]);
             $updated = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -190,7 +190,7 @@ class SettingsController {
                 }
                 
                 // Check if setting exists
-                $stmt = $db->prepare("SELECT id FROM settings WHERE key = ?");
+                $stmt = $db->prepare("SELECT id FROM settings WHERE setting_key = ?");
                 $stmt->execute([$key]);
                 $existing = $stmt->fetch();
                 
@@ -198,17 +198,17 @@ class SettingsController {
                     // Update existing
                     $stmt = $db->prepare("
                         UPDATE settings 
-                        SET value = ?, category = ?, description = ?, updated_at = NOW()
-                        WHERE key = ?
+                        SET setting_value = ?, setting_group = ?, description = ?, updated_at = NOW()
+                        WHERE setting_key = ?
                     ");
                     $stmt->execute([$value, $category, $description, $key]);
                 } else {
                     // Create new
                     $stmt = $db->prepare("
-                        INSERT INTO settings (key, value, category, description, created_at)
+                        INSERT INTO settings (setting_key, setting_value, setting_group, description, created_at)
                         VALUES (?, ?, ?, ?, NOW())
                     ");
-                    $stmt->execute([$value, $category, $description, $key]);
+                    $stmt->execute([$key, $value, $category, $description]);
                 }
                 
                 $results[] = $key;
@@ -236,13 +236,13 @@ class SettingsController {
     /**
      * Delete a setting
      */
-    public function deleteSetting(): void {
+    public function deleteSetting(array $params): void {
         // Verify admin token
         if (!AdminController::verifyAdminToken()) {
             return;
         }
         
-        $key = Request::param('key');
+        $key = (string) ($params['key'] ?? '');
         
         if (!$key) {
             Response::error('Setting key required', 400);
@@ -252,7 +252,7 @@ class SettingsController {
         $db = Database::getConnection();
         
         // Check if setting exists
-        $stmt = $db->prepare("SELECT * FROM settings WHERE key = ?");
+        $stmt = $db->prepare("SELECT id, setting_key AS `key`, setting_value AS `value`, setting_group AS category, description, created_at, updated_at FROM settings WHERE setting_key = ?");
         $stmt->execute([$key]);
         $setting = $stmt->fetch();
         
@@ -262,7 +262,7 @@ class SettingsController {
         }
         
         try {
-            $stmt = $db->prepare("DELETE FROM settings WHERE key = ?");
+            $stmt = $db->prepare("DELETE FROM settings WHERE setting_key = ?");
             $stmt->execute([$key]);
             
             // Log deletion
@@ -288,9 +288,9 @@ class SettingsController {
         $db = Database::getConnection();
         
         $stmt = $db->prepare("
-            SELECT key, value FROM settings 
-            WHERE category = 'mail'
-            ORDER BY key ASC
+            SELECT setting_key AS `key`, setting_value AS `value` FROM settings
+            WHERE setting_group = 'mail'
+            ORDER BY setting_key ASC
         ");
         $stmt->execute();
         $settings = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -324,24 +324,24 @@ class SettingsController {
                 $jsonValue = is_array($value) || is_object($value) ? json_encode($value) : $value;
                 
                 // Check if exists
-                $stmt = $db->prepare("SELECT id FROM settings WHERE key = ?");
+                $stmt = $db->prepare("SELECT id FROM settings WHERE setting_key = ?");
                 $stmt->execute([$key]);
                 $existing = $stmt->fetch();
                 
                 if ($existing) {
                     $stmt = $db->prepare("
                         UPDATE settings 
-                        SET value = ?, updated_at = NOW()
-                        WHERE key = ?
+                        SET setting_value = ?, updated_at = NOW()
+                        WHERE setting_key = ?
                     ");
+                    $stmt->execute([$jsonValue, $key]);
                 } else {
                     $stmt = $db->prepare("
-                        INSERT INTO settings (key, value, category, created_at)
+                        INSERT INTO settings (setting_key, setting_value, setting_group, created_at)
                         VALUES (?, ?, 'mail', NOW())
                     ");
+                    $stmt->execute([$key, $jsonValue]);
                 }
-                
-                $stmt->execute([$jsonValue, $key]);
             }
             
             // Log update
@@ -366,9 +366,9 @@ class SettingsController {
         $db = Database::getConnection();
         
         $stmt = $db->prepare("
-            SELECT key, value FROM settings 
-            WHERE category = 'payment'
-            ORDER BY key ASC
+            SELECT setting_key AS `key`, setting_value AS `value` FROM settings
+            WHERE setting_group = 'payment'
+            ORDER BY setting_key ASC
         ");
         $stmt->execute();
         $settings = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -402,24 +402,24 @@ class SettingsController {
                 $jsonValue = is_array($value) || is_object($value) ? json_encode($value) : $value;
                 
                 // Check if exists
-                $stmt = $db->prepare("SELECT id FROM settings WHERE key = ?");
+                $stmt = $db->prepare("SELECT id FROM settings WHERE setting_key = ?");
                 $stmt->execute([$key]);
                 $existing = $stmt->fetch();
                 
                 if ($existing) {
                     $stmt = $db->prepare("
                         UPDATE settings 
-                        SET value = ?, updated_at = NOW()
-                        WHERE key = ?
+                        SET setting_value = ?, updated_at = NOW()
+                        WHERE setting_key = ?
                     ");
+                    $stmt->execute([$jsonValue, $key]);
                 } else {
                     $stmt = $db->prepare("
-                        INSERT INTO settings (key, value, category, created_at)
+                        INSERT INTO settings (setting_key, setting_value, setting_group, created_at)
                         VALUES (?, ?, 'payment', NOW())
                     ");
+                    $stmt->execute([$key, $jsonValue]);
                 }
-                
-                $stmt->execute([$jsonValue, $key]);
             }
             
             // Log update
@@ -453,7 +453,7 @@ class SettingsController {
         
         try {
             if ($category) {
-                $stmt = $db->prepare("DELETE FROM settings WHERE category = ?");
+                $stmt = $db->prepare("DELETE FROM settings WHERE setting_group = ?");
                 $stmt->execute([$category]);
                 $message = "Settings for category '$category' reset to defaults";
             } else {

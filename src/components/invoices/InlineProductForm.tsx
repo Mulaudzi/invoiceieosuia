@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCreateProduct } from "@/hooks/useProducts";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus } from "@/lib/icons";
 import { Product } from "@/lib/types";
 
 const productSchema = z.object({

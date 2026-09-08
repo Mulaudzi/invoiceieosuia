@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import PageHeader from "@/components/landing/PageHeader";
-import { FileText } from "lucide-react";
+import { FileText } from "@/lib/icons";
 
 const TermsOfService = () => {
   return (
@@ -18,6 +18,7 @@ const TermsOfService = () => {
         
         <div className="container mx-auto px-4 max-w-4xl py-16">
           <div className="prose prose-gray dark:prose-invert max-w-none space-y-8">
+            <section><h2 className="text-2xl font-semibold text-foreground mb-4">Service provider</h2><p className="text-muted-foreground leading-relaxed">IEOSUIA, 26 Rock Alder, Naturena, Johannesburg, 2095, South Africa.</p></section>
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. Agreement to Terms</h2>
               <p className="text-muted-foreground leading-relaxed">
@@ -28,7 +29,7 @@ const TermsOfService = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
               <p className="text-muted-foreground leading-relaxed">
-                IEOSUIA provides an online invoicing and bookkeeping platform that allows users to create, send, and manage invoices, track payments, manage clients, send reminders via email and SMS, and generate financial reports. The platform is designed primarily for South African businesses and supports ZAR and other currencies.
+                IEOSUIA provides an online invoicing and bookkeeping platform that allows users to create, download, and manage invoices, manage clients and products, track invoice status, and generate financial reports. The platform is designed primarily for South African businesses and supports ZAR and other currencies.
               </p>
             </section>
 
@@ -61,14 +62,11 @@ const TermsOfService = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">5. Payment Terms</h2>
+              <h2 className="text-2xl font-semibold mb-4">5. Free Access</h2>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                <li>Paid plans are billed in South African Rand (ZAR) in advance on a monthly or annual basis</li>
-                <li>All prices are inclusive of VAT where applicable</li>
-                <li>All fees are non-refundable unless otherwise stated</li>
-                <li>We reserve the right to change pricing with 30 days notice</li>
-                <li>Failure to pay may result in account suspension or termination</li>
-                <li>Additional SMS and email credits are charged at the rates specified in your plan</li>
+                <li>The core invoicing service is provided free of charge</li>
+                <li>All core invoicing features are included for every account</li>
+                <li>There are no product tiers or feature upgrades</li>
               </ul>
             </section>
 

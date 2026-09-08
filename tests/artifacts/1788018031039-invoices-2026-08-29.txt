@@ -1,0 +1,10 @@
+INVOICES REPORT
+Generated: Saturday, 29 August 2026
+────────────────────────────────────────────────────────────
+
+Invoice #            | Client               | Email                | Amount               | Status               | Date                 | Due Date            
+────────────────────────────────────────────────────────────
+20                   | Browser QA Client 17 | browser.qa.178801803 | R336,28              | Paid                 | 2026/08/29           | 2026/09/28          
+
+────────────────────────────────────────────────────────────
+Total Records: 1

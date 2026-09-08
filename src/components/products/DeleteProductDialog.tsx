@@ -11,7 +11,7 @@ import {
 import { useDeleteProduct } from "@/hooks/useProducts";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/lib/types";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons";
 
 interface DeleteProductDialogProps {
   open: boolean;

@@ -1,6 +1,7 @@
 <?php
 
 class AuthController {
+    private const DEFAULT_ADMIN_PIN_HASH = '$2y$12$yDxmmzHP0zmTTfotOgXjJ.8tL27YtGtoMiK.32zAxRFoundtHD/Fq';
     public function register(): void {
         $request = new Request();
         $data = $request->validate([
@@ -8,15 +9,6 @@ class AuthController {
             'email' => 'required|email|max:255',
             'password' => 'required|min:8',
         ]);
-        
-        // Verify reCAPTCHA (if enabled)
-        $recaptchaToken = $request->input('recaptcha_token');
-        if (Recaptcha::isEnabled()) {
-            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'register');
-            if (!$recaptchaResult['success']) {
-                Response::error($recaptchaResult['error'], 422);
-            }
-        }
         
         // Rate limit signup: 3 attempts per hour per IP
         $rateLimiter = new RateLimitMiddleware(3, 60);
@@ -50,7 +42,7 @@ class AuthController {
             'name' => $data['name'],
             'email' => strtolower(trim($data['email'])),
             'password' => password_hash($data['password'], PASSWORD_ARGON2ID),
-            'plan' => $request->input('plan', 'free'),
+            'plan' => 'free',
             'business_name' => $request->input('business_name'),
             'status' => 'active'
         ]);
@@ -106,25 +98,14 @@ class AuthController {
     }
     
     /**
-     * Batch admin login - verify all 3 passwords at once
+     * Admin login - verify the account password before the PIN challenge.
      */
     public function adminLoginBatch(): void {
         $request = new Request();
         $data = $request->validate([
             'email' => 'required|email',
-            'password_1' => 'required',
-            'password_2' => 'required',
-            'password_3' => 'required',
+            'password' => 'required',
         ]);
-        
-        // Verify reCAPTCHA (if enabled)
-        $recaptchaToken = $request->input('recaptcha_token');
-        if (Recaptcha::isEnabled()) {
-            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'admin_login');
-            if (!$recaptchaResult['success']) {
-                Response::error($recaptchaResult['error'], 422);
-            }
-        }
         
         $email = strtolower(trim($data['email']));
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -144,52 +125,96 @@ class AuthController {
             return;
         }
         
-        // Verify all 3 passwords without revealing which one failed
-        $allValid = password_verify($data['password_1'], $adminUser['password_1'])
-            && password_verify($data['password_2'], $adminUser['password_2'])
-            && password_verify($data['password_3'], $adminUser['password_3']);
+        $allValid = password_verify($data['password'], $adminUser['password']);
         
         if (!$allValid) {
             $rateLimiter->hit();
             error_log("Admin batch login failed from IP: $ip");
             AdminActivityLogger::logAuth('admin_login_failed', 'failed', null, $email, [
-                'method' => 'batch',
+                'method' => 'password',
                 'reason' => 'Invalid credentials'
             ]);
-            $this->sendAdminLoginAlert(0, $ip, 'Batch login failed - invalid credentials');
+            $this->sendAdminLoginAlert(0, $ip, 'Admin login failed - invalid credentials');
             Response::error('Authentication failed', 401);
             return;
         }
         
-        // All passwords correct - generate admin token
+        // Passwords are only the first factor. Create a short-lived PIN challenge;
+        // no protected admin token is issued until the PIN is verified.
         $db = Database::getConnection();
-        $adminToken = bin2hex(random_bytes(32));
-        $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        $this->ensureAdminPinStorage($db);
+        $pinToken = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes'));
         
         $stmt = $db->prepare("
             INSERT INTO admin_sessions (session_token, ip_address, step, expires_at, last_activity, admin_user_id) 
-            VALUES (?, ?, 99, ?, NOW(), ?)
+            VALUES (?, ?, 50, ?, NOW(), ?)
         ");
-        $stmt->execute([hash('sha256', $adminToken), $ip, $expiresAt, $adminUser['id']]);
-        
-        // Update last login
-        $stmt = $db->prepare("UPDATE admin_users SET last_login_at = NOW() WHERE id = ?");
-        $stmt->execute([$adminUser['id']]);
-        
-        // Log successful login
-        AdminActivityLogger::logAuth('admin_login_success', 'success', $adminUser['id'], $adminUser['email'], [
-            'method' => 'batch',
-            'message' => 'All 3 passwords verified in batch'
-        ]);
-        
-        error_log("Admin batch login successful for {$adminUser['email']} from IP: $ip");
+        $stmt->execute([hash('sha256', $pinToken), $ip, $expiresAt, $adminUser['id']]);
         
         Response::json([
             'success' => true,
-            'admin_token' => $adminToken,
+            'pin_required' => true,
+            'pin_token' => $pinToken,
             'admin_name' => $adminUser['name'],
-            'message' => 'Admin login successful'
+            'message' => 'Passwords accepted. Enter your admin PIN to continue.'
         ]);
+    }
+
+    public function verifyAdminPin(): void {
+        $request = new Request();
+        $pinToken = trim((string) $request->input('pin_token', ''));
+        $pin = trim((string) $request->input('pin', ''));
+        if ($pinToken === '' || !preg_match('/^\d{6,12}$/', $pin)) Response::error('Enter your 6 to 12 digit administrator PIN.', 422);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $limiter = new RateLimitMiddleware(5, 15);
+        if (!$limiter->handle('admin_pin:' . $ip)) return;
+        $db = Database::getConnection();
+        $this->ensureAdminPinStorage($db);
+        $stmt = $db->prepare("SELECT s.*, a.email, a.name, a.pin_hash FROM admin_sessions s JOIN admin_users a ON a.id = s.admin_user_id WHERE s.session_token = ? AND s.ip_address = ? AND s.step = 50 AND s.expires_at > NOW() AND s.last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)");
+        $stmt->execute([hash('sha256', $pinToken), $ip]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$session) {
+            Response::error('The PIN prompt has expired. Sign in again to request a new one.', 401);
+        }
+        if (!password_verify($pin, (string) $session['pin_hash'])) {
+            $limiter->hit();
+            Response::error('That administrator PIN is incorrect. Check the digits and try again.', 422);
+        }
+        $adminToken = bin2hex(random_bytes(32));
+        $stmt = $db->prepare("UPDATE admin_sessions SET session_token = ?, step = 99, expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR), last_activity = NOW() WHERE id = ?");
+        $stmt->execute([hash('sha256', $adminToken), $session['id']]);
+        $stmt = $db->prepare("UPDATE admin_users SET last_login_at = NOW() WHERE id = ?");
+        $stmt->execute([$session['admin_user_id']]);
+        AdminActivityLogger::logAuth('admin_login_success', 'success', (int) $session['admin_user_id'], (string) $session['email'], ['method'=>'passwords_and_pin']);
+        Response::json(['success'=>true, 'admin_token'=>$adminToken, 'admin_name'=>$session['name'], 'expires_in'=>300, 'message'=>'Administrator authentication complete.']);
+    }
+
+    public function changeAdminPin(): void {
+        $request = new Request();
+        $currentPin = trim((string) $request->input('current_pin', ''));
+        $newPin = trim((string) $request->input('new_pin', ''));
+        if (!preg_match('/^\d{6,12}$/', $newPin)) Response::error('The new PIN must contain 6 to 12 digits.', 422);
+        if ($currentPin === $newPin) Response::error('Choose a new PIN that is different from the current PIN.', 422);
+        $token = $request->bearerToken();
+        $db = Database::getConnection();
+        $this->ensureAdminPinStorage($db);
+        $stmt = $db->prepare("SELECT a.id, a.pin_hash FROM admin_sessions s JOIN admin_users a ON a.id=s.admin_user_id WHERE s.session_token=? AND s.step=99");
+        $stmt->execute([hash('sha256', (string) $token)]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$admin || !password_verify($currentPin, (string) $admin['pin_hash'])) Response::error('The current administrator PIN is incorrect.', 422);
+        $stmt = $db->prepare('UPDATE admin_users SET pin_hash = ? WHERE id = ?');
+        $stmt->execute([password_hash($newPin, PASSWORD_DEFAULT), $admin['id']]);
+        $stmt = $db->prepare('DELETE FROM admin_sessions WHERE admin_user_id = ? AND session_token != ?');
+        $stmt->execute([$admin['id'], hash('sha256', (string) $token)]);
+        Response::json(['success'=>true, 'message'=>'Administrator PIN updated. Other admin sessions were signed out.']);
+    }
+
+    private function ensureAdminPinStorage(PDO $db): void {
+        $column = $db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admin_users' AND COLUMN_NAME = 'pin_hash'")->fetchColumn();
+        if ((int) $column === 0) $db->exec("ALTER TABLE admin_users ADD COLUMN pin_hash VARCHAR(255) NULL AFTER password");
+        $stmt = $db->prepare("UPDATE admin_users SET pin_hash = ? WHERE pin_hash IS NULL OR pin_hash = ''");
+        $stmt->execute([self::DEFAULT_ADMIN_PIN_HASH]);
     }
     
     public function login(): void {
@@ -198,15 +223,6 @@ class AuthController {
             'email' => 'required|email',
             'password' => 'required',
         ]);
-        
-        // Verify reCAPTCHA (if enabled)
-        $recaptchaToken = $request->input('recaptcha_token');
-        if (Recaptcha::isEnabled()) {
-            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'login');
-            if (!$recaptchaResult['success']) {
-                Response::error($recaptchaResult['error'], 422);
-            }
-        }
         
         $email = strtolower(trim($data['email']));
         
@@ -286,7 +302,7 @@ class AuthController {
         
         // Step 1: First password
         if ($step === 1) {
-            if (!password_verify($password, $adminUser['password_1'])) {
+            if (!password_verify($password, $adminUser['password'])) {
                 $rateLimiter->hit();
                 error_log("Admin login step 1 failed from IP: $ip");
                 AdminActivityLogger::logAuth('admin_login_failed', 'failed', null, $email, ['step' => 1, 'reason' => 'Wrong first password']);
@@ -464,7 +480,8 @@ class AuthController {
         $request = new Request();
         $data = $request->all();
         
-        $allowed = ['name', 'business_name', 'phone', 'address', 'tax_number'];
+        $allowed = ['name', 'business_name', 'phone', 'address', 'tax_number', 'registration_number', 'website',
+            'bank_name', 'account_name', 'account_number', 'branch_code', 'swift_code', 'payment_instructions'];
         $filtered = array_intersect_key($data, array_flip($allowed));
         
         User::query()->update(Auth::id(), $filtered);
@@ -503,9 +520,8 @@ class AuthController {
         $file = $_FILES['avatar'];
         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         
-        // Validate file type
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($file['tmp_name']);
+        // Validate using image signatures so shared hosts do not require fileinfo.
+        $mimeType = $this->detectImageMime($file['tmp_name']);
         
         if (!in_array($mimeType, $allowedTypes)) {
             Response::error('Invalid file type. Allowed: JPG, PNG, GIF, WEBP', 422);
@@ -518,9 +534,7 @@ class AuthController {
         
         // Create uploads directory if it doesn't exist
         $uploadDir = __DIR__ . '/../uploads/avatars/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+        $this->ensureUploadDirectory($uploadDir);
         
         // Generate unique filename
         $extension = match($mimeType) {
@@ -548,7 +562,7 @@ class AuthController {
         }
         
         // Update user avatar URL
-        $avatarUrl = '/api/uploads/avatars/' . $filename;
+        $avatarUrl = '/api/media/avatars/' . $filename;
         User::query()->update(Auth::id(), ['avatar' => $avatarUrl]);
         
         $updatedUser = User::query()->find(Auth::id());
@@ -583,22 +597,6 @@ class AuthController {
         ]);
     }
 
-    public function updatePlan(): void {
-        $request = new Request();
-        $plan = $request->input('plan');
-        
-        if (!in_array($plan, ['free', 'pro', 'business'])) {
-            Response::error('Invalid plan', 422);
-        }
-        
-        User::query()->update(Auth::id(), ['plan' => $plan]);
-        
-        $user = User::query()->find(Auth::id());
-        unset($user['password']);
-        
-        Response::json($user);
-    }
-    
     public function verifyEmail(): void {
         $request = new Request();
         $token = $request->input('token');
@@ -650,7 +648,7 @@ class AuthController {
         
         // Check using camelCase key from formatUserForFrontend
         if ($user['emailVerified']) {
-            Response::error('Email is already verified', 422);
+            Response::success(['message' => 'Email is already verified', 'already_verified' => true]);
         }
         
         // Rate limit: 3 attempts per 15 minutes per user
@@ -660,7 +658,9 @@ class AuthController {
         }
         $rateLimiter->hit();
         
-        $this->createAndSendVerificationEmail($user['id'], $user['email'], $user['name']);
+        if (!$this->createAndSendVerificationEmail($user['id'], $user['email'], $user['name'])) {
+            Response::error('We could not send the verification email. Please try again shortly.', 503);
+        }
         
         Response::success(['message' => 'Verification email sent']);
     }
@@ -747,7 +747,7 @@ class AuthController {
         Response::success(['message' => 'Password reset successfully']);
     }
     
-    private function createAndSendVerificationEmail(int $userId, string $email, string $name): void {
+    private function createAndSendVerificationEmail(int $userId, string $email, string $name): bool {
         $db = Database::getConnection();
         
         // Delete existing verification tokens
@@ -763,7 +763,7 @@ class AuthController {
         $stmt->execute([$userId, $hash, $expiresAt]);
         
         // Send email
-        Mailer::sendVerificationEmail($email, $name, $token);
+        return Mailer::sendVerificationEmail($email, $name, $token);
     }
     
     /**
@@ -820,26 +820,21 @@ class AuthController {
             Response::error('Logo must be smaller than 2MB', 422);
         }
         
-        // Check mime type
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-        $mimeType = mime_content_type($file['tmp_name']);
+        // Check image signature without relying on the optional fileinfo extension.
+        $allowedTypes = ['image/jpeg', 'image/png'];
+        $mimeType = $this->detectImageMime($file['tmp_name']);
         if (!in_array($mimeType, $allowedTypes)) {
-            Response::error('Invalid file type. Allowed: PNG, JPG, GIF, WEBP, SVG', 422);
+            Response::error('Invalid file type. Allowed: PNG and JPG', 422);
         }
         
         // Create uploads directory if not exists
         $uploadDir = __DIR__ . '/../uploads/logos/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+        $this->ensureUploadDirectory($uploadDir);
         
         // Generate unique filename
         $extension = match($mimeType) {
             'image/jpeg' => 'jpg',
             'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            'image/svg+xml' => 'svg',
             default => 'png'
         };
         $filename = Auth::id() . '_logo_' . time() . '.' . $extension;
@@ -860,7 +855,7 @@ class AuthController {
         }
         
         // Update user logo URL
-        $logoUrl = '/api/uploads/logos/' . $filename;
+        $logoUrl = '/api/media/logos/' . $filename;
         User::query()->update(Auth::id(), ['logo_path' => $logoUrl]);
         
         $updatedUser = User::query()->find(Auth::id());
@@ -869,7 +864,7 @@ class AuthController {
         Response::json([
             'message' => 'Logo uploaded successfully',
             'logo_path' => $logoUrl,
-            'user' => $this->formatUserForFrontend($updatedUser)
+            'user' => Auth::formatUserForFrontend($updatedUser)
         ]);
     }
     
@@ -891,8 +886,54 @@ class AuthController {
         
         Response::json([
             'message' => 'Logo deleted successfully',
-            'user' => $this->formatUserForFrontend($updatedUser)
+            'user' => Auth::formatUserForFrontend($updatedUser)
         ]);
+    }
+
+    public function uploadInvoiceLogo(): void {
+        if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+            Response::error('No invoice logo uploaded or upload failed', 422);
+        }
+        $file = $_FILES['logo'];
+        if ($file['size'] > 2 * 1024 * 1024) {
+            Response::error('Invoice logo must be smaller than 2MB', 422);
+        }
+        $mimeType = $this->detectImageMime($file['tmp_name']);
+        if (!in_array($mimeType, ['image/jpeg', 'image/png'], true)) {
+            Response::error('Invalid file type. Allowed: PNG and JPG', 422);
+        }
+        $uploadDir = __DIR__ . '/../uploads/invoice-logos/';
+        $this->ensureUploadDirectory($uploadDir);
+        $extension = $mimeType === 'image/jpeg' ? 'jpg' : 'png';
+        $filename = Auth::id() . '_invoice_' . bin2hex(random_bytes(8)) . '.' . $extension;
+        if (!move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+            Response::error('Failed to save invoice logo', 500);
+        }
+        Response::json(['logo_path' => '/api/media/invoice-logos/' . $filename], 201);
+    }
+
+    private function ensureUploadDirectory(string $directory): void {
+        if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+            Response::error('The upload directory could not be created. Check server permissions.', 500);
+        }
+        if (!is_writable($directory)) {
+            @chmod($directory, 0775);
+        }
+        if (!is_writable($directory)) {
+            Response::error('The upload directory is not writable. Check server permissions.', 500);
+        }
+    }
+
+    private function detectImageMime(string $path): string {
+        $handle = @fopen($path, 'rb');
+        if ($handle === false) return '';
+        $signature = (string) fread($handle, 12);
+        fclose($handle);
+        if (str_starts_with($signature, "\x89PNG\x0D\x0A\x1A\x0A")) return 'image/png';
+        if (str_starts_with($signature, "\xFF\xD8\xFF")) return 'image/jpeg';
+        if (str_starts_with($signature, 'GIF87a') || str_starts_with($signature, 'GIF89a')) return 'image/gif';
+        if (substr($signature, 0, 4) === 'RIFF' && substr($signature, 8, 4) === 'WEBP') return 'image/webp';
+        return '';
     }
     
     /**
@@ -900,19 +941,22 @@ class AuthController {
      * This should be disabled or protected after initial setup
      */
     public function createAdmin(): void {
+        if (filter_var($_ENV['ADMIN_SETUP_ENABLED'] ?? false, FILTER_VALIDATE_BOOL) !== true) {
+            Response::error('Admin setup is disabled', 404);
+            return;
+        }
+
         $request = new Request();
         $data = $request->validate([
             'email' => 'required|email|max:255',
             'name' => 'required|max:255',
-            'password_1' => 'required|min:6',
-            'password_2' => 'required|min:6',
-            'password_3' => 'required|min:6',
+            'password' => 'required|min:8',
             'setup_key' => 'required',
         ]);
         
         // Validate setup key (temporary security measure)
-        $setupKey = getenv('ADMIN_SETUP_KEY') ?: 'ieosuia_admin_setup_2025';
-        if ($data['setup_key'] !== $setupKey) {
+        $setupKey = $_ENV['ADMIN_SETUP_KEY'] ?? getenv('ADMIN_SETUP_KEY') ?: '';
+        if ($setupKey === '' || !hash_equals($setupKey, (string) $data['setup_key'])) {
             Response::error('Invalid setup key', 403);
             return;
         }
@@ -927,22 +971,19 @@ class AuthController {
             return;
         }
         
-        // Hash passwords using Argon2ID (same as regular users)
-        $hashedPassword1 = password_hash($data['password_1'], PASSWORD_ARGON2ID);
-        $hashedPassword2 = password_hash($data['password_2'], PASSWORD_ARGON2ID);
-        $hashedPassword3 = password_hash($data['password_3'], PASSWORD_ARGON2ID);
+        $passwordCheck = $this->validatePasswordStrength($data['password']);
+        if (!$passwordCheck['valid']) Response::error($passwordCheck['error'], 422);
+        $hashedPassword = password_hash($data['password'], PASSWORD_ARGON2ID);
         
         // Insert admin user
         $stmt = $db->prepare("
-            INSERT INTO admin_users (email, name, password_1, password_2, password_3, status)
-            VALUES (?, ?, ?, ?, ?, 'active')
+            INSERT INTO admin_users (email, name, password, status)
+            VALUES (?, ?, ?, 'active')
         ");
         $stmt->execute([
             strtolower(trim($data['email'])),
             $data['name'],
-            $hashedPassword1,
-            $hashedPassword2,
-            $hashedPassword3
+            $hashedPassword
         ]);
         
         $adminId = $db->lastInsertId();
@@ -975,9 +1016,7 @@ class AuthController {
         $data = $request->validate([
             'name' => 'required|max:255',
             'email' => 'required|email|max:255',
-            'password_1' => 'required|min:8',
-            'password_2' => 'required|min:8',
-            'password_3' => 'required|min:8',
+            'password' => 'required|min:8',
         ]);
         
         $db = Database::getConnection();
@@ -990,34 +1029,20 @@ class AuthController {
             return;
         }
         
-        // Validate password strength for all three passwords
-        foreach (['password_1', 'password_2', 'password_3'] as $field) {
-            $passCheck = $this->validatePasswordStrength($data[$field]);
-            if (!$passCheck['valid']) {
-                Response::error("${field}: " . $passCheck['error'], 422);
-                return;
-            }
-        }
-        
-        // Hash the three passwords
-        $hashedPasswords = [
-            'password_1' => password_hash($data['password_1'], PASSWORD_ARGON2ID),
-            'password_2' => password_hash($data['password_2'], PASSWORD_ARGON2ID),
-            'password_3' => password_hash($data['password_3'], PASSWORD_ARGON2ID)
-        ];
+        $passCheck = $this->validatePasswordStrength($data['password']);
+        if (!$passCheck['valid']) Response::error($passCheck['error'], 422);
+        $hashedPassword = password_hash($data['password'], PASSWORD_ARGON2ID);
         
         try {
             // Insert admin user
             $stmt = $db->prepare("
-                INSERT INTO admin_users (name, email, password_1, password_2, password_3, status, created_at)
-                VALUES (?, ?, ?, ?, ?, 'active', NOW())
+                INSERT INTO admin_users (name, email, password, status, created_at)
+                VALUES (?, ?, ?, 'active', NOW())
             ");
             $stmt->execute([
                 $data['name'],
                 strtolower(trim($data['email'])),
-                $hashedPasswords['password_1'],
-                $hashedPasswords['password_2'],
-                $hashedPasswords['password_3']
+                $hashedPassword
             ]);
             
             $adminId = $db->lastInsertId();
@@ -1111,18 +1136,12 @@ class AuthController {
             $params_arr[] = $status;
         }
         
-        // Update passwords if provided (all three must be provided together)
-        $password_1 = $request->input('password_1');
-        $password_2 = $request->input('password_2');
-        $password_3 = $request->input('password_3');
-        
-        if ($password_1 && $password_2 && $password_3) {
-            $updates[] = "password_1 = ?";
-            $params_arr[] = password_hash($password_1, PASSWORD_ARGON2ID);
-            $updates[] = "password_2 = ?";
-            $params_arr[] = password_hash($password_2, PASSWORD_ARGON2ID);
-            $updates[] = "password_3 = ?";
-            $params_arr[] = password_hash($password_3, PASSWORD_ARGON2ID);
+        $password = $request->input('password');
+        if ($password) {
+            $passCheck = $this->validatePasswordStrength($password);
+            if (!$passCheck['valid']) Response::error($passCheck['error'], 422);
+            $updates[] = "password = ?";
+            $params_arr[] = password_hash($password, PASSWORD_ARGON2ID);
         }
         
         if (empty($updates)) {
@@ -1140,7 +1159,7 @@ class AuthController {
         if ($name) $changedFields[] = 'name';
         if ($email) $changedFields[] = 'email';
         if ($status) $changedFields[] = 'status';
-        if ($password_1 && $password_2 && $password_3) $changedFields[] = 'passwords';
+        if ($password) $changedFields[] = 'password';
         
         AdminActivityLogger::logUserManagement('admin_user_updated', (int)$id, [
             'target_email' => $admin['email'],

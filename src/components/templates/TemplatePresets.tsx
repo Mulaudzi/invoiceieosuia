@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { templatePresets, TemplatePreset } from "@/lib/templatePresets";
 import { useCreateTemplate } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "@/lib/icons";
 import { useState } from "react";
 
 interface TemplatePresetsProps {
@@ -40,7 +40,9 @@ export function TemplatePresets({ onTemplateCreated }: TemplatePresetsProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-foreground">Template Presets</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          Template Designs ({templatePresets.length})
+        </h3>
         <p className="text-sm text-muted-foreground">
           Choose from our professionally designed templates to get started quickly
         </p>
@@ -70,28 +72,44 @@ export function TemplatePresets({ onTemplateCreated }: TemplatePresetsProps) {
             </CardHeader>
             <CardContent className="pt-0">
               {/* Mini Preview */}
-              <div 
-                className="mb-3 p-3 rounded-md border text-[8px] bg-white text-gray-900"
-                style={{ borderColor: preset.styles.primaryColor }}
+              <div
+                className="mb-3 rounded-md border bg-white text-gray-900 overflow-hidden"
+                style={{ borderColor: preset.styles.showBorder ? preset.styles.accentColor : "#e5e7eb" }}
               >
-                <div 
-                  className="font-bold mb-1"
-                  style={{ color: preset.styles.primaryColor }}
+                <div
+                  className={`px-3 py-2 text-white ${
+                    preset.styles.headerStyle === "center"
+                      ? "text-center"
+                      : preset.styles.headerStyle === "right"
+                        ? "text-right"
+                        : "text-left"
+                  }`}
+                  style={{ backgroundColor: preset.styles.primaryColor }}
                 >
-                  Sample Invoice
+                  <div className="text-[9px] font-bold tracking-wide">INVOICE</div>
+                  <div className="text-[6px] opacity-80">Your business name</div>
                 </div>
-                <div className="flex justify-between text-[6px] text-gray-500">
-                  <span>Item</span>
-                  <span>R1,000.00</span>
-                </div>
-                <div 
-                  className="mt-1 pt-1 border-t text-right font-bold text-[7px]"
-                  style={{ 
-                    borderColor: preset.styles.primaryColor,
-                    color: preset.styles.primaryColor 
-                  }}
-                >
-                  Total: R1,150.00
+                <div className="p-3 text-[7px]">
+                  <div
+                    className={`grid grid-cols-[1fr_auto] gap-x-2 py-1 ${
+                      preset.styles.tableStyle === "bordered" ? "border" : "border-b"
+                    }`}
+                    style={{ borderColor: preset.styles.accentColor }}
+                  >
+                    <span className="px-1 font-medium">Professional service</span>
+                    <span className="px-1">R1,000.00</span>
+                  </div>
+                  <div
+                    className="mt-2 ml-auto w-1/2 px-1.5 py-1 text-right font-bold text-white"
+                    style={{ backgroundColor: preset.styles.primaryColor }}
+                  >
+                    Total R1,150.00
+                  </div>
+                  {preset.styles.showWatermark && (
+                    <div className="mt-1 text-center text-[6px] uppercase tracking-[0.2em] text-gray-300">
+                      Watermark
+                    </div>
+                  )}
                 </div>
               </div>
 

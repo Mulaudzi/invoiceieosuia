@@ -1,4 +1,4 @@
-import { Building2, Users, FileText, TrendingUp } from "lucide-react";
+import { Building2, Users, FileText, TrendingUp } from "@/lib/icons";
 
 const HowItWorksSection = () => {
   const steps = [
@@ -18,13 +18,13 @@ const HowItWorksSection = () => {
       step: 3,
       icon: FileText,
       title: "Generate Invoices",
-      description: "Create professional invoices with customizable templates. Send them instantly via email.",
+      description: "Create professional invoices with customizable templates, then download polished PDFs.",
     },
     {
       step: 4,
       icon: TrendingUp,
       title: "Track & Grow",
-      description: "Monitor payments, automate reminders, and use insights to grow your business.",
+      description: "Monitor invoice status, review reports, and use financial insights to grow your business.",
     },
   ];
 

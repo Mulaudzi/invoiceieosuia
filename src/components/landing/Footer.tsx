@@ -7,7 +7,7 @@ const Footer = () => {
     "Quick Links": [
       { name: "Home", href: "/", isRoute: true },
       { name: "Features", href: "/#features" },
-      { name: "Pricing", href: "/#pricing" },
+      { name: "Free", href: "/#free" },
       { name: "Contact", href: "/contact", isRoute: true },
       { name: "Login", href: "/login", isRoute: true },
     ],

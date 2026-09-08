@@ -8,7 +8,7 @@ class ContactController {
     private static array $emailRouting = [
         'general' => 'hello@ieosuia.com',
         'support' => 'support@ieosuia.com',
-        'sales' => 'sales@ieosuia.com',
+        'sales' => 'hello@ieosuia.com',
     ];
     
     // CC email for all messages
@@ -30,16 +30,6 @@ class ContactController {
         $rateLimiter = new RateLimitMiddleware(5, 15);
         if (!$rateLimiter->handle('contact:' . $ip)) {
             return;
-        }
-        
-        // Verify reCAPTCHA (if enabled)
-        $recaptchaToken = $request->input('recaptcha_token');
-        if (Recaptcha::isEnabled()) {
-            $recaptchaResult = Recaptcha::verify($recaptchaToken ?? '', 'contact');
-            if (!$recaptchaResult['success']) {
-                Response::error($recaptchaResult['error'], 422);
-                return;
-            }
         }
         
         // Validate required fields
@@ -152,7 +142,7 @@ class ContactController {
             'message' => nl2br(htmlspecialchars($message)),
             'origin' => htmlspecialchars($origin),
             'timestamp' => date('Y-m-d H:i:s T'),
-            'admin_url' => 'https://invoices.ieosuia.com/admin/submissions/' . $submissionId,
+            'admin_url' => 'https://invoices.ieosuia.com/guymhan/submissions/' . $submissionId,
         ]);
         
         foreach ($recipients as $recipient) {
@@ -280,7 +270,8 @@ class ContactController {
             </body>
             </html>
         ';
-    
+    }
+
     private function saveSubmission(
         string $name, 
         string $email, 
@@ -414,9 +405,9 @@ class ContactController {
             // SMTP Configuration
             $mail->isSMTP();
             $mail->Host = $_ENV['MAIL_HOST'] ?? 'smtp.mailtrap.io';
-            $mail->SMTPAuth = true;
             $mail->Username = $_ENV['MAIL_USERNAME'] ?? '';
             $mail->Password = $_ENV['MAIL_PASSWORD'] ?? '';
+            $mail->SMTPAuth = $mail->Username !== '';
             
             $encryption = strtolower($_ENV['MAIL_ENCRYPTION'] ?? 'tls');
             if ($encryption === 'ssl') {

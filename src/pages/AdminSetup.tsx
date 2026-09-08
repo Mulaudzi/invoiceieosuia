@@ -5,25 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Shield, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Shield, Eye, EyeOff, AlertTriangle } from "@/lib/icons";
 import api from "@/services/api";
 
 const AdminSetup = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
-    password_1: false,
-    password_2: false,
-    password_3: false,
+    password: false,
     setup_key: false,
   });
   
   const [formData, setFormData] = useState({
     email: "",
     name: "",
-    password_1: "",
-    password_2: "",
-    password_3: "",
+    password: "",
     setup_key: "",
   });
 
@@ -38,7 +34,7 @@ const AdminSetup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.name || !formData.password_1 || !formData.password_2 || !formData.password_3 || !formData.setup_key) {
+    if (!formData.email || !formData.name || !formData.password || !formData.setup_key) {
       toast.error("All fields are required");
       return;
     }
@@ -46,16 +42,14 @@ const AdminSetup = () => {
     setIsLoading(true);
     
     try {
-      const response = await api.post("/admin/setup", formData);
+      const response = await api.post("/guymhan/setup", formData);
       
       if (response.data.success) {
         toast.success("Admin user created successfully!");
         setFormData({
           email: "",
           name: "",
-          password_1: "",
-          password_2: "",
-          password_3: "",
+          password: "",
           setup_key: "",
         });
         
@@ -82,7 +76,7 @@ const AdminSetup = () => {
           </div>
           <CardTitle className="text-2xl">Admin Setup</CardTitle>
           <CardDescription>
-            Create a new admin user with 3-step authentication
+            Create a new admin user with password and PIN authentication
           </CardDescription>
         </CardHeader>
         
@@ -120,14 +114,14 @@ const AdminSetup = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password_1">Password 1 (First Step)</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
-                  id="password_1"
-                  type={showPasswords.password_1 ? "text" : "password"}
-                  value={formData.password_1}
-                  onChange={(e) => handleChange("password_1", e.target.value)}
-                  placeholder="Enter first password"
+                  id="password"
+                  type={showPasswords.password ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  placeholder="Enter password"
                   required
                 />
                 <Button
@@ -135,58 +129,13 @@ const AdminSetup = () => {
                   variant="ghost"
                   size="icon"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => togglePasswordVisibility("password_1")}
+                  onClick={() => togglePasswordVisibility("password")}
                 >
-                  {showPasswords.password_1 ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPasswords.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="password_2">Password 2 (Second Step)</Label>
-              <div className="relative">
-                <Input
-                  id="password_2"
-                  type={showPasswords.password_2 ? "text" : "password"}
-                  value={formData.password_2}
-                  onChange={(e) => handleChange("password_2", e.target.value)}
-                  placeholder="Enter second password"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => togglePasswordVisibility("password_2")}
-                >
-                  {showPasswords.password_2 ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password_3">Password 3 (Third Step)</Label>
-              <div className="relative">
-                <Input
-                  id="password_3"
-                  type={showPasswords.password_3 ? "text" : "password"}
-                  value={formData.password_3}
-                  onChange={(e) => handleChange("password_3", e.target.value)}
-                  placeholder="Enter third password"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => togglePasswordVisibility("password_3")}
-                >
-                  {showPasswords.password_3 ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
             
             <div className="space-y-2">
               <Label htmlFor="setup_key">Setup Key</Label>

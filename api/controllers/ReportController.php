@@ -18,16 +18,19 @@ class ReportController {
         
         $today = date('Y-m-d');
         
-        foreach ($invoices as $inv) {
+        $invoiceModel = new Invoice();
+        foreach ($invoices as $rawInvoice) {
+            $inv = $invoiceModel->withRelations($rawInvoice);
+            if (in_array(($inv['document_type'] ?? ''), ['receipt', 'credit_note', 'debit_note'], true)) continue;
             if ($inv['status'] === 'Paid') {
                 $totalRevenue += (float) $inv['total'];
                 $paidInvoices++;
-            } elseif (in_array($inv['status'], ['Pending', 'Sent'])) {
-                $outstanding += (float) $inv['total'];
+            } elseif (in_array($inv['status'], ['Pending', 'Sent', 'Partially Paid', 'Overdue'])) {
+                $outstanding += (float) $inv['balance_due'];
                 $pendingInvoices++;
                 
                 if ($inv['due_date'] < $today) {
-                    $overdue += (float) $inv['total'];
+                    $overdue += (float) $inv['balance_due'];
                     $overdueCount++;
                     $overdueInvoices++;
                 }
@@ -45,6 +48,7 @@ class ReportController {
         Response::json([
             'total_revenue' => $totalRevenue,
             'outstanding' => $outstanding,
+            'overdue_amount' => $overdue,
             'overdue_count' => $overdueCount,
             'total_invoices' => $totalInvoices,
             'paid_invoices' => $paidInvoices,
@@ -90,13 +94,15 @@ class ReportController {
         $invoices = Invoice::query()->where('user_id', $userId)->get();
         
         $statusCounts = [];
-        foreach ($invoices as $inv) {
+        $invoiceModel = new Invoice();
+        foreach ($invoices as $rawInvoice) {
+            $inv = $invoiceModel->withRelations($rawInvoice);
             $status = $inv['status'];
             if (!isset($statusCounts[$status])) {
                 $statusCounts[$status] = ['status' => $status, 'count' => 0, 'amount' => 0];
             }
             $statusCounts[$status]['count']++;
-            $statusCounts[$status]['amount'] += (float) $inv['total'];
+            $statusCounts[$status]['amount'] += $status === 'Paid' ? (float) $inv['total'] : (float) $inv['balance_due'];
         }
         
         Response::json(array_values($statusCounts));
@@ -209,99 +215,12 @@ class ReportController {
             ->limit($limit)
             ->get();
         
-        $invoices = array_map(function($inv) {
-            $inv['client'] = Client::query()->find($inv['client_id']);
-            return $inv;
+        $invoiceModel = new Invoice();
+        $invoices = array_map(function($inv) use ($invoiceModel) {
+            return $invoiceModel->withRelations($inv);
         }, $invoices);
         
         Response::json($invoices);
-    }
-    
-    /**
-     * Get payment timeline analytics - how quickly clients pay
-     */
-    public function paymentTimeline(): void {
-        $userId = Auth::id();
-        
-        // Get all payments with their invoice data
-        $payments = Payment::query()->where('user_id', $userId)->get();
-        
-        $timeline = [
-            'within_7' => 0,
-            '8_to_14' => 0,
-            '15_to_30' => 0,
-            'over_30' => 0,
-        ];
-        
-        $total = count($payments);
-        
-        foreach ($payments as $payment) {
-            $invoice = Invoice::query()->find($payment['invoice_id']);
-            if (!$invoice) continue;
-            
-            $invoiceDate = strtotime($invoice['date']);
-            $paymentDate = strtotime($payment['date']);
-            $daysDiff = floor(($paymentDate - $invoiceDate) / 86400);
-            
-            if ($daysDiff <= 7) {
-                $timeline['within_7']++;
-            } elseif ($daysDiff <= 14) {
-                $timeline['8_to_14']++;
-            } elseif ($daysDiff <= 30) {
-                $timeline['15_to_30']++;
-            } else {
-                $timeline['over_30']++;
-            }
-        }
-        
-        // Convert to percentages
-        $result = [
-            ['name' => 'Within 7 days', 'value' => $total > 0 ? round(($timeline['within_7'] / $total) * 100) : 0, 'count' => $timeline['within_7']],
-            ['name' => '8-14 days', 'value' => $total > 0 ? round(($timeline['8_to_14'] / $total) * 100) : 0, 'count' => $timeline['8_to_14']],
-            ['name' => '15-30 days', 'value' => $total > 0 ? round(($timeline['15_to_30'] / $total) * 100) : 0, 'count' => $timeline['15_to_30']],
-            ['name' => '30+ days', 'value' => $total > 0 ? round(($timeline['over_30'] / $total) * 100) : 0, 'count' => $timeline['over_30']],
-        ];
-        
-        $paidWithin14Days = $timeline['within_7'] + $timeline['8_to_14'];
-        
-        Response::json([
-            'timeline' => $result,
-            'total_payments' => $total,
-            'paid_within_14_days' => $total > 0 ? round(($paidWithin14Days / $total) * 100) : 0,
-        ]);
-    }
-    
-    /**
-     * Get billing history for subscription payments
-     */
-    public function billingHistory(): void {
-        $userId = Auth::id();
-        
-        $db = Database::getConnection();
-        
-        // Get payment transactions (subscription payments)
-        $stmt = $db->prepare("
-            SELECT id, plan, amount, payment_id, status, created_at, completed_at
-            FROM payment_transactions
-            WHERE user_id = ? AND status = 'completed'
-            ORDER BY created_at DESC
-            LIMIT 20
-        ");
-        $stmt->execute([$userId]);
-        $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $history = array_map(function($tx) {
-            return [
-                'id' => $tx['id'],
-                'date' => $tx['completed_at'] ?? $tx['created_at'],
-                'amount' => (float) $tx['amount'],
-                'plan' => ucfirst($tx['plan']),
-                'status' => $tx['status'],
-                'payment_id' => $tx['payment_id'],
-            ];
-        }, $transactions);
-        
-        Response::json($history);
     }
     
     /**
@@ -320,12 +239,14 @@ class ReportController {
         
         $today = date('Y-m-d');
         
-        foreach ($invoices as $inv) {
+        $invoiceModel = new Invoice();
+        foreach ($invoices as $rawInvoice) {
+            $inv = $invoiceModel->withRelations($rawInvoice);
             if ($inv['status'] === 'Paid') {
                 $totalRevenue += (float) $inv['total'];
                 $paidCount++;
-            } elseif (in_array($inv['status'], ['Pending', 'Sent'])) {
-                $outstanding += (float) $inv['total'];
+            } elseif (in_array($inv['status'], ['Pending', 'Sent', 'Partially Paid'])) {
+                $outstanding += (float) $inv['balance_due'];
                 $pendingCount++;
                 
                 if ($inv['due_date'] < $today) {
@@ -482,16 +403,6 @@ class ReportController {
         $newClients = $clientsQuery->count();
         $totalClients = Client::query()->where('user_id', $userId)->count();
         
-        // Get payment summary
-        $payments = Payment::query()
-            ->where('user_id', $userId)
-            ->where('date', '>=', $startDate)
-            ->get();
-        
-        $totalPaymentsReceived = array_sum(array_map(function($p) {
-            return (float) $p['amount'];
-        }, $payments));
-        
         Response::json([
             'period_days' => $days,
             'start_date' => $startDate,
@@ -507,24 +418,76 @@ class ReportController {
             'clients' => [
                 'new' => $newClients,
                 'total' => $totalClients
-            ],
-            'payments' => [
-                'count' => count($payments),
-                'total' => $totalPaymentsReceived
             ]
         ]);
     }
     
     public function export(): void {
         $request = new Request();
-        $type = $request->query('type') ?? 'pdf'; // pdf, excel, csv
-        $reportType = $request->query('report') ?? 'invoices'; // invoices, clients, payments
+        $type = strtolower((string) ($request->query('type') ?? 'pdf'));
+        $reportType = strtolower((string) ($request->query('report') ?? 'analytics'));
         $userId = Auth::id();
-        
-        header('Content-Type: application/json');
-        
-        // For now, return error as export functionality requires additional libraries
-        // In production, implement using PhpSpreadsheet for Excel and FPDF for PDF
-        Response::error('Report export functionality is being prepared. Currently available via manual CSV export.', 503);
+
+        if ($type !== 'pdf') {
+            Response::error('Unsupported report format', 422);
+            return;
+        }
+
+        require_once __DIR__ . '/../lib/FPDF.php';
+
+        $invoices = Invoice::query()
+            ->where('user_id', $userId)
+            ->orderBy('date', 'DESC')
+            ->get();
+
+        $total = 0.0;
+        $paid = 0.0;
+        foreach ($invoices as $invoice) {
+            $amount = (float) ($invoice['total'] ?? 0);
+            $total += $amount;
+            if (($invoice['status'] ?? '') === 'Paid') {
+                $paid += $amount;
+            }
+        }
+
+        $pdf = new FPDF();
+        $pdf->SetTitle('IEOSUIA Invoices Report');
+        $pdf->SetAuthor('IEOSUIA Invoices');
+        $pdf->AddPage();
+        $pdf->SetFont('Helvetica', 'B', 18);
+        $pdf->Cell(0, 12, 'IEOSUIA Invoices', 0, 1);
+        $pdf->SetFont('Helvetica', '', 11);
+        $pdf->Cell(0, 7, ucfirst($reportType) . ' report - ' . date('Y-m-d'), 0, 1);
+        $pdf->Ln(3);
+        $pdf->SetFont('Helvetica', 'B', 11);
+        $pdf->Cell(0, 7, 'Invoices: ' . count($invoices), 0, 1);
+        $pdf->Cell(0, 7, 'Total invoiced: R ' . number_format($total, 2), 0, 1);
+        $pdf->Cell(0, 7, 'Total paid: R ' . number_format($paid, 2), 0, 1);
+        $pdf->Ln(5);
+
+        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->Cell(42, 7, 'Invoice', 1);
+        $pdf->Cell(27, 7, 'Date', 1);
+        $pdf->Cell(31, 7, 'Status', 1);
+        $pdf->Cell(38, 7, 'Amount', 1, 1, 'R');
+        $pdf->SetFont('Helvetica', '', 9);
+
+        foreach ($invoices as $invoice) {
+            if ($pdf->GetY() > 270) {
+                $pdf->AddPage();
+            }
+            $pdf->Cell(42, 7, substr((string) ($invoice['invoice_number'] ?? ''), 0, 22), 1);
+            $pdf->Cell(27, 7, (string) ($invoice['date'] ?? ''), 1);
+            $pdf->Cell(31, 7, substr((string) ($invoice['status'] ?? ''), 0, 16), 1);
+            $pdf->Cell(38, 7, 'R ' . number_format((float) ($invoice['total'] ?? 0), 2), 1, 1, 'R');
+        }
+
+        $contents = $pdf->Output('S');
+        $filename = 'ieosuia-' . preg_replace('/[^a-z0-9-]+/', '-', $reportType) . '-report-' . date('Y-m-d') . '.pdf';
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($contents));
+        echo $contents;
+        exit;
     }
 }

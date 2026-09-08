@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2 } from "@/lib/icons";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
 import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";

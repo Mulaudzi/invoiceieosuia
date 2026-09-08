@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, LucideIcon } from "lucide-react";
+import { ArrowLeft, LucideIcon } from "@/lib/icons";
 
 interface PageHeaderProps {
   title: string;

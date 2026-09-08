@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAdminToken } from "./AdminLogin";
+import { getAdminToken } from "@/services/adminAuth";
 
 /**
  * Admin index route - redirects to dashboard if authenticated, login if not
@@ -11,9 +11,9 @@ const AdminIndex = () => {
   useEffect(() => {
     const token = getAdminToken();
     if (token) {
-      navigate('/admin/dashboard', { replace: true });
+      navigate('/guymhan/dashboard', { replace: true });
     } else {
-      navigate('/admin/login', { replace: true });
+      navigate('/guymhan/login', { replace: true });
     }
   }, [navigate]);
 

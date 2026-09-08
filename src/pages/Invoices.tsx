@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
@@ -10,61 +11,124 @@ import {
   MoreHorizontal,
   Eye,
   Edit,
-  Send,
   Trash2,
   Download,
   CheckCircle,
-  MessageSquare,
-} from "lucide-react";
+  CreditCard,
+  Printer,
+  Send,
+  FileText,
+} from "@/lib/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useSendInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
+import { useInvoices, useDeleteInvoice, useDownloadInvoicePdf, useMarkInvoicePaid, useIssueInvoice } from "@/hooks/useInvoices";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
 import { ApiErrorFallback } from "@/components/ApiErrorFallback";
-import { SendSmsDialog } from "@/components/invoices/SendSmsDialog";
-import { SendEmailDialog } from "@/components/invoices/SendEmailDialog";
 import { InvoiceModal } from "@/components/invoices/InvoiceModal";
+import { InvoiceStartWizard, type InvoiceStartSelection } from "@/components/invoices/InvoiceStartWizard";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { Invoice } from "@/lib/types";
 import { ExportDropdown } from "@/components/exports/ExportDropdown";
 import { useExport } from "@/hooks/useExport";
 import { invoiceColumns, formatCurrencyForExport, formatDateForExport } from "@/lib/exportUtils";
+import { RecurringInvoice, useRecurringInvoices } from "@/hooks/useRecurringInvoices";
+import { getDocumentTitle, getTemplate } from "@/lib/invoiceArchitecture";
+import { RecordPaymentDialog } from "@/components/invoices/RecordPaymentDialog";
+import { PaymentHistoryDialog } from "@/components/invoices/PaymentHistoryDialog";
+import { InvoiceDetailsSheet } from "@/components/invoices/InvoiceDetailsSheet";
+import { invoiceService } from "@/services/api";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+const documentFilterOptions = [
+  ['standard_invoice', 'Standard Invoice'], ['tax_invoice', 'Tax Invoice'],
+  ['pro_forma', 'Pro Forma Invoice'], ['final', 'Final Invoice'],
+  ['quote', 'Quote / Estimate'], ['credit_note', 'Credit Note'],
+  ['debit_note', 'Debit Note'], ['receipt', 'Receipt'],
+] as const;
+
+const statusFilterOptions = [
+  { id: 'draft', label: 'Draft', values: ['Draft'] },
+  { id: 'pending', label: 'Unpaid / Pending', values: ['Unpaid', 'Pending'] },
+  { id: 'partial', label: 'Partially Paid', values: ['Partially Paid'] },
+  { id: 'paid', label: 'Paid', values: ['Paid'] },
+  { id: 'overdue', label: 'Overdue', values: ['Overdue'] },
+  { id: 'cancelled', label: 'Cancelled / Voided', values: ['Cancelled', 'Voided'] },
+] as const;
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [startWizardOpen, setStartWizardOpen] = useState(false);
+  const [startSelection, setStartSelection] = useState<InvoiceStartSelection>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [pendingSchedule, setPendingSchedule] = useState<RecurringInvoice | null>(null);
+  const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
+  const [historyInvoiceId, setHistoryInvoiceId] = useState<string | null>(null);
+  const [detailsInvoiceId, setDetailsInvoiceId] = useState<string | null>(null);
+  const [sourceInvoice, setSourceInvoice] = useState<Invoice | null>(null);
+  const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openedSchedule = useRef<string | null>(null);
   const { toast } = useToast();
   const { exportToCsv, exportToText } = useExport();
   
   // API hooks
   const { data: invoices = [], isLoading, error, refetch } = useInvoices();
+  const { data: schedules = [] } = useRecurringInvoices();
   const deleteInvoice = useDeleteInvoice();
   const downloadPdf = useDownloadInvoicePdf();
-  const sendInvoice = useSendInvoice();
   const markPaid = useMarkInvoicePaid();
+  const issueInvoice = useIssueInvoice();
+  const historyInvoice = invoices.find(entry => entry.id === historyInvoiceId) || null;
+  const detailsInvoice = invoices.find(entry => entry.id === detailsInvoiceId) || null;
 
-  const handleOpenSmsDialog = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setSmsDialogOpen(true);
-  };
+  useEffect(() => {
+    const scheduleId = searchParams.get("schedule");
+    if (!scheduleId || openedSchedule.current === scheduleId || schedules.length === 0) return;
+    const schedule = schedules.find((entry) => String(entry.id) === scheduleId);
+    if (!schedule) return;
+    openedSchedule.current = scheduleId;
+    setPendingSchedule(schedule);
+    setSelectedInvoice(null);
+    setStartWizardOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("schedule");
+    setSearchParams(next, { replace: true });
+  }, [schedules, searchParams, setSearchParams]);
 
-  const handleOpenEmailDialog = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setEmailDialogOpen(true);
-  };
+  useEffect(() => {
+    if (searchParams.get("new") !== "document") return;
+    setSelectedInvoice(null);
+    setSourceInvoice(null);
+    setStartWizardOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("new");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleOpenCreateModal = () => {
     setSelectedInvoice(null);
+    setSourceInvoice(null);
+    setStartWizardOpen(true);
+  };
+
+  const handleCreateDocument = (invoice: Invoice, documentType: 'credit_note' | 'debit_note' | 'receipt') => {
+    const currentTemplate = getTemplate(invoice.templateSlug);
+    setSelectedInvoice(null);
+    setSourceInvoice(invoice);
+    setStartSelection({ category: invoice.category || 'general', documentType, templateSlug: currentTemplate.supportedDocumentTypes.includes(documentType) ? currentTemplate.slug : 'general-corporate-blue' });
     setInvoiceModalOpen(true);
   };
 
@@ -96,6 +160,8 @@ const Invoices = () => {
         return "bg-success/10 text-success";
       case "Pending":
         return "bg-warning/10 text-warning";
+      case "Partially Paid":
+        return "bg-blue-100 text-blue-700";
       case "Overdue":
         return "bg-destructive/10 text-destructive";
       case "Draft":
@@ -117,17 +183,34 @@ const Invoices = () => {
     });
   };
 
-  const filteredInvoices = invoices.filter(
-    (invoice) =>
-      invoice.id.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const statusFilter = searchParams.get("status");
+  const filteredInvoices = invoices.filter((invoice) => {
+    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) || invoice.clientName?.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (selectedDocumentTypes.length > 0 && !selectedDocumentTypes.includes(invoice.documentType || 'standard_invoice')) return false;
+    if (selectedStatuses.length > 0) {
+      const matchesSelectedStatus = statusFilterOptions.some(option => selectedStatuses.includes(option.id) && (option.values as readonly string[]).includes(invoice.status));
+      if (!matchesSelectedStatus) return false;
+    }
+    if (statusFilter === "overdue") return invoice.status === "Overdue";
+    if (statusFilter === "outstanding") return invoice.status !== "Draft" && invoice.balanceDue > 0;
+    return true;
+  });
+  const activeFilterCount = selectedDocumentTypes.length + selectedStatuses.length + (statusFilter ? 1 : 0);
+  const toggleFilter = (value: string, selected: string[], update: (values: string[]) => void) => update(selected.includes(value) ? selected.filter(entry => entry !== value) : [...selected, value]);
+  const clearFilters = () => {
+    setSelectedDocumentTypes([]);
+    setSelectedStatuses([]);
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    setSearchParams(next, { replace: true });
+  };
 
   // Calculate stats from actual data
   const stats = {
     all: invoices.length,
     paid: invoices.filter(i => i.status === 'Paid').length,
-    pending: invoices.filter(i => i.status === 'Pending').length,
+    pending: invoices.filter(i => i.status === 'Pending' || i.status === 'Partially Paid').length,
     overdue: invoices.filter(i => i.status === 'Overdue').length,
   };
 
@@ -141,8 +224,6 @@ const Invoices = () => {
     }
   };
 
-  // Email sending is now handled by the SendEmailDialog
-
   const handleMarkPaid = async (id: string) => {
     try {
       await markPaid.mutateAsync(id);
@@ -151,6 +232,10 @@ const Invoices = () => {
       toast({ title: "Failed to mark as paid", variant: "destructive" });
     }
   };
+
+  const handleIssue = async (invoice: Invoice) => { if (!window.confirm(`Issue ${invoice.invoiceNumber}? Once issued it becomes active and payments and due dates will be tracked.`)) return; try { await issueInvoice.mutateAsync(invoice.id); toast({ title: 'Invoice issued' }); } catch (error) { toast({ title: error instanceof Error ? error.message : 'Failed to issue invoice', variant: 'destructive' }); } };
+  const handlePrint = async (invoice: Invoice) => { try { const blob = await invoiceService.getPdfBlob(invoice.id); const url = URL.createObjectURL(blob); const opened = window.open(url, '_blank'); if (!opened) throw new Error('Allow pop-ups to print the invoice'); setTimeout(() => URL.revokeObjectURL(url), 60000); } catch (error) { toast({ title: error instanceof Error ? error.message : 'Failed to open PDF', variant: 'destructive' }); } };
+  const handleSend = async (invoice: Invoice) => { try { const blob = await invoiceService.getPdfBlob(invoice.id); const file = new File([blob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' }); if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) await navigator.share({ title: invoice.invoiceNumber, text: `Please find ${invoice.invoiceNumber} attached.`, files: [file] }); else { await invoiceService.downloadPdf(invoice.id); toast({ title: 'PDF downloaded — attach it to your message' }); } } catch (error) { if ((error as DOMException)?.name !== 'AbortError') toast({ title: 'Could not send invoice', variant: 'destructive' }); } };
 
   if (error) {
     return (
@@ -204,15 +289,19 @@ const Invoices = () => {
                   className="pl-9"
                 />
               </div>
-              <Button variant="outline">
-                <Filter className="w-4 h-4" />
-                Filters
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild><Button variant="outline"><Filter className="w-4 h-4" />Filters{activeFilterCount > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{activeFilterCount}</span>}</Button></PopoverTrigger>
+                <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)]">
+                  <div className="flex items-center justify-between"><h3 className="font-semibold">Filter documents</h3>{activeFilterCount > 0 && <Button variant="ghost" size="sm" onClick={clearFilters}>Clear all</Button>}</div>
+                  <div className="mt-4"><p className="mb-2 text-sm font-medium">Document Type</p><div className="grid gap-2">{documentFilterOptions.map(([id, label]) => <label key={id} className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={selectedDocumentTypes.includes(id)} onCheckedChange={() => toggleFilter(id, selectedDocumentTypes, setSelectedDocumentTypes)} /><span>{label}</span></label>)}</div></div>
+                  <div className="mt-5 border-t pt-4"><p className="mb-2 text-sm font-medium">Status</p><div className="grid gap-2">{statusFilterOptions.map(option => <label key={option.id} className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={selectedStatuses.includes(option.id)} onCheckedChange={() => toggleFilter(option.id, selectedStatuses, setSelectedStatuses)} /><span>{option.label}</span></label>)}</div></div>
+                </PopoverContent>
+              </Popover>
               <ExportDropdown
                 label="Export"
                 onExportCsv={() => {
-                  const exportData = invoices.map(inv => ({
-                    id: inv.id,
+                  const exportData = filteredInvoices.map(inv => ({
+                    invoiceNumber: inv.invoiceNumber,
                     clientName: inv.clientName,
                     clientEmail: inv.clientEmail,
                     total: formatCurrencyForExport(inv.total),
@@ -228,8 +317,8 @@ const Invoices = () => {
                   });
                 }}
                 onExportText={() => {
-                  const exportData = invoices.map(inv => ({
-                    id: inv.id,
+                  const exportData = filteredInvoices.map(inv => ({
+                    invoiceNumber: inv.invoiceNumber,
                     clientName: inv.clientName,
                     clientEmail: inv.clientEmail,
                     total: formatCurrencyForExport(inv.total),
@@ -275,12 +364,13 @@ const Invoices = () => {
           </div>
 
           {/* Invoices Table */}
+          {activeFilterCount > 0 && <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3"><p className="text-sm"><strong>Filtered:</strong> showing {filteredInvoices.length} matching document{filteredInvoices.length === 1 ? '' : 's'}</p><Button size="sm" variant="outline" onClick={clearFilters}>Clear filters</Button></div>}
           <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Invoice</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Document</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Client</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Email</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Amount</th>
@@ -318,11 +408,12 @@ const Invoices = () => {
                         className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors"
                       >
                         <td className="p-4">
-                          <span className="font-medium text-foreground">{invoice.id}</span>
+                          <span className="font-medium text-foreground block">{getDocumentTitle(invoice.documentType || 'standard_invoice')}</span>
+                          <span className="text-xs text-muted-foreground">{invoice.invoiceNumber}</span>
                         </td>
                         <td className="p-4 text-foreground">{invoice.clientName}</td>
                         <td className="p-4 text-muted-foreground hidden md:table-cell">{invoice.clientEmail}</td>
-                        <td className="p-4 font-medium text-foreground">{formatCurrency(invoice.total)}</td>
+                        <td className="p-4 font-medium text-foreground">{formatCurrency(invoice.balanceDue)}{invoice.amountPaid > 0 && <span className="block text-xs text-muted-foreground">of {formatCurrency(invoice.total)}</span>}</td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
                             {invoice.status}
@@ -338,7 +429,7 @@ const Invoices = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleOpenEditModal(invoice)}>
+                              <DropdownMenuItem onClick={() => setDetailsInvoiceId(invoice.id)}>
                                 <Eye className="w-4 h-4 mr-2" />
                                 View
                               </DropdownMenuItem>
@@ -350,15 +441,25 @@ const Invoices = () => {
                                 <Download className="w-4 h-4 mr-2" />
                                 Download PDF
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenEmailDialog(invoice)}>
-                                <Send className="w-4 h-4 mr-2" />
-                                Send Email
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenSmsDialog(invoice)}>
-                                <MessageSquare className="w-4 h-4 mr-2" />
-                                Send SMS Reminder
-                              </DropdownMenuItem>
-                              {invoice.status !== 'Paid' && (
+                              <DropdownMenuItem onClick={() => handlePrint(invoice)}><Printer className="w-4 h-4 mr-2" />Print</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSend(invoice)}><Send className="w-4 h-4 mr-2" />Send / Share</DropdownMenuItem>
+                              {invoice.status === 'Draft' && <DropdownMenuItem onClick={() => handleIssue(invoice)}><CheckCircle className="w-4 h-4 mr-2" />Finalize / Issue Invoice</DropdownMenuItem>}
+                              {invoice.status !== 'Draft' && <DropdownMenuItem onClick={() => setHistoryInvoiceId(invoice.id)}><CreditCard className="w-4 h-4 mr-2" />Payment History</DropdownMenuItem>}
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger><FileText className="w-4 h-4 mr-2" />Documents</DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  <DropdownMenuItem onClick={() => handleCreateDocument(invoice, 'credit_note')}>Credit Note</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleCreateDocument(invoice, 'debit_note')}>Debit Note</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleCreateDocument(invoice, 'receipt')}>Receipt</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              {invoice.status !== 'Paid' && invoice.status !== 'Draft' && (
+                                <DropdownMenuItem onClick={() => setPaymentInvoice(invoice)}>
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  Record Payment
+                                </DropdownMenuItem>
+                              )}
+                              {invoice.status !== 'Paid' && invoice.status !== 'Draft' && (
                                 <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
                                   <CheckCircle className="w-4 h-4 mr-2" />
                                   Mark as Paid
@@ -395,33 +496,34 @@ const Invoices = () => {
                 </Button>
               </div>
             </div>
+
           </div>
         </main>
       </div>
 
-      {/* SMS Dialog */}
-      {selectedInvoice && (
-        <SendSmsDialog
-          invoice={selectedInvoice}
-          open={smsDialogOpen}
-          onOpenChange={setSmsDialogOpen}
-        />
-      )}
-
-      {/* Email Dialog */}
-      {selectedInvoice && (
-        <SendEmailDialog
-          invoice={selectedInvoice}
-          open={emailDialogOpen}
-          onOpenChange={setEmailDialogOpen}
-        />
-      )}
-
       {/* Invoice Create/Edit Modal */}
       <InvoiceModal
         open={invoiceModalOpen}
-        onOpenChange={setInvoiceModalOpen}
+        onOpenChange={(open) => {
+          setInvoiceModalOpen(open);
+          if (!open) { setPendingSchedule(null); setSourceInvoice(null); }
+        }}
         invoice={selectedInvoice}
+        selection={startSelection}
+        schedule={pendingSchedule}
+        sourceInvoice={sourceInvoice}
+      />
+      <InvoiceStartWizard
+        open={startWizardOpen}
+        onOpenChange={(open) => {
+          setStartWizardOpen(open);
+          if (!open && !invoiceModalOpen) setPendingSchedule(null);
+        }}
+        onContinue={(selection) => {
+          setStartSelection(selection);
+          setStartWizardOpen(false);
+          setInvoiceModalOpen(true);
+        }}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -434,6 +536,9 @@ const Invoices = () => {
           isDeleting={deleteInvoice.isPending}
         />
       )}
+      <RecordPaymentDialog invoice={paymentInvoice ? { id: paymentInvoice.id, total: paymentInvoice.total, amountPaid: paymentInvoice.amountPaid, balanceDue: paymentInvoice.balanceDue, label: `${getDocumentTitle(paymentInvoice.documentType || 'standard_invoice')} ${paymentInvoice.invoiceNumber}` } : null} open={!!paymentInvoice} onOpenChange={(open) => !open && setPaymentInvoice(null)} />
+      <PaymentHistoryDialog invoice={historyInvoice} open={!!historyInvoice} onOpenChange={(open) => !open && setHistoryInvoiceId(null)} />
+      <InvoiceDetailsSheet invoice={detailsInvoice} open={!!detailsInvoice} onOpenChange={(open) => !open && setDetailsInvoiceId(null)} onEdit={(entry) => { setDetailsInvoiceId(null); handleOpenEditModal(entry); }} onManagePayments={(entry) => { setDetailsInvoiceId(null); setHistoryInvoiceId(entry.id); }} />
     </div>
   );
 };

@@ -30,12 +30,14 @@ class RecurringInvoiceController {
             ");
             $itemStmt->execute([$ri['id']]);
             $ri['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+            $ri['generated_invoices'] = $this->generatedInvoices((int) $ri['id'], $userId);
         }
         
         Response::json(['data' => $recurringInvoices]);
     }
     
-    public function getById($id) {
+    public function getById(array $params): void {
+        $id = (int) ($params['id'] ?? 0);
         $userId = Auth::id() ?? Auth::getUserId();
         
         $stmt = $this->db->prepare("
@@ -61,6 +63,7 @@ class RecurringInvoiceController {
         ");
         $itemStmt->execute([$id]);
         $recurringInvoice['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+        $recurringInvoice['generated_invoices'] = $this->generatedInvoices($id, $userId);
         
         Response::json(['data' => $recurringInvoice]);
     }
@@ -79,16 +82,22 @@ class RecurringInvoiceController {
             Response::error('At least one line item is required', 400);
             return;
         }
+
+        if (!$this->referencesBelongToUser($data, $userId)) {
+            return;
+        }
         
         try {
             $this->db->beginTransaction();
             
             // Calculate totals
             $subtotal = 0;
+            $tax = 0;
             foreach ($data['items'] as $item) {
-                $subtotal += $item['quantity'] * $item['unit_price'];
+                $itemSubtotal = (float) $item['quantity'] * (float) $item['unit_price'];
+                $subtotal += $itemSubtotal;
+                $tax += $itemSubtotal * min(100, max(0, (float) ($item['tax_rate'] ?? 0))) / 100;
             }
-            $tax = $subtotal * 0.15; // 15% VAT
             $total = $subtotal + $tax;
             
             // Calculate next invoice date
@@ -120,22 +129,23 @@ class RecurringInvoiceController {
             $recurringId = $this->db->lastInsertId();
             
             // Insert items
-            $itemStmt = $this->db->prepare("
-                INSERT INTO recurring_invoice_items 
-                (recurring_invoice_id, product_id, description, quantity, unit_price, total)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ");
+            $hasItemTaxRate = $this->columnExists('recurring_invoice_items', 'tax_rate');
+            $itemStmt = $this->db->prepare($hasItemTaxRate
+                ? "INSERT INTO recurring_invoice_items (recurring_invoice_id, product_id, description, quantity, unit_price, tax_rate, total) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                : "INSERT INTO recurring_invoice_items (recurring_invoice_id, product_id, description, quantity, unit_price, total) VALUES (?, ?, ?, ?, ?, ?)");
             
             foreach ($data['items'] as $item) {
                 $itemTotal = $item['quantity'] * $item['unit_price'];
-                $itemStmt->execute([
+                $values = [
                     $recurringId,
                     $item['product_id'] ?? null,
                     $item['description'],
                     $item['quantity'],
-                    $item['unit_price'],
-                    $itemTotal
-                ]);
+                    $item['unit_price']
+                ];
+                if ($hasItemTaxRate) $values[] = min(100, max(0, (float) ($item['tax_rate'] ?? 0)));
+                $values[] = $itemTotal;
+                $itemStmt->execute($values);
             }
             
             $this->db->commit();
@@ -151,7 +161,8 @@ class RecurringInvoiceController {
         }
     }
     
-    public function update($id) {
+    public function update(array $params): void {
+        $id = (int) ($params['id'] ?? 0);
         $userId = Auth::id() ?? Auth::getUserId();
         $request = new Request();
         $data = $request->all() ?? [];
@@ -163,6 +174,11 @@ class RecurringInvoiceController {
             Response::error('Recurring invoice not found', 404);
             return;
         }
+
+
+        if (!$this->referencesBelongToUser($data, $userId)) {
+            return;
+        }
         
         try {
             $this->db->beginTransaction();
@@ -170,10 +186,12 @@ class RecurringInvoiceController {
             // Calculate totals if items provided
             if (!empty($data['items'])) {
                 $subtotal = 0;
+                $tax = 0;
                 foreach ($data['items'] as $item) {
-                    $subtotal += $item['quantity'] * $item['unit_price'];
+                    $itemSubtotal = (float) $item['quantity'] * (float) $item['unit_price'];
+                    $subtotal += $itemSubtotal;
+                    $tax += $itemSubtotal * min(100, max(0, (float) ($item['tax_rate'] ?? 0))) / 100;
                 }
-                $tax = $subtotal * 0.15;
                 $total = $subtotal + $tax;
                 
                 $data['subtotal'] = $subtotal;
@@ -209,22 +227,23 @@ class RecurringInvoiceController {
                 $deleteStmt->execute([$id]);
                 
                 // Insert new items
-                $itemStmt = $this->db->prepare("
-                    INSERT INTO recurring_invoice_items 
-                    (recurring_invoice_id, product_id, description, quantity, unit_price, total)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ");
+                $hasItemTaxRate = $this->columnExists('recurring_invoice_items', 'tax_rate');
+                $itemStmt = $this->db->prepare($hasItemTaxRate
+                    ? "INSERT INTO recurring_invoice_items (recurring_invoice_id, product_id, description, quantity, unit_price, tax_rate, total) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    : "INSERT INTO recurring_invoice_items (recurring_invoice_id, product_id, description, quantity, unit_price, total) VALUES (?, ?, ?, ?, ?, ?)");
                 
                 foreach ($data['items'] as $item) {
                     $itemTotal = $item['quantity'] * $item['unit_price'];
-                    $itemStmt->execute([
+                    $values = [
                         $id,
                         $item['product_id'] ?? null,
                         $item['description'],
                         $item['quantity'],
-                        $item['unit_price'],
-                        $itemTotal
-                    ]);
+                        $item['unit_price']
+                    ];
+                    if ($hasItemTaxRate) $values[] = min(100, max(0, (float) ($item['tax_rate'] ?? 0)));
+                    $values[] = $itemTotal;
+                    $itemStmt->execute($values);
                 }
             }
             
@@ -238,7 +257,8 @@ class RecurringInvoiceController {
         }
     }
     
-    public function delete($id) {
+    public function delete(array $params): void {
+        $id = (int) ($params['id'] ?? 0);
         $userId = Auth::id() ?? Auth::getUserId();
         
         $stmt = $this->db->prepare("DELETE FROM recurring_invoices WHERE id = ? AND user_id = ?");
@@ -252,7 +272,8 @@ class RecurringInvoiceController {
         Response::json(['message' => 'Recurring invoice deleted successfully']);
     }
     
-    public function updateStatus($id) {
+    public function updateStatus(array $params): void {
+        $id = (int) ($params['id'] ?? 0);
         $userId = Auth::id() ?? Auth::getUserId();
         $request = new Request();
         $data = $request->all() ?? [];
@@ -283,7 +304,8 @@ class RecurringInvoiceController {
         Response::json(['message' => 'Status updated successfully']);
     }
     
-    public function generate($id) {
+    public function generate(array $params): void {
+        $id = (int) ($params['id'] ?? 0);
         $userId = Auth::id() ?? Auth::getUserId();
         
         // Get recurring invoice
@@ -301,91 +323,26 @@ class RecurringInvoiceController {
             return;
         }
         
-        // Get items
-        $itemStmt = $this->db->prepare("SELECT * FROM recurring_invoice_items WHERE recurring_invoice_id = ?");
-        $itemStmt->execute([$id]);
-        $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
-        
         try {
-            $this->db->beginTransaction();
-            
-            // Generate invoice number
-            $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
-            
-            // Create invoice
-            $invoiceStmt = $this->db->prepare("
-                INSERT INTO invoices 
-                (user_id, client_id, template_id, recurring_invoice_id, invoice_number, 
-                 date, due_date, subtotal, tax, total, notes, terms, status)
-                VALUES (?, ?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), ?, ?, ?, ?, ?, 'Pending')
-            ");
-            
-            $invoiceStmt->execute([
-                $userId,
-                $recurring['client_id'],
-                $recurring['template_id'],
-                $id,
-                $invoiceNumber,
-                $recurring['subtotal'],
-                $recurring['tax'],
-                $recurring['total'],
-                $recurring['notes'],
-                $recurring['terms']
-            ]);
-            
-            $invoiceId = $this->db->lastInsertId();
-            
-            // Create invoice items
-            $invoiceItemStmt = $this->db->prepare("
-                INSERT INTO invoice_items (invoice_id, product_id, description, quantity, unit_price, total)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ");
-            
-            foreach ($items as $item) {
-                $invoiceItemStmt->execute([
-                    $invoiceId,
-                    $item['product_id'],
-                    $item['description'],
-                    $item['quantity'],
-                    $item['unit_price'],
-                    $item['total']
-                ]);
-            }
-            
-            // Update recurring invoice
-            $nextDate = $this->calculateNextDate($recurring['next_invoice_date'], $recurring['frequency']);
-            
-            $updateStmt = $this->db->prepare("
-                UPDATE recurring_invoices 
-                SET next_invoice_date = ?, 
-                    last_generated_at = NOW(), 
-                    total_generated = total_generated + 1
-                WHERE id = ?
-            ");
-            $updateStmt->execute([$nextDate, $id]);
-            
-            // Check if completed
-            if ($recurring['end_date'] && $nextDate > $recurring['end_date']) {
-                $completeStmt = $this->db->prepare("UPDATE recurring_invoices SET status = 'completed' WHERE id = ?");
-                $completeStmt->execute([$id]);
-            }
-            
-            $this->db->commit();
+            $generated = $this->generateInvoice($recurring);
             
             Response::json([
                 'message' => 'Invoice generated successfully',
-                'invoice_id' => $invoiceId,
-                'invoice_number' => $invoiceNumber
+                'invoice_id' => $generated['invoice_id'],
+                'invoice_number' => $generated['invoice_number']
             ], 201);
             
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             Response::error('Failed to generate invoice: ' . $e->getMessage(), 500);
         }
     }
     
     private function calculateNextDate($currentDate, $frequency) {
         $date = new DateTime($currentDate);
+        $billingDay = (int) $date->format('d');
         
         switch ($frequency) {
             case 'weekly':
@@ -395,13 +352,18 @@ class RecurringInvoiceController {
                 $date->modify('+2 weeks');
                 break;
             case 'monthly':
-                $date->modify('+1 month');
+                $date->modify('first day of next month');
+                $date->setDate((int) $date->format('Y'), (int) $date->format('m'), min($billingDay, (int) $date->format('t')));
                 break;
             case 'quarterly':
-                $date->modify('+3 months');
+                $date->modify('first day of +3 months');
+                $date->setDate((int) $date->format('Y'), (int) $date->format('m'), min($billingDay, (int) $date->format('t')));
                 break;
             case 'yearly':
-                $date->modify('+1 year');
+                $month = (int) $date->format('m');
+                $year = (int) $date->format('Y') + 1;
+                $date->setDate($year, $month, 1);
+                $date->setDate($year, $month, min($billingDay, (int) $date->format('t')));
                 break;
         }
         
@@ -410,38 +372,164 @@ class RecurringInvoiceController {
     
     // Cron job to process due recurring invoices
     public function processDue() {
+        $result = $this->processDueSchedules(null);
+        Response::json([
+            'message' => 'Processed recurring invoices',
+            'generated' => $result['generated'],
+            'errors' => $result['errors']
+        ]);
+    }
+
+    private function processDueSchedules(?int $userId): array {
+        $userFilter = $userId !== null ? ' AND ri.user_id = ?' : '';
         $stmt = $this->db->prepare("
-            SELECT ri.*, u.email as user_email
+            SELECT ri.*
             FROM recurring_invoices ri
-            JOIN users u ON ri.user_id = u.id
             WHERE ri.status = 'active' 
             AND ri.next_invoice_date <= CURDATE()
             AND (ri.end_date IS NULL OR ri.next_invoice_date <= ri.end_date)
+            {$userFilter}
         ");
-        $stmt->execute();
+        $stmt->execute($userId !== null ? [$userId] : []);
         $dueInvoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $generated = 0;
         $errors = [];
         
         foreach ($dueInvoices as $recurring) {
-            try {
-                // Temporarily set user context
-                Auth::setUserId($recurring['user_id']);
-                $this->generate($recurring['id']);
-                $generated++;
-            } catch (Exception $e) {
-                $errors[] = [
-                    'id' => $recurring['id'],
-                    'error' => $e->getMessage()
-                ];
+            // Generate every missed billing period, with a defensive cap for
+            // malformed historical schedules.
+            for ($periods = 0; $periods < 120 && $recurring['next_invoice_date'] <= date('Y-m-d'); $periods++) {
+                if ($recurring['end_date'] && $recurring['next_invoice_date'] > $recurring['end_date']) break;
+                try {
+                    $scheduledDate = $recurring['next_invoice_date'];
+                    $this->generateInvoice($recurring, $scheduledDate);
+                    $generated++;
+                    $recurring['next_invoice_date'] = $this->calculateNextDate($scheduledDate, $recurring['frequency']);
+                } catch (Throwable $e) {
+                    $errors[] = ['id' => $recurring['id'], 'error' => $e->getMessage()];
+                    break;
+                }
             }
         }
-        
-        Response::json([
-            'message' => 'Processed recurring invoices',
-            'generated' => $generated,
-            'errors' => $errors
-        ]);
+        return ['generated' => $generated, 'errors' => $errors];
+    }
+
+    private function referencesBelongToUser(array $data, int $userId): bool {
+        $checks = [
+            ['field' => 'client_id', 'table' => 'clients', 'required' => true],
+            ['field' => 'template_id', 'table' => 'templates', 'required' => false],
+        ];
+
+        foreach ($checks as $check) {
+            $value = $data[$check['field']] ?? null;
+            if ($value === null || $value === '') {
+                if ($check['required'] && array_key_exists($check['field'], $data)) {
+                    Response::error('Referenced record not found', 404);
+                    return false;
+                }
+                continue;
+            }
+            $stmt = $this->db->prepare("SELECT id FROM {$check['table']} WHERE id = ? AND user_id = ?");
+            $stmt->execute([(int) $value, $userId]);
+            if (!$stmt->fetchColumn()) {
+                Response::error('Referenced record not found', 404);
+                return false;
+            }
+        }
+
+        foreach (($data['items'] ?? []) as $item) {
+            if (empty($item['product_id'])) {
+                continue;
+            }
+            $stmt = $this->db->prepare('SELECT id FROM products WHERE id = ? AND user_id = ?');
+            $stmt->execute([(int) $item['product_id'], $userId]);
+            if (!$stmt->fetchColumn()) {
+                Response::error('Referenced product not found', 404);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function columnExists(string $table, string $column): bool {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $stmt->execute([$table, $column]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function generatedInvoices(int $recurringId, int $userId): array {
+        if (!$this->columnExists('invoices', 'recurring_invoice_id')) return [];
+        $stmt = $this->db->prepare('SELECT id, invoice_number, date, due_date, status, total, metadata FROM invoices WHERE recurring_invoice_id = ? AND user_id = ? ORDER BY date DESC, id DESC');
+        $stmt->execute([$recurringId, $userId]);
+        $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row){$metadata=json_decode((string)($row['metadata']??''),true)?:[];$history=is_array($metadata['payment_history']??null)?$metadata['payment_history']:[];$paid=array_reduce($history,fn($sum,$payment)=>$sum+max(0,(float)($payment['amount']??0)),0.0);if($row['status']==='Paid'&&$paid<=0)$paid=(float)$row['total'];$row['payment_date']=$metadata['payment_date']??null;$row['payment_history']=$history;$row['amount_paid']=min((float)$row['total'],$paid);$row['balance_due']=max(0,(float)$row['total']-$row['amount_paid']);unset($row['metadata']);}
+        return $rows;
+    }
+
+    private function generateInvoice(array $recurring, ?string $scheduledDate = null): array {
+        $id = (int) $recurring['id'];
+        $itemStmt = $this->db->prepare('SELECT * FROM recurring_invoice_items WHERE recurring_invoice_id = ?');
+        $itemStmt->execute([$id]);
+        $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->db->beginTransaction();
+        try {
+            $invoiceNumber = 'INV-' . date('Ymd') . '-' . bin2hex(random_bytes(3));
+            $profile = User::query()->find((int) $recurring['user_id']);
+            $profileSnapshot = [
+                'business_name'=>$profile['business_name'] ?? $profile['name'] ?? '', 'business_address'=>$profile['address'] ?? '',
+                'business_email'=>$profile['email'] ?? '', 'business_phone'=>$profile['phone'] ?? '',
+                'business_tax_number'=>$profile['tax_number'] ?? '', 'business_registration_number'=>$profile['registration_number'] ?? '',
+                'business_website'=>$profile['website'] ?? '', 'invoice_logo_path'=>$profile['logo_path'] ?? '',
+                'bank_name'=>$profile['bank_name'] ?? '', 'account_name'=>$profile['account_name'] ?? '',
+                'account_number'=>$profile['account_number'] ?? '', 'branch_code'=>$profile['branch_code'] ?? '',
+                'swift_code'=>$profile['swift_code'] ?? '', 'payment_instructions'=>$profile['payment_instructions'] ?? '',
+            ];
+            $invoiceDate = $scheduledDate ?: date('Y-m-d');
+            $invoiceStmt = $this->db->prepare("
+                INSERT INTO invoices
+                (user_id, client_id, template_id, recurring_invoice_id, invoice_number,
+                 date, due_date, subtotal, tax, total, notes, terms, metadata, status)
+                VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(?, INTERVAL 30 DAY), ?, ?, ?, ?, ?, ?, 'Pending')
+            ");
+            $invoiceStmt->execute([
+                $recurring['user_id'], $recurring['client_id'], $recurring['template_id'], $id,
+                $invoiceNumber, $invoiceDate, $invoiceDate, $recurring['subtotal'], $recurring['tax'], $recurring['total'],
+                $recurring['notes'], $recurring['terms'], json_encode($profileSnapshot)
+            ]);
+            $invoiceId = (int) $this->db->lastInsertId();
+
+            $invoiceItemStmt = $this->db->prepare("
+                INSERT INTO invoice_items
+                (invoice_id, product_id, name, description, quantity, price, tax_rate, subtotal, tax, total)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            foreach ($items as $item) {
+                $subtotal = (float) $item['total'];
+                $taxRate = min(100, max(0, (float) ($item['tax_rate'] ?? 0)));
+                $tax = $subtotal * $taxRate / 100;
+                $invoiceItemStmt->execute([
+                    $invoiceId, $item['product_id'], $item['description'], $item['description'],
+                    $item['quantity'], $item['unit_price'], $taxRate, $subtotal, $tax, $subtotal + $tax
+                ]);
+            }
+
+            $nextDate = $this->calculateNextDate($recurring['next_invoice_date'], $recurring['frequency']);
+            $status = ($recurring['end_date'] && $nextDate > $recurring['end_date']) ? 'completed' : $recurring['status'];
+            $updateStmt = $this->db->prepare("
+                UPDATE recurring_invoices
+                SET next_invoice_date = ?, last_generated_at = NOW(), total_generated = total_generated + 1, status = ?
+                WHERE id = ?
+            ");
+            $updateStmt->execute([$nextDate, $status, $id]);
+            $this->db->commit();
+            return ['invoice_id' => $invoiceId, 'invoice_number' => $invoiceNumber];
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
     }
 }

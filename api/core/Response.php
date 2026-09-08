@@ -8,8 +8,8 @@ class Response {
         exit;
     }
     
-    public static function error(string $message, int $status = 400): void {
-        self::json(['error' => $message], $status);
+    public static function error(string $message, int $status = 400, array $details = []): void {
+        self::json(array_merge(['error' => $message, 'message' => $message], $details), $status);
     }
     
     public static function success($data = null, int $status = 200): void {

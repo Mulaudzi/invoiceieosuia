@@ -7,9 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, FileText, FileSpreadsheet, File } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { isFreePlan } from "@/lib/exportUtils";
+import { Download, FileText, FileSpreadsheet, File } from "@/lib/icons";
 
 interface ExportDropdownProps {
   onExportCsv?: () => void;
@@ -26,9 +24,6 @@ export const ExportDropdown = ({
   label = "Export",
   disabled = false,
 }: ExportDropdownProps) => {
-  const { user } = useAuth();
-  const isFree = isFreePlan(user);
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -62,20 +57,6 @@ export const ExportDropdown = ({
           </DropdownMenuItem>
         )}
         
-        {isFree && (
-          <>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1.5">
-              <p className="text-xs text-muted-foreground">
-                Free plan exports include IEOSUIA branding.{' '}
-                <a href="/dashboard/subscription" className="text-accent hover:underline">
-                  Upgrade
-                </a>{' '}
-                to remove.
-              </p>
-            </div>
-          </>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

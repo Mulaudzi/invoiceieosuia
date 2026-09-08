@@ -25,8 +25,8 @@ export const useCurrencies = () => {
   return useQuery({
     queryKey: ['currencies'],
     queryFn: async () => {
-      const response = await api.get<{ currencies: CurrencyInfo[] }>('/currencies');
-      return response.data.currencies;
+      const response = await api.get<{ data?: CurrencyInfo[] }>('/currencies');
+      return Array.isArray(response.data.data) ? response.data.data : [];
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });

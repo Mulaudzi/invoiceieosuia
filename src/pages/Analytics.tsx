@@ -9,8 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useExtendedStats, useMonthlyStats, useInvoiceStatus, useTopClients, usePaymentTimeline } from "@/hooks/useReports";
-import { useCredits } from "@/hooks/useCredits";
+import { useExtendedStats, useMonthlyStats, useInvoiceStatus, useTopClients } from "@/hooks/useReports";
 import {
   BarChart,
   Bar,
@@ -38,10 +37,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
-  Mail,
-  MessageSquare,
   Percent,
-} from "lucide-react";
+} from "@/lib/icons";
 import {
   Card,
   CardContent,
@@ -62,8 +59,6 @@ const Analytics = () => {
   const { data: monthlyStats = [], isLoading: monthlyLoading } = useMonthlyStats(12);
   const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(10);
-  const { data: paymentTimelineData, isLoading: timelineLoading } = usePaymentTimeline();
-  const { data: credits } = useCredits();
   const { exportToCsv, exportToText, exportToPdf, formatCurrencyForExport } = useExport();
 
   const formatCurrency = (amount: number) =>
@@ -92,22 +87,9 @@ const Analytics = () => {
   const avgInvoiceValue = totalInvoices > 0 ? (stats?.total_revenue || 0) / totalInvoices : 0;
   const revenueChange = stats?.revenue_change || 0;
 
-  // Payment timeline data from API with fallback colors
-  const timelineColors = [
-    'hsl(var(--success))',
-    'hsl(var(--accent))',
-    'hsl(var(--warning))',
-    'hsl(var(--destructive))',
-  ];
-  
-  const paymentTimeline = (paymentTimelineData?.timeline || []).map((item, index) => ({
-    ...item,
-    fill: timelineColors[index] || 'hsl(var(--muted-foreground))',
-  }));
-
   // Client revenue distribution from API
   const clientRevenue = topClients.slice(0, 5).map((c: any) => ({
-    name: c.name?.split(' ')[0] || 'Unknown',
+    name: c.client?.name || c.name || 'Unknown',
     revenue: c.total || 0,
   }));
 
@@ -340,12 +322,12 @@ const Analytics = () => {
           </Card>
 
           {/* Charts Grid */}
-          <div className="grid lg:grid-cols-3 gap-6 mb-6">
+          <div className="grid lg:grid-cols-2 gap-6 mb-6">
             {/* Invoice Status */}
             <Card>
               <CardHeader>
                 <CardTitle>Invoice Status</CardTitle>
-                <CardDescription>Distribution by payment status</CardDescription>
+                <CardDescription>Distribution by invoice status</CardDescription>
               </CardHeader>
               <CardContent>
                 {statusLoading ? (
@@ -379,49 +361,6 @@ const Analytics = () => {
                           <span className="text-xs text-muted-foreground">{status.status}: {status.count}</span>
                         </div>
                       ))}
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Payment Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Timeline</CardTitle>
-                <CardDescription>How quickly clients pay</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {timelineLoading ? (
-                  <Skeleton className="h-48 w-full" />
-                ) : (
-                  <>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={paymentTimeline} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis type="number" stroke="hsl(var(--muted-foreground))" unit="%" />
-                          <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" width={80} tick={{ fontSize: 11 }} />
-                          <Tooltip
-                            formatter={(value: number) => [`${value}%`, 'Invoices']}
-                            contentStyle={{
-                              background: "hsl(var(--card))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px",
-                            }}
-                          />
-                          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                            {paymentTimeline.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="mt-4 p-3 bg-success/10 rounded-lg">
-                      <p className="text-sm text-success font-medium">
-                        {paymentTimelineData?.paid_within_14_days || 0}% paid within 14 days
-                      </p>
                     </div>
                   </>
                 )}
@@ -463,53 +402,6 @@ const Analytics = () => {
             </Card>
           </div>
 
-          {/* Credit Usage */}
-          {credits && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Usage</CardTitle>
-                <CardDescription>Email and SMS credits used this billing period</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-5 h-5 text-info" />
-                        <span className="font-medium text-foreground">Email Credits</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {credits.credits.email.used} / {credits.credits.email.monthly_limit} used
-                      </span>
-                    </div>
-                    <div className="h-3 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-info rounded-full transition-all"
-                        style={{ width: `${(credits.credits.email.used / credits.credits.email.monthly_limit) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-accent" />
-                        <span className="font-medium text-foreground">SMS Credits</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {credits.credits.sms.used} / {credits.credits.sms.monthly_limit} used
-                      </span>
-                    </div>
-                    <div className="h-3 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-accent rounded-full transition-all"
-                        style={{ width: `${credits.credits.sms.monthly_limit > 0 ? (credits.credits.sms.used / credits.credits.sms.monthly_limit) * 100 : 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </main>
       </div>
     </div>

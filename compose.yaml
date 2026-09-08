@@ -1,0 +1,68 @@
+name: ieosuia-invoices-local
+
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: ejetffbz_invoices
+      MARIADB_USER: ieosuia_local
+      MARIADB_PASSWORD: local_invoice_password
+      MARIADB_ROOT_PASSWORD: local_root_password
+    ports:
+      - "127.0.0.1:3308:3306"
+    volumes:
+      - invoice-db-data:/var/lib/mysql
+      - ./.private/database/ejetffbz_invoices.sql:/docker-entrypoint-initdb.d/01-production-copy.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8026:8025"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8000:8080"
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html
+      SSL_MODE: "off"
+    volumes:
+      - ./api:/var/www/html
+      - ./.private/environments/docker-api.env:/var/www/html/.env:ro
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1:8080/api/health') === false ? 1 : 0);\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: /api
+      VITE_API_PROXY_TARGET: http://api:8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+volumes:
+  invoice-db-data:

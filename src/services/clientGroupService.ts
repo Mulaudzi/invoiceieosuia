@@ -22,8 +22,8 @@ export interface CreateClientGroupData {
 
 export const clientGroupService = {
   getAll: async (): Promise<ClientGroup[]> => {
-    const response = await api.get('/client-groups');
-    return response.data;
+    const response = await api.get<{ data?: ClientGroup[] }>('/client-groups');
+    return Array.isArray(response.data.data) ? response.data.data : [];
   },
 
   getById: async (id: number): Promise<ClientGroup> => {

@@ -11,7 +11,7 @@ import {
 import { useDeleteClientGroup } from "@/hooks/useClientGroups";
 import { useToast } from "@/hooks/use-toast";
 import { ClientGroup } from "@/services/clientGroupService";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons";
 
 interface DeleteClientGroupDialogProps {
   open: boolean;

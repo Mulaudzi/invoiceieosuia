@@ -1,17 +1,20 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, PlanType } from '@/lib/types';
+import { User } from '@/lib/types';
 import { authService, getToken, removeToken, setToken } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.debug(...args);
+};
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, recaptchaToken?: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, plan?: PlanType, recaptchaToken?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
-  setUserFromOAuth: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,17 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Skip if already initialized or user was set by login/OAuth
     if (authInitialized) {
-      console.log('AuthContext: Already initialized, skipping initAuth');
+      debugLog('AuthContext: Already initialized, skipping initAuth');
       return;
     }
 
     let isMounted = true;
 
     const initAuth = async () => {
+      const centralToken = new URLSearchParams(window.location.hash.slice(1)).get('ieosuia_token');
+      if (centralToken) {
+        setToken(centralToken);
+        localStorage.removeItem('auth_user');
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      }
       const token = getToken();
       
       if (!token) {
-        console.log('AuthContext: No token found');
+        debugLog('AuthContext: No token found');
         if (isMounted) {
           setIsLoading(false);
           setAuthInitialized(true);
@@ -73,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // If we already have a user (from login or cache), use it immediately
       if (user) {
-        console.log('AuthContext: User already set:', user.email);
+        debugLog('AuthContext: User already set');
         if (isMounted) {
           setIsLoading(false);
           setAuthInitialized(true);
@@ -82,14 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Background validation - don't block UI, with timeout
         const validateInBackground = async () => {
           try {
-            console.log('AuthContext: Background validating user...');
+            debugLog('AuthContext: Background validating user...');
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
             
             const currentUser = await authService.getCurrentUser();
             clearTimeout(timeoutId);
             
-            console.log('AuthContext: User validated:', currentUser?.email);
+            debugLog('AuthContext: User validated');
             if (isMounted) {
               setUser(currentUser);
               localStorage.setItem('auth_user', JSON.stringify(currentUser));
@@ -98,12 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('AuthContext: Background validation failed:', error);
             // Silently fail in background - don't clear auth on timeout
             if (error instanceof Error && error.message.includes('timeout')) {
-              console.log('AuthContext: Background validation timeout - keeping cached user');
+              debugLog('AuthContext: Background validation timeout - keeping cached user');
               return;
             }
             // Only clear on actual auth errors (401), not on timeout
             if (isMounted && error instanceof Error && !error.message.includes('timeout')) {
-              console.log('AuthContext: Clearing auth state due to validation failure');
+              debugLog('AuthContext: Clearing auth state due to validation failure');
               removeToken();
               localStorage.removeItem('auth_user');
               setUser(null);
@@ -117,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // No cached user but have token - must fetch with timeout
       try {
-        console.log('AuthContext: Fetching current user from API...');
+        debugLog('AuthContext: Fetching current user from API...');
         
         // Create a timeout promise
         const timeoutPromise = new Promise((_, reject) => 
@@ -127,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userFetch = authService.getCurrentUser();
         const currentUser = await Promise.race([userFetch, timeoutPromise]) as any;
         
-        console.log('AuthContext: User fetched successfully:', currentUser?.email);
+        debugLog('AuthContext: User fetched successfully');
         if (isMounted) {
           setUser(currentUser);
           localStorage.setItem('auth_user', JSON.stringify(currentUser));
@@ -136,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('AuthContext: Failed to fetch user:', error);
         
         if (error instanceof Error && error.message.includes('timeout')) {
-          console.log('AuthContext: Timeout fetching user - showing error');
+          debugLog('AuthContext: Timeout fetching user - showing error');
           if (isMounted) {
             toast({
               title: "Connection slow",
@@ -146,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
         // Clear auth state on error
-        console.log('AuthContext: Clearing auth state');
+        debugLog('AuthContext: Clearing auth state');
         if (isMounted) {
           removeToken();
           localStorage.removeItem('auth_user');
@@ -167,11 +176,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [toast, authInitialized]);
 
-  const login = async (email: string, password: string, recaptchaToken?: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('AuthContext: Starting login for:', email);
-      const { user: loggedInUser, token } = await authService.login(email, password, recaptchaToken);
-      console.log('AuthContext: Login successful, setting user:', loggedInUser?.email);
+      debugLog('AuthContext: Starting login');
+      const { user: loggedInUser, token } = await authService.login(email, password);
+      debugLog('AuthContext: Login successful, setting user');
       // Set user in state AND localStorage for persistence
       setUser(loggedInUser);
       localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
@@ -189,12 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (
     name: string,
     email: string,
-    password: string,
-    plan: PlanType = 'free',
-    recaptchaToken?: string
+    password: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { user: newUser } = await authService.register(name, email, password, plan, recaptchaToken);
+      const { user: newUser } = await authService.register(name, email, password);
       setUser(newUser);
       return { success: true };
     } catch (error) {
@@ -225,14 +232,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async (): Promise<void> => {
     const token = getToken();
     if (!token) {
-      console.log('No token found, cannot refresh user');
+      debugLog('No token found, cannot refresh user');
       return;
     }
     
     try {
-      console.log('Refreshing user data...');
+      debugLog('Refreshing user data...');
       const currentUser = await authService.getCurrentUser();
-      console.log('User refreshed:', currentUser?.email);
+      debugLog('User refreshed');
       setUser(currentUser);
     } catch (error) {
       console.error('Failed to refresh user:', error);
@@ -242,17 +249,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Direct setter for OAuth flow (avoids race conditions)
-  const setUserFromOAuth = useCallback((oauthUser: User): void => {
-    console.log('Setting user from OAuth:', oauthUser?.email);
-    setUser(oauthUser);
-    localStorage.setItem('auth_user', JSON.stringify(oauthUser));
-    setAuthInitialized(true);
-    setIsLoading(false);
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser, refreshUser, setUserFromOAuth }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

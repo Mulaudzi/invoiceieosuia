@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Save, X } from "lucide-react";
+import { FileText, Save, X } from "@/lib/icons";
 
 interface TemplateEditorProps {
   template: Template | null;

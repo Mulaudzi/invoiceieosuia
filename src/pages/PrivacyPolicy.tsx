@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import PageHeader from "@/components/landing/PageHeader";
-import { Shield } from "lucide-react";
+import { Shield } from "@/lib/icons";
 
 const PrivacyPolicy = () => {
   return (
@@ -18,6 +18,7 @@ const PrivacyPolicy = () => {
         
         <div className="container mx-auto px-4 max-w-4xl py-16">
           <div className="prose prose-gray dark:prose-invert max-w-none space-y-8">
+            <section><h2 className="text-2xl font-semibold text-foreground mb-4">Responsible party</h2><p className="text-muted-foreground leading-relaxed">IEOSUIA, 26 Rock Alder, Naturena, Johannesburg, 2095, South Africa.</p></section>
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
               <p className="text-muted-foreground leading-relaxed">
@@ -31,7 +32,6 @@ const PrivacyPolicy = () => {
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li>Name and email address</li>
                 <li>Business information (company name, address, VAT number)</li>
-                <li>Payment and billing information</li>
                 <li>Phone number</li>
                 <li>Banking details for invoice purposes</li>
               </ul>
@@ -49,8 +49,8 @@ const PrivacyPolicy = () => {
               <h2 className="text-2xl font-semibold mb-4">3. How We Use Your Information</h2>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li>To provide and maintain our service</li>
-                <li>To process invoices and payments</li>
-                <li>To send transactional emails and notifications</li>
+                <li>To create, download, and manage invoices</li>
+                <li>To send account verification, password recovery, and service administration emails</li>
                 <li>To improve our platform and user experience</li>
                 <li>To comply with legal obligations including POPIA and tax regulations</li>
                 <li>To prevent fraud and abuse</li>
@@ -79,7 +79,6 @@ const PrivacyPolicy = () => {
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2 mt-2">
                 <li>Service providers who assist in our operations (under strict data protection agreements)</li>
-                <li>Payment processors for transaction handling</li>
                 <li>Legal authorities when required by South African law</li>
               </ul>
             </section>

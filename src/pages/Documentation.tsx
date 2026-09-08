@@ -12,10 +12,9 @@ import {
   Zap,
   Users,
   CreditCard,
-  Bell,
   BarChart3,
   Settings
-} from "lucide-react";
+} from "@/lib/icons";
 
 const Documentation = () => {
   const gettingStartedGuides = [
@@ -28,7 +27,7 @@ const Documentation = () => {
     {
       icon: FileText,
       title: "Creating Your First Invoice",
-      description: "Step-by-step guide to creating and sending invoices",
+      description: "Step-by-step guide to creating and downloading invoices",
       link: "/support"
     },
     {
@@ -39,17 +38,17 @@ const Documentation = () => {
     },
     {
       icon: CreditCard,
-      title: "Payment Tracking",
-      description: "Track payments and manage your cash flow",
+      title: "Invoice Status Tracking",
+      description: "Track draft, sent, overdue, and completed invoices",
       link: "/support"
     }
   ];
 
   const featureGuides = [
     {
-      icon: Bell,
-      title: "Reminders & Notifications",
-      description: "Set up automated email and SMS reminders"
+      icon: FileText,
+      title: "PDF Downloads & Exports",
+      description: "Download invoice PDFs and export your business data"
     },
     {
       icon: BarChart3,

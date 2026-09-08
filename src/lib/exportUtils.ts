@@ -5,7 +5,7 @@ const BRANDING_URL = 'https://ieosuia.com';
 
 // Check if user is on a free plan
 export const isFreePlan = (user: User | null): boolean => {
-  return !user?.plan || user.plan === 'free';
+  return false;
 };
 
 // Convert data to CSV string with optional branding
@@ -124,7 +124,6 @@ export const generateTextReport = (
     lines.push('');
     lines.push(divider);
     lines.push(BRANDING_TEXT);
-    lines.push('Upgrade to a paid plan to remove branding');
     lines.push(divider);
   }
 
@@ -146,7 +145,7 @@ export const downloadTextFile = (content: string, filename: string): void => {
 
 // Invoice export columns
 export const invoiceColumns = [
-  { key: 'id', label: 'Invoice #' },
+  { key: 'invoiceNumber', label: 'Document Number' },
   { key: 'clientName', label: 'Client' },
   { key: 'clientEmail', label: 'Email' },
   { key: 'total', label: 'Amount' },

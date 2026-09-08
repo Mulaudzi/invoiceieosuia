@@ -25,6 +25,8 @@ export const useCreateInvoice = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['recurring-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
   });
 };
@@ -39,6 +41,7 @@ export const useUpdateInvoice = () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoices', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
   });
 };
@@ -61,18 +64,6 @@ export const useDownloadInvoicePdf = () => {
   });
 };
 
-export const useSendInvoice = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ id, message }: { id: string | number; message?: string }) => 
-      invoiceService.send(id, message),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    },
-  });
-};
-
 export const useMarkInvoicePaid = () => {
   const queryClient = useQueryClient();
   
@@ -81,7 +72,36 @@ export const useMarkInvoicePaid = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['recurring-invoices'] });
     },
   });
 };
+
+export const useRecordInvoicePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, amount, paymentDate, reference, requestId }: { id: string | number; amount: number; paymentDate: string; reference?: string; requestId?: string }) =>
+      invoiceService.recordPayment(id, { amount, payment_date: paymentDate, reference, request_id: requestId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['recurring-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    },
+  });
+};
+
+const useInvoiceLedgerMutation = <T,>(mutationFn: (variables: T) => Promise<Invoice>) => {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn, onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['reports'] });
+    queryClient.invalidateQueries({ queryKey: ['recurring-invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+  }});
+};
+
+export const useIssueInvoice = () => useInvoiceLedgerMutation((id: string | number) => invoiceService.issue(id));
+export const useUpdateInvoicePayment = () => useInvoiceLedgerMutation(({ id, paymentId, amount, paymentDate, reference }: { id: string | number; paymentId: string; amount: number; paymentDate: string; reference?: string }) => invoiceService.updatePayment(id, paymentId, { amount, payment_date: paymentDate, reference }));
+export const useVoidInvoicePayment = () => useInvoiceLedgerMutation(({ id, paymentId }: { id: string | number; paymentId: string }) => invoiceService.voidPayment(id, paymentId));

@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { contactService } from "@/services/api";
-import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { z } from "zod";
 import { 
   Mail, 
@@ -20,7 +19,7 @@ import {
   Send,
   Video,
   ArrowRight
-} from "lucide-react";
+} from "@/lib/icons";
 
 // Validation schema for support form
 const supportFormSchema = z.object({
@@ -34,7 +33,6 @@ type SupportFormData = z.infer<typeof supportFormSchema>;
 
 const Support = () => {
   const { toast } = useToast();
-  const { executeRecaptcha, isLoaded: recaptchaLoaded } = useRecaptcha();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SupportFormData, string>>>({});
   
@@ -128,19 +126,13 @@ const Support = () => {
     setIsSubmitting(true);
 
     try {
-      // Execute reCAPTCHA
-      let recaptchaToken = "";
-      if (recaptchaLoaded) {
-        recaptchaToken = await executeRecaptcha("contact_support");
-      }
-
       // Call the contact API with "support" purpose
       await contactService.submit({
         name: formData.name,
         email: formData.email,
         message: `Subject: ${formData.subject}\n\nMessage: ${formData.message}`,
         purpose: "support",
-        recaptcha_token: recaptchaToken,
+        origin: window.location.origin,
       });
 
       toast({

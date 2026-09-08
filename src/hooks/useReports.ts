@@ -56,17 +56,3 @@ export const useRecentInvoices = (limit?: number) => {
     queryFn: () => reportService.getRecentInvoices(limit),
   });
 };
-
-export const usePaymentTimeline = () => {
-  return useQuery({
-    queryKey: ['reports', 'payment-timeline'],
-    queryFn: reportService.getPaymentTimeline,
-  });
-};
-
-export const useBillingHistory = () => {
-  return useQuery({
-    queryKey: ['reports', 'billing-history'],
-    queryFn: reportService.getBillingHistory,
-  });
-};

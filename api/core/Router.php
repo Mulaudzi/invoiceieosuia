@@ -31,6 +31,7 @@ class Router {
         
         $this->routes[] = [
             'method' => $method,
+            'path' => $path,
             'pattern' => $pattern,
             'handler' => $handler,
             'middleware' => $middleware
@@ -45,7 +46,15 @@ class Router {
         // Remove /api prefix if present
         $uri = preg_replace('#^/api#', '', $uri) ?: '/';
         
-        foreach ($this->routes as $route) {
+        $routes = $this->routes;
+        // Static routes must win over parameterized routes regardless of registration order.
+        usort($routes, static function (array $a, array $b): int {
+            $aParams = substr_count($a['path'], '{');
+            $bParams = substr_count($b['path'], '{');
+            return $aParams <=> $bParams ?: strlen($b['path']) <=> strlen($a['path']);
+        });
+
+        foreach ($routes as $route) {
             if ($route['method'] !== $method) {
                 continue;
             }

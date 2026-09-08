@@ -1,4 +1,4 @@
-import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { LucideIcon, TrendingUp, TrendingDown } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
@@ -7,11 +7,12 @@ interface StatCardProps {
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
+  onClick?: () => void;
 }
 
-const StatCard = ({ title, value, change, changeType = "neutral", icon: Icon }: StatCardProps) => {
+const StatCard = ({ title, value, change, changeType = "neutral", icon: Icon, onClick }: StatCardProps) => {
   return (
-    <div className="bg-card rounded-xl border border-border p-6 shadow-soft card-hover">
+    <div role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined} onClick={onClick} onKeyDown={(event) => { if (onClick && (event.key === "Enter" || event.key === " ")) onClick(); }} className={cn("bg-card rounded-xl border border-border p-6 shadow-soft card-hover", onClick && "cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring")}>
       <div className="flex items-start justify-between mb-4">
         <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
           <Icon className="w-6 h-6 text-accent" />

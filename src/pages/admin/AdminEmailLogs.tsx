@@ -14,13 +14,13 @@ import {
   Send,
   Download,
   FileText,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAdminToken, removeAdminToken } from "./AdminLogin";
+import { getAdminToken, removeAdminToken } from "@/services/adminAuth";
 import api from "@/services/api";
 import {
   DropdownMenu,
@@ -69,7 +69,7 @@ const AdminEmailLogs = () => {
   const fetchLogs = async (page: number = 1) => {
     const token = getAdminToken();
     if (!token) {
-      navigate('/admin/login');
+      navigate('/guymhan/login');
       return;
     }
 
@@ -81,7 +81,7 @@ const AdminEmailLogs = () => {
       if (typeFilter !== 'all') params.append('type', typeFilter);
       if (searchTerm) params.append('search', searchTerm);
 
-      const response = await api.get<EmailLogsResponse>(`/admin/email-logs?${params.toString()}`, {
+      const response = await api.get<EmailLogsResponse>(`/guymhan/email-logs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -92,7 +92,7 @@ const AdminEmailLogs = () => {
     } catch (error: any) {
       if (error.response?.status === 401) {
         removeAdminToken();
-        navigate('/admin/login');
+        navigate('/guymhan/login');
       } else {
         toast({
           title: "Error",
@@ -117,12 +117,12 @@ const AdminEmailLogs = () => {
   const handleLogout = async () => {
     const token = getAdminToken();
     try {
-      await api.post('/admin/logout', { admin_token: token });
+      await api.post('/guymhan/logout', { admin_token: token });
     } catch (e) {
       // Ignore errors
     }
     removeAdminToken();
-    navigate('/admin/login');
+    navigate('/guymhan/login');
   };
 
   const formatDate = (dateString: string | null) => {
@@ -150,7 +150,7 @@ const AdminEmailLogs = () => {
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
 
-      const response = await api.get(`/admin/export/email-logs?${params.toString()}`, {
+      const response = await api.get(`/guymhan/export/email-logs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -223,7 +223,7 @@ const AdminEmailLogs = () => {
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
 
-      const response = await api.get(`/admin/export/email-logs?${params.toString()}`, {
+      const response = await api.get(`/guymhan/export/email-logs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

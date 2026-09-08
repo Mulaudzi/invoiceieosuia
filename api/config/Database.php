@@ -8,13 +8,18 @@ class Database {
     
     public static function getConnection(): PDO {
         if (self::$connection === null) {
-            $host = $_ENV['DB_HOST'] ?? 'localhost';
-            $db = $_ENV['DB_DATABASE'] ?? 'ejetffbz_invoices';
-            $user = $_ENV['DB_USERNAME'] ?? 'ejetffbz_ieosuia';
-            $pass = $_ENV['DB_PASSWORD'] ?? 'I Am Ieosuia';
+            $host = $_ENV['DB_HOST'] ?? '';
+            $port = $_ENV['DB_PORT'] ?? '3306';
+            $db = $_ENV['DB_DATABASE'] ?? '';
+            $user = $_ENV['DB_USERNAME'] ?? '';
+            $pass = $_ENV['DB_PASSWORD'] ?? '';
             $charset = 'utf8mb4';
+
+            if ($host === '' || $db === '' || $user === '' || $pass === '') {
+                throw new RuntimeException('Database configuration is incomplete');
+            }
             
-            $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+            $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
             
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

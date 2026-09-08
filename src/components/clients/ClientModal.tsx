@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateClient, useUpdateClient } from "@/hooks/useClients";
 import { Client } from "@/lib/types";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons";
 
 const clientSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),

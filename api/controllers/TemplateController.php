@@ -30,19 +30,6 @@ class TemplateController {
             'name' => 'required|max:255',
         ]);
         
-        $user = Auth::user();
-        $templateLimit = match ($user['plan'] ?? 'free') {
-            'free' => 3,
-            'pro' => 10,
-            'business' => 999,
-            default => 3,
-        };
-        
-        $count = Template::query()->where('user_id', Auth::id())->count();
-        if ($count >= $templateLimit) {
-            Response::error("Template limit reached for your plan ($templateLimit)", 403);
-        }
-        
         $templateModel = new Template();
         
         // Handle default flag
@@ -161,12 +148,7 @@ class TemplateController {
     }
     
     public function seedDefaultTemplates(): void {
-        // Admin only - check if user is admin
-        if (Auth::role() !== 'admin') {
-            Response::error('Unauthorized. Admin access required.', 403);
-            return;
-        }
-        
+        // AdminAuthMiddleware protects this endpoint.
         require_once __DIR__ . '/../seeders/TemplateSeeder.php';
         
         $results = TemplateSeeder::seed();

@@ -327,6 +327,11 @@ function AddPage($orientation='', $size='', $rotation=0)
 		$this->_out($fc);
 	$this->TextColor = $tc;
 	$this->ColorFlag = $cf;
+	// Render the document header for every new page. This callback is part of
+	// standard FPDF behavior and is required for invoice logos and headings.
+	$this->InHeader = true;
+	$this->Header();
+	$this->InHeader = false;
 }
 
 function Header()

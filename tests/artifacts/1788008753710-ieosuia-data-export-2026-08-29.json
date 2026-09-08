@@ -1,0 +1,116 @@
+{
+  "user": {
+    "id": "4",
+    "name": "Codex Local Tester Browser QA",
+    "email": "codex.local.test@ieosuia.com",
+    "plan": "free",
+    "businessName": "IEOSUIA Local QA",
+    "phone": "+27 12 345 6789",
+    "address": "Browser QA address",
+    "taxNumber": "",
+    "avatar": null,
+    "logoPath": null,
+    "logo_path": null,
+    "emailVerified": true,
+    "emailVerifiedAt": "2026-08-29 13:03:48",
+    "createdAt": "2026-08-29 10:26:53"
+  },
+  "clients": [
+    {
+      "id": 28,
+      "user_id": 4,
+      "name": "Browser QA Client 1788008753710 Edited",
+      "email": "browser.qa.1788008753710@example.com",
+      "phone": "+27 11 555 0101",
+      "company": "Browser QA Company Edited",
+      "address": "",
+      "tax_number": null,
+      "status": "Active",
+      "notes": null,
+      "created_at": "2026-08-29 13:06:03",
+      "updated_at": "2026-08-29 13:06:05",
+      "currency": "ZAR",
+      "plan": "free",
+      "group_id": null
+    }
+  ],
+  "products": [
+    {
+      "id": 24,
+      "user_id": 4,
+      "name": "Browser QA Product 1788008753710 Edited",
+      "description": "Created by interactive browser QA",
+      "price": "300.25",
+      "tax_rate": "12.00",
+      "category": "Browser QA",
+      "unit": null,
+      "status": "Active",
+      "created_at": "2026-08-29 13:06:06",
+      "updated_at": "2026-08-29 13:06:07"
+    }
+  ],
+  "invoices": [
+    {
+      "id": 18,
+      "user_id": 4,
+      "client_id": 28,
+      "template_id": null,
+      "category": "general",
+      "document_type": "standard_invoice",
+      "template_slug": "general-classic",
+      "template_version": 1,
+      "metadata": "[]",
+      "template_snapshot": "{\"slug\":\"general-classic\",\"version\":1}",
+      "recurring_invoice_id": null,
+      "invoice_number": "INV-2026-0001",
+      "date": "2026-08-29",
+      "due_date": "2026-09-28",
+      "subtotal": "300.25",
+      "tax": "36.03",
+      "total": "336.28",
+      "status": "Paid",
+      "notes": "Interactive browser QA invoice edited",
+      "terms": null,
+      "created_at": "2026-08-29 13:06:10",
+      "updated_at": "2026-08-29 13:06:12",
+      "currency": "ZAR",
+      "exchange_rate": "1.000000",
+      "base_total": null,
+      "items": [
+        {
+          "id": 20,
+          "invoice_id": 18,
+          "product_id": 24,
+          "sku": "",
+          "unit": "",
+          "group_name": "",
+          "name": "Browser QA Product 1788008753710 Edited",
+          "description": "",
+          "quantity": 1,
+          "price": "300.25",
+          "discount_rate": "0.00",
+          "metadata": null,
+          "tax_rate": "12.00",
+          "subtotal": "300.25",
+          "tax": "36.03",
+          "total": "336.28",
+          "created_at": "2026-08-29 13:06:11",
+          "updated_at": "2026-08-29 13:06:11"
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": 22,
+      "user_id": 4,
+      "name": "Browser QA Template 1788008753710 Edited",
+      "description": "Browser CRUD template edited",
+      "is_default": 1,
+      "styles": "{\"primaryColor\":\"#2563eb\",\"accentColor\":\"#10b981\",\"fontFamily\":\"inter\",\"headerStyle\":\"left\",\"showLogo\":true,\"showBorder\":true,\"showWatermark\":false,\"tableStyle\":\"striped\"}",
+      "created_at": "2026-08-29 13:06:15",
+      "updated_at": "2026-08-29 13:06:15"
+    }
+  ],
+  "exported_at": "2026-08-29T13:06:25+00:00"
+}

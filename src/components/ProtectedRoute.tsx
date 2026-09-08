@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getToken, removeToken } from '@/services/api';
+import { getToken } from '@/services/api';
 import { useEffect, useState, useRef } from 'react';
 
 interface ProtectedRouteProps {
@@ -17,18 +17,6 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const hasToken = !!getToken();
-
-  // Debug logging
-  useEffect(() => {
-    console.log('ProtectedRoute state:', { 
-      isLoading, 
-      hasToken, 
-      hasUser: !!user, 
-      userEmail: user?.email,
-      loadingTimedOut,
-      path: location.pathname 
-    });
-  }, [isLoading, hasToken, user, loadingTimedOut, location.pathname]);
 
   // Safety timeout - only when actually loading without a user
   useEffect(() => {
@@ -47,13 +35,8 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
     // Only set timeout if we're in a loading state AND have a token
     // This prevents timeout on fresh page loads without auth
     if (isLoading && hasToken && !user) {
-      console.log('ProtectedRoute: Starting loading timeout...');
       timeoutRef.current = setTimeout(() => {
-        console.log('ProtectedRoute: Loading timed out after', MAX_LOADING_TIME, 'ms');
         setLoadingTimedOut(true);
-        // Clear token on timeout to prevent infinite loop
-        removeToken();
-        localStorage.removeItem('auth_user');
       }, MAX_LOADING_TIME);
     }
 
@@ -74,15 +57,23 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
     return <>{children}</>;
   }
 
-  // Timed out without user - redirect to login
+  // A timeout is a connectivity problem, not proof that the session is invalid.
   if (loadingTimedOut) {
-    console.log('ProtectedRoute: Timed out, redirecting to login');
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-semibold">We could not verify your session</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Check your connection and try again. Your session has not been cleared.</p>
+          <button className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={() => window.location.reload()}>
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // No token and not loading - redirect to login
   if (!hasToken && !isLoading) {
-    console.log('ProtectedRoute: No token, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

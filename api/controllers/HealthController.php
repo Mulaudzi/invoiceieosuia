@@ -22,14 +22,14 @@ class HealthController {
             $status['status'] = 'error';
             $status['checks']['database'] = [
                 'status' => 'error',
-                'message' => 'Database connection failed: ' . $e->getMessage()
+                'message' => 'Database connection failed'
             ];
         }
         
         // Check if required tables exist
         try {
             $db = Database::getConnection();
-            $tables = ['users', 'clients', 'products', 'invoices', 'payments'];
+            $tables = ['users', 'clients', 'products', 'invoices'];
             $missingTables = [];
             
             foreach ($tables as $table) {
@@ -54,7 +54,7 @@ class HealthController {
         } catch (Exception $e) {
             $status['checks']['tables'] = [
                 'status' => 'error',
-                'message' => 'Could not check tables: ' . $e->getMessage()
+                'message' => 'Could not check required tables'
             ];
         }
         
@@ -116,7 +116,11 @@ class HealthController {
     }
     
     public function debug(): void {
-        // More detailed debug info (should be disabled in production)
+        if (($_ENV['APP_ENV'] ?? 'production') !== 'development') {
+            Response::error('Not found', 404);
+            return;
+        }
+
         $debug = [
             'php_version' => PHP_VERSION,
             'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',

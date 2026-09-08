@@ -20,9 +20,9 @@ class Mailer {
             // SMTP Configuration
             self::$mailer->isSMTP();
             self::$mailer->Host = $_ENV['MAIL_HOST'] ?? 'smtp.mailtrap.io';
-            self::$mailer->SMTPAuth = true;
             self::$mailer->Username = $_ENV['MAIL_USERNAME'] ?? '';
             self::$mailer->Password = $_ENV['MAIL_PASSWORD'] ?? '';
+            self::$mailer->SMTPAuth = self::$mailer->Username !== '';
             
             // Handle encryption - convert string to PHPMailer constant
             $encryption = strtolower($_ENV['MAIL_ENCRYPTION'] ?? 'tls');
@@ -232,7 +232,7 @@ class Mailer {
                                     <li>📄 Create professional invoices in seconds</li>
                                     <li>👥 Manage your clients and products</li>
                                     <li>📊 Track payments and generate reports</li>
-                                    <li>📱 Send invoices via email or SMS</li>
+                                    <li>📥 Download professional invoice PDFs</li>
                                     <li>🎨 Customize your invoice templates</li>
                                 </ul>
                             </div>
@@ -492,6 +492,12 @@ class Mailer {
                 </html>
             ',
         ];
+
+        $html = $templates[$template] ?? '';
+        if ($html === '') {
+            error_log("Mailer template not found: {$template}");
+            return '';
+        }
         
         foreach ($data as $key => $value) {
             $html = str_replace('{{' . $key . '}}', $value, $html);
@@ -564,9 +570,9 @@ class Mailer {
     
     public static function sendSubscriptionSuccessEmail(string $email, array $data): bool {
         $planFeatures = [
-            'solo' => '<li>📄 100 invoices/month</li><li>📧 50 email credits</li><li>📱 20 SMS credits</li>',
-            'pro' => '<li>📄 500 invoices/month</li><li>📧 200 email credits</li><li>📱 100 SMS credits</li><li>🎨 Custom templates</li>',
-            'business' => '<li>📄 Unlimited invoices</li><li>📧 500 email credits</li><li>📱 300 SMS credits</li><li>🎨 Custom templates</li><li>📊 Advanced reports</li>',
+            'solo' => '<li>📄 Unlimited invoices</li><li>📥 PDF downloads</li><li>🎨 Custom templates</li>',
+            'pro' => '<li>📄 Unlimited invoices</li><li>👥 Client management</li><li>🎨 Custom templates</li>',
+            'business' => '<li>📄 Unlimited invoices</li><li>📊 Advanced reports</li><li>🎨 Custom templates</li>',
         ];
         
         $plan = strtolower($data['plan'] ?? 'pro');

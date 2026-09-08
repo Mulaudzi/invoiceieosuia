@@ -1,8 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatCard from "@/components/dashboard/StatCard";
-import { CreditsWidget } from "@/components/credits/CreditsWidget";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
@@ -15,10 +14,11 @@ import {
   Plus,
   ArrowRight,
   TrendingUp,
-} from "lucide-react";
+} from "@/lib/icons";
 import { useDashboardStats, useRecentInvoices, useTopClients } from "@/hooks/useReports";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useDashboardStats();
   const { data: recentInvoices = [], isLoading: invoicesLoading } = useRecentInvoices(5);
   const { data: topClients = [], isLoading: clientsLoading } = useTopClients(4);
@@ -40,7 +40,7 @@ const Dashboard = () => {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -82,9 +82,18 @@ const Dashboard = () => {
     {
       title: "Outstanding",
       value: stats ? formatCurrency(stats.outstanding) : "R0",
-      change: `${stats?.overdue_count || 0} overdue`,
+      change: "Awaiting payment",
+      changeType: "positive" as const,
+      icon: Clock,
+      onClick: () => navigate("/dashboard/invoices?status=outstanding"),
+    },
+    {
+      title: "Total Overdue",
+      value: stats ? formatCurrency(stats.overdue_amount || 0) : "R0.00",
+      change: `${stats?.overdue_count || 0} overdue invoice${stats?.overdue_count === 1 ? "" : "s"}`,
       changeType: stats?.overdue_count ? "negative" as const : "positive" as const,
       icon: Clock,
+      onClick: () => navigate("/dashboard/invoices?status=overdue"),
     },
     {
       title: "Active Clients",
@@ -105,10 +114,10 @@ const Dashboard = () => {
           {/* Quick Actions */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">Overview</h2>
-            <Link to="/invoices">
+            <Link to="/dashboard/invoices?new=document">
               <Button variant="accent">
                 <Plus className="w-4 h-4" />
-                New Invoice
+                New / Document
               </Button>
             </Link>
           </div>
@@ -124,7 +133,7 @@ const Dashboard = () => {
           )}
 
           {/* Stats Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
             {statsLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="bg-card rounded-xl border border-border p-6">
@@ -140,18 +149,13 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Credits Widget */}
-          <div className="mb-8">
-            <CreditsWidget />
-          </div>
-
           {/* Content Grid */}
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Recent Invoices */}
             <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-soft">
               <div className="p-6 border-b border-border flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">Recent Invoices</h3>
-                <Link to="/invoices">
+                <Link to="/dashboard/invoices">
                   <Button variant="ghost" size="sm" className="text-accent">
                     View All
                     <ArrowRight className="w-4 h-4" />
@@ -191,7 +195,7 @@ const Dashboard = () => {
                         <tr key={invoice.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="p-4 text-sm font-medium text-foreground">{invoice.invoice_number || invoice.id}</td>
                           <td className="p-4 text-sm text-foreground">{invoice.client?.name || invoice.clientName}</td>
-                          <td className="p-4 text-sm font-medium text-foreground">{formatCurrency(invoice.total)}</td>
+                          <td className="p-4 text-sm font-medium text-foreground">{formatCurrency(invoice.balance_due ?? invoice.total)}</td>
                           <td className="p-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
                               {invoice.status}
@@ -233,15 +237,15 @@ const Dashboard = () => {
                 ) : (
                   <ul className="space-y-4">
                     {topClients.map((client: any, index: number) => (
-                      <li key={client.name} className="flex items-center gap-4">
+                      <li key={`${client.client?.id ?? client.id ?? index}`} className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent font-medium">
                           {index + 1}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-foreground">{client.name}</p>
+                          <p className="font-medium text-foreground">{client.client?.name || client.name || 'Unknown'}</p>
                           <p className="text-sm text-muted-foreground">Top performer</p>
                         </div>
-                        <p className="font-semibold text-foreground">{formatCurrency(client.revenue)}</p>
+                        <p className="font-semibold text-foreground">{formatCurrency(client.total ?? client.revenue ?? 0)}</p>
                       </li>
                     ))}
                   </ul>

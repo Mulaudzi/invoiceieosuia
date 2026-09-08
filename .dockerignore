@@ -1,0 +1,8 @@
+.git
+.private
+api/.env
+build-package.zip
+dist
+node_modules
+*.log
+*.tsbuildinfo

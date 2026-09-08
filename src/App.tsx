@@ -3,59 +3,47 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import Invoices from "./pages/Invoices";
-import Clients from "./pages/Clients";
-import Products from "./pages/Products";
-import Reports from "./pages/Reports";
-import Analytics from "./pages/Analytics";
-import Payments from "./pages/Payments";
-import PaymentHistory from "./pages/PaymentHistory";
-import BillingPortal from "./pages/BillingPortal";
-import Templates from "./pages/Templates";
-import Settings from "./pages/Settings";
-import Reminders from "./pages/Reminders";
-import RecurringInvoices from "./pages/RecurringInvoices";
-import NotificationHistory from "./pages/NotificationHistory";
-import EmailTemplates from "./pages/EmailTemplates";
-import Subscription from "./pages/Subscription";
-import Profile from "./pages/Profile";
-import VerifyEmail from "./pages/VerifyEmail";
-import VerifyEmailReminder from "./pages/VerifyEmailReminder";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import CookiePolicy from "./pages/CookiePolicy";
-import PopiaCompliance from "./pages/PopiaCompliance";
-import Contact from "./pages/Contact";
-import Support from "./pages/Support";
-import Documentation from "./pages/Documentation";
-import Careers from "./pages/Careers";
-import FAQ from "./pages/FAQ";
 import CookieConsent from "./components/CookieConsent";
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminIndex from "./pages/admin/AdminIndex";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminSubmissions from "./pages/admin/AdminSubmissions";
-import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminQaConsole from "./pages/admin/AdminQaConsole";
-import AdminSetup from "./pages/AdminSetup";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
-import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
-import GoogleCallback from "./pages/GoogleCallback";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentFailed from "./pages/PaymentFailed";
-import AutomatedTests from "./pages/AutomatedTests";
+import CentralAuthRedirect from "@/components/auth/CentralAuthRedirect";
+
+const Index = lazy(() => import("./pages/Index"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Invoices = lazy(() => import("./pages/Invoices"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Products = lazy(() => import("./pages/Products"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Templates = lazy(() => import("./pages/Templates"));
+const Settings = lazy(() => import("./pages/Settings"));
+const RecurringInvoices = lazy(() => import("./pages/RecurringInvoices"));
+const Profile = lazy(() => import("./pages/Profile"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const VerifyEmailReminder = lazy(() => import("./pages/VerifyEmailReminder"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
+const PopiaCompliance = lazy(() => import("./pages/PopiaCompliance"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Support = lazy(() => import("./pages/Support"));
+const Documentation = lazy(() => import("./pages/Documentation"));
+const Careers = lazy(() => import("./pages/Careers"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const AdminIndex = lazy(() => import("./pages/admin/AdminIndex"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminSubmissions = lazy(() => import("./pages/admin/AdminSubmissions"));
+const AdminEmailLogs = lazy(() => import("./pages/admin/AdminEmailLogs"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminSetup = lazy(() => import("./pages/AdminSetup"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminActivityLogs = lazy(() => import("./pages/admin/AdminActivityLogs"));
+const AdminSystem = lazy(() => import("./pages/admin/AdminSystem"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,11 +62,14 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <Suspense fallback={<div className="min-h-screen grid place-items-center" role="status">Loading…</div>}>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<CentralAuthRedirect />} />
+              <Route path="/register" element={<CentralAuthRedirect mode="signup" />} />
+              <Route path="/auth/callback" element={<CentralAuthRedirect callback />} />
+              <Route path="/guymhan/auth/callback" element={<CentralAuthRedirect mode="admin" callback />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -91,23 +82,19 @@ const App = () => (
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/faq" element={<FAQ />} />
-              <Route path="/auth/google/callback" element={<GoogleCallback />} />
-              <Route path="/admin-setup" element={<AdminSetup />} />
-              <Route path="/payment/success" element={<PaymentSuccess />} />
-              <Route path="/payment/failed" element={<PaymentFailed />} />
+              <Route path="/guymhan-setup" element={<AdminSetup />} />
               
               {/* Admin Routes */}
-              <Route path="/admin" element={<AdminIndex />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/submissions" element={<AdminSubmissions />} />
-              <Route path="/admin/submissions/:id" element={<AdminSubmissions />} />
-              <Route path="/admin/email-logs" element={<AdminEmailLogs />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/qa" element={<AdminQaConsole />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/activity-logs" element={<AdminActivityLogs />} />
-              <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+              <Route path="/guymhan" element={<AdminIndex />} />
+              <Route path="/guymhan/login" element={<CentralAuthRedirect mode="admin" />} />
+              <Route path="/guymhan/dashboard" element={<AdminDashboard />} />
+              <Route path="/guymhan/submissions" element={<AdminSubmissions />} />
+              <Route path="/guymhan/submissions/:id" element={<AdminSubmissions />} />
+              <Route path="/guymhan/email-logs" element={<AdminEmailLogs />} />
+              <Route path="/guymhan/settings" element={<AdminSettings />} />
+              <Route path="/guymhan/users" element={<AdminUsers />} />
+              <Route path="/guymhan/activity-logs" element={<AdminActivityLogs />} />
+              <Route path="/guymhan/system" element={<AdminSystem />} />
               
               {/* Email Verification Reminder (requires auth but not verification) */}
               <Route path="/verify-email-reminder" element={<ProtectedRoute requireVerified={false}><VerifyEmailReminder /></ProtectedRoute>} />
@@ -119,22 +106,15 @@ const App = () => (
               <Route path="/dashboard/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
               <Route path="/dashboard/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/dashboard/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-              <Route path="/dashboard/payment-history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
               <Route path="/dashboard/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
               <Route path="/dashboard/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/dashboard/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
               <Route path="/dashboard/recurring" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
-              <Route path="/dashboard/notifications" element={<ProtectedRoute><NotificationHistory /></ProtectedRoute>} />
-              <Route path="/dashboard/email-templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
-              <Route path="/dashboard/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-              <Route path="/dashboard/billing" element={<ProtectedRoute><BillingPortal /></ProtectedRoute>} />
-              <Route path="/dashboard/tests" element={<ProtectedRoute><AutomatedTests /></ProtectedRoute>} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
             <CookieConsent />
           </BrowserRouter>
         </TooltipProvider>

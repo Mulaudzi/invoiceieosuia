@@ -14,7 +14,6 @@ class GdprController {
         $clients = Client::query()->where('user_id', $userId)->get();
         $products = Product::query()->where('user_id', $userId)->get();
         $invoices = Invoice::query()->where('user_id', $userId)->get();
-        $payments = Payment::query()->where('user_id', $userId)->get();
         $templates = Template::query()->where('user_id', $userId)->get();
         
         // Get invoice items for each invoice
@@ -29,7 +28,6 @@ class GdprController {
             'clients' => $clients,
             'products' => $products,
             'invoices' => $invoices,
-            'payments' => $payments,
             'templates' => $templates,
             'exported_at' => date('c'),
         ];
@@ -65,10 +63,6 @@ class GdprController {
                 $stmt = $db->prepare("DELETE FROM invoice_items WHERE invoice_id IN ($placeholders)");
                 $stmt->execute($invoiceIdList);
             }
-            
-            // Delete payments
-            $stmt = $db->prepare("DELETE FROM payments WHERE user_id = ?");
-            $stmt->execute([$userId]);
             
             // Delete invoices
             $stmt = $db->prepare("DELETE FROM invoices WHERE user_id = ?");

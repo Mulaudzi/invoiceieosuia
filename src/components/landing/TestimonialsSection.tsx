@@ -1,9 +1,9 @@
-import { Quote, Star } from "lucide-react";
+import { Quote, Star } from "@/lib/icons";
 
 const TestimonialsSection = () => {
   const testimonials = [
     {
-      quote: "IEOSUIA Invoices helped me get paid 3x faster. The automated reminders are a game-changer!",
+      quote: "IEOSUIA Invoices keeps my client work organized, and the professional PDF designs look excellent.",
       author: "Sarah M.",
       role: "Freelance Designer",
       location: "Cape Town",
@@ -17,7 +17,7 @@ const TestimonialsSection = () => {
       rating: 5,
     },
     {
-      quote: "The SMS reminders feature alone is worth the subscription. My clients never forget to pay now.",
+      quote: "Reusable products and invoice templates save me hours every month. Creating each invoice is now effortless.",
       author: "Thabo N.",
       role: "IT Contractor",
       location: "Pretoria",

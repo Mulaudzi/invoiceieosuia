@@ -13,14 +13,28 @@ class Client extends Model {
             ->get();
         
         $paidTotal = 0;
-        foreach ($invoices as $inv) {
-            if ($inv['status'] === 'Paid') {
-                $paidTotal += (float) $inv['total'];
-            }
+        $outstanding = 0;
+        $documents = [];
+        $invoiceModel = new Invoice();
+        foreach ($invoices as $rawInvoice) {
+            $inv = $invoiceModel->withRelations($rawInvoice);
+            $documents[] = [
+                'id' => $inv['id'], 'invoice_number' => $inv['invoice_number'],
+                'document_type' => $inv['document_type'] ?? 'standard_invoice',
+                'status' => $inv['status'], 'date' => $inv['date'], 'total' => (float) $inv['total'],
+                'balance_due' => (float) $inv['balance_due'],
+                'original_invoice_id' => $inv['metadata']['original_invoice_id'] ?? null,
+                'original_invoice_number' => $inv['metadata']['original_invoice_number'] ?? null,
+            ];
+            if (in_array(($inv['document_type'] ?? ''), ['credit_note', 'debit_note', 'receipt'], true)) continue;
+            $paidTotal += (float) $inv['amount_paid'];
+            $outstanding += (float) $inv['balance_due'];
         }
         
         $client['total_revenue'] = $paidTotal;
         $client['invoice_count'] = count($invoices);
+        $client['outstanding_balance'] = round($outstanding, 2);
+        $client['documents'] = $documents;
         
         return $client;
     }
