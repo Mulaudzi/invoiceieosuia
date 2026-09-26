@@ -51,9 +51,9 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate("/");
+      return;
     } catch {
-      navigate("/");
+      return;
     }
   };
 

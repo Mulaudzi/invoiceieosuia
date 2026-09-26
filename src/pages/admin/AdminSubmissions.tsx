@@ -98,9 +98,12 @@ const AdminSubmissions = () => {
     fetchSubmissions();
   }, [filters]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = getAdminToken();
+    try { await api.post('/guymhan/logout', { admin_token: token }); } catch { /* local cleanup must continue */ }
     removeAdminToken();
-    navigate('/guymhan/login');
+    localStorage.setItem('ieosuia_explicit_logout', String(Date.now()));
+    window.location.replace('https://auth.ieosuia.com/oauth/logout?client_id=invoice-web&post_logout_redirect_uri=https%3A%2F%2Finvoices.ieosuia.com%2F%3Fsigned_out%3D1');
   };
 
   const handleMarkAsRead = async (id: number) => {

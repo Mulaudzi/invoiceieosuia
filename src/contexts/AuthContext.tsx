@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     const initAuth = async () => {
-      const centralToken = new URLSearchParams(window.location.hash.slice(1)).get('ieosuia_token');
+      const centralToken = localStorage.getItem('ieosuia_explicit_logout') ? null : new URLSearchParams(window.location.hash.slice(1)).get('ieosuia_token');
       if (centralToken) {
         setToken(centralToken);
         localStorage.removeItem('auth_user');
@@ -176,6 +176,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [toast, authInitialized]);
 
+  useEffect(() => {
+    const synchronizeLogout = (event: StorageEvent) => {
+      if (event.key !== 'ieosuia_explicit_logout' || !event.newValue) return;
+      removeToken();
+      localStorage.removeItem('auth_user');
+      setUser(null);
+    };
+    window.addEventListener('storage', synchronizeLogout);
+    return () => window.removeEventListener('storage', synchronizeLogout);
+  }, []);
+
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       debugLog('AuthContext: Starting login');
@@ -211,10 +222,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async (): Promise<void> => {
+    localStorage.setItem('ieosuia_explicit_logout', Date.now().toString());
     try {
       await authService.logout();
     } finally {
       setUser(null);
+      window.location.replace('https://auth.ieosuia.com/oauth/logout?client_id=invoice-web&post_logout_redirect_uri=https%3A%2F%2Finvoices.ieosuia.com%2F%3Fsigned_out%3D1');
     }
   };
 

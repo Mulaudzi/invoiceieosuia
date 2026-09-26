@@ -50,7 +50,8 @@ export default function AdminSidebar() {
       // Ignore errors
     }
     removeAdminToken();
-    navigate('/guymhan/login');
+    localStorage.setItem('ieosuia_explicit_logout', String(Date.now()));
+    window.location.replace('https://auth.ieosuia.com/oauth/logout?client_id=invoice-web&post_logout_redirect_uri=https%3A%2F%2Finvoices.ieosuia.com%2F%3Fsigned_out%3D1');
   };
 
   return (<>

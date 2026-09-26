@@ -50,8 +50,7 @@ const DashboardSidebar = () => {
   ];
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
+    void logout();
   };
 
   return (<>

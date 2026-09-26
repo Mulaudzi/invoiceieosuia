@@ -115,7 +115,7 @@ const Settings = () => {
         description: "Your account and all data have been permanently deleted."
       });
       await logout();
-      navigate("/");
+      return;
     } catch (error) {
       toast({
         title: "Failed to delete account",
@@ -131,9 +131,9 @@ const Settings = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate("/");
+      return;
     } catch (error) {
-      navigate("/");
+      return;
     }
   };
 

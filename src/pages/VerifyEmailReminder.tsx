@@ -39,7 +39,7 @@ const VerifyEmailReminder = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    return;
   };
 
   return (

@@ -7,10 +7,11 @@ final class IeosuiaAuthController {
         $this->session(); $verifier=$this->b64(random_bytes(48)); $state=$this->b64(random_bytes(32));
         $type=($_GET['account_type']??'customer')==='admin'?'admin':'customer';
         $screenHint=(($_GET['screen_hint']??'')==='signup'&&$type==='customer')?'signup':'login';
+        $prompt=($_GET['prompt']??'')==='login'?'login':'';
         $pending=['verifier'=>$verifier,'state'=>$state,'account_type'=>$type,'created_at'=>time()];
         $_SESSION['ieosuia_oauth']=$pending;
         $this->storeFlowCookie($pending);
-        $query=http_build_query(['client_id'=>$_ENV['AUTH_CLIENT_ID']??'invoice-web','redirect_uri'=>$this->redirectUri(),'response_type'=>'code','scope'=>'openid profile email','account_type'=>$type,'screen_hint'=>$screenHint,'state'=>$state,'code_challenge'=>$this->b64(hash('sha256',$verifier,true)),'code_challenge_method'=>'S256'],'','&',PHP_QUERY_RFC3986);
+        $query=http_build_query(['client_id'=>$_ENV['AUTH_CLIENT_ID']??'invoice-web','redirect_uri'=>$this->redirectUri(),'response_type'=>'code','scope'=>'openid profile email','account_type'=>$type,'screen_hint'=>$screenHint,'prompt'=>$prompt,'state'=>$state,'code_challenge'=>$this->b64(hash('sha256',$verifier,true)),'code_challenge_method'=>'S256'],'','&',PHP_QUERY_RFC3986);
         header('Location: '.$this->issuer().'/oauth/authorize?'.$query,true,302); exit;
     }
 
