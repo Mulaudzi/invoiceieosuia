@@ -1,4 +1,5 @@
 import { useLayoutEffect } from "react";
+import IEOSUIAInvoicesLogo from "@/components/branding/IEOSUIAInvoicesLogo";
 
 export default function CentralAuthRedirect({ mode = "login", callback = false }: { mode?: "login" | "signup" | "admin"; callback?: boolean }) {
   useLayoutEffect(() => {
@@ -13,5 +14,5 @@ export default function CentralAuthRedirect({ mode = "login", callback = false }
     const query = mode === "signup" ? "?screen_hint=signup" : mode === "admin" ? `?account_type=admin${fresh ? `&${fresh}` : ""}` : fresh ? `?${fresh}` : "";
     window.location.replace(`/api/auth/ieosuia/start${query}`);
   }, [mode, callback]);
-  return <main className="min-h-screen grid place-items-center bg-slate-950" aria-live="polite"><div className="w-full max-w-sm space-y-5 px-6"><div className="mx-auto h-14 w-14 animate-pulse rounded-2xl bg-slate-800"/><div className="mx-auto h-5 w-44 animate-pulse rounded bg-slate-800"/><div className="h-12 animate-pulse rounded-xl bg-slate-800"/><div className="h-12 animate-pulse rounded-xl bg-slate-800"/><p className="text-center text-sm text-slate-500">Connecting securely to IEOSUIA Auth…</p></div></main>;
+  return <main className="min-h-screen grid place-items-center bg-slate-950" aria-live="polite"><div className="w-full max-w-sm space-y-6 px-6"><IEOSUIAInvoicesLogo variant="light" size="auth" className="mx-auto" /><div className="mx-auto h-1.5 w-32 overflow-hidden rounded-full bg-slate-800"><div className="h-full w-1/2 animate-pulse rounded-full bg-emerald-400" /></div><p className="text-center text-sm text-slate-400">Connecting securely to IEOSUIA Auth…</p></div></main>;
 }

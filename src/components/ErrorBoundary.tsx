@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw } from "@/lib/icons";
+import IEOSUIAInvoicesLogo from "@/components/branding/IEOSUIAInvoicesLogo";
 
 interface Props {
   children: ReactNode;
@@ -39,6 +40,7 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-[400px] items-center justify-center p-6">
           <div className="text-center space-y-4 max-w-md">
+            <IEOSUIAInvoicesLogo variant="standard" size="auth" className="mx-auto mb-7" />
             <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
               <AlertTriangle className="w-8 h-8 text-destructive" />
             </div>

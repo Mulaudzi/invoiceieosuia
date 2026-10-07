@@ -1,0 +1,25 @@
+# IEOSUIA Invoices
+
+> IEOSUIA Invoices is a web application for creating invoices and related business documents, managing clients and reusable products or services, tracking payments, and viewing reports. Accounting is planned and is not currently available.
+
+## Public product pages
+
+- https://invoices.ieosuia.com/features
+- https://invoices.ieosuia.com/invoicing
+- https://invoices.ieosuia.com/quotes
+- https://invoices.ieosuia.com/payment-tracking
+- https://invoices.ieosuia.com/client-management
+- https://invoices.ieosuia.com/products-and-services
+- https://invoices.ieosuia.com/reports
+- https://invoices.ieosuia.com/accounting
+
+## Help and policies
+
+- https://invoices.ieosuia.com/documentation
+- https://invoices.ieosuia.com/faq
+- https://invoices.ieosuia.com/support
+- https://invoices.ieosuia.com/privacy-policy
+- https://invoices.ieosuia.com/terms-of-service
+- https://invoices.ieosuia.com/popia-compliance
+
+Private dashboards, account data, APIs, generated documents and administrative routes are not public documentation and should not be indexed.

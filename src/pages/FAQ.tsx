@@ -5,47 +5,55 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 const faqs = [
   {
-    question: "Is IEOSUIA really free?",
-    answer: "Yes. Every account includes the complete invoicing workspace with no tiers, trials, or locked core features.",
+    question: "What is IEOSUIA Invoices?",
+    answer: "IEOSUIA Invoices is an online workspace for creating business documents, managing clients and reusable items, tracking invoice payments, and reviewing reports.",
   },
   {
-    question: "What can I create?",
-    answer: "You can create invoices, clients, products, reusable templates, recurring invoices, reports, PDF files, and data exports.",
+    question: "How do I create an invoice?",
+    answer: "Create an account, add your business and client details, choose an invoice design, add items and dates, then save or issue the invoice.",
   },
   {
-    question: "Are invoice and client limits enforced?",
-    answer: "No. The free workspace supports unlimited invoices and clients.",
+    question: "Can I create quotes and estimates?",
+    answer: "Yes. Quote and estimate documents are available alongside invoices, credit notes, debit notes and receipts.",
   },
   {
-    question: "Can I customize invoice templates?",
-    answer: "Yes. Custom invoice designs and all professional template presets are included for every account.",
+    question: "Can I track full and partial payments?",
+    answer: "Yes. You can record payments against an issued invoice and view the amount paid, outstanding balance, payment history and payment status.",
   },
   {
-    question: "Can invoices recur automatically?",
-    answer: "Yes. Create weekly, monthly, quarterly, or annual billing schedules. The app reminds you when billing is due, and you create the invoice when ready.",
+    question: "Can I manage clients and reusable products or services?",
+    answer: "Yes. Save client contact details and reusable products or services so relevant information can be carried into new documents.",
   },
   {
-    question: "Can I download and share invoices?",
-    answer: "Yes. Download invoices as professional PDF documents and share them using your preferred method.",
+    question: "Can I download documents as PDF files?",
+    answer: "Yes. Supported documents can be previewed and downloaded as PDF files from your authenticated workspace.",
   },
   {
-    question: "Can I export my information?",
-    answer: "Yes. Reports and business records can be exported from the dashboard, and you can request a complete data export from Settings.",
+    question: "Does IEOSUIA Invoices support receipts and credit notes?",
+    answer: "Yes. Receipts, credit notes and debit notes use their own document labels and numbering and can be linked to relevant invoice information.",
   },
   {
-    question: "How is my account protected?",
-    answer: "Passwords are securely hashed, email verification is supported, sessions use expiring tokens, and sensitive API routes require authorization.",
+    question: "Is IEOSUIA Invoices free?",
+    answer: "A free option is available. The product will show the features available to your account when you sign in.",
   },
   {
-    question: "How do I get support?",
-    answer: "Use the Contact or Support page and the IEOSUIA team will respond as soon as possible.",
+    question: "Is accounting available?",
+    answer: "Not yet. Accounting is marked as Coming Soon. The currently available product focuses on invoicing and related business documents.",
+  },
+  {
+    question: "Is the platform intended for South African businesses?",
+    answer: "The platform supports South African business use, including rand-denominated documents and business details commonly used locally.",
+  },
+  {
+    question: "Can I include VAT information?",
+    answer: "You can enter relevant tax and VAT details where supported. You remain responsible for making sure each document meets your business and regulatory requirements.",
   },
 ];
 
 const FAQ = () => (
   <div className="min-h-screen bg-background">
     <Navbar />
-    <PageHeader title="Frequently Asked Questions" subtitle="Everything you need to know about your free invoicing workspace." />
+    <PageHeader title="Frequently Asked Questions" subtitle="Practical answers about IEOSUIA Invoices, documents and payment tracking." />
     <main className="container mx-auto max-w-4xl px-4 py-16">
       <Accordion type="single" collapsible className="space-y-3">
         {faqs.map((faq, index) => (

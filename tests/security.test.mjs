@@ -109,21 +109,33 @@ test('every admin data route requires admin middleware', async () => {
   }
 });
 
-test('administrator access requires a PIN and expires after five minutes of inactivity', async () => {
-  const auth = await read('api/controllers/AuthController.php');
+test('administrator access uses central authentication and expires after five minutes of inactivity', async () => {
   const admin = await read('api/controllers/AdminController.php');
   const routes = await read('api/index.php');
-  const login = await read('src/pages/admin/AdminLogin.tsx');
+  const app = await read('src/App.tsx');
+  const redirect = await read('src/components/auth/CentralAuthRedirect.tsx');
   const layout = await read('src/components/admin/AdminLayout.tsx');
-  const settings = await read('src/pages/admin/AdminSettings.tsx');
 
-  assert.match(auth, /password_verify\(\$pin, \(string\) \$session\['pin_hash'\]\)/);
-  assert.match(auth, /password_verify\(\$data\['password'\], \$adminUser\['password'\]\)/);
-  assert.doesNotMatch(login, /password_[123]|password[123]/);
-  assert.match(routes, /guymhan\/login\/pin/);
-  assert.match(routes, /guymhan\/pin/);
+  assert.match(app, /CentralAuthRedirect mode="admin"/);
+  assert.match(redirect, /account_type=admin/);
+  assert.match(routes, /guymhan\/login\/batch'.*IeosuiaAuthController::class, 'disabled'/);
   assert.match(admin, /last_activity > DATE_SUB\(NOW\(\), INTERVAL 5 MINUTE\)/);
-  assert.match(login, /guymhan\/login\/pin/);
   assert.match(layout, /5 \* 60 \* 1000/);
-  assert.match(settings, /guymhan\/pin/);
+});
+
+test('central authentication callback accepts query and form-post responses with specific safe failures', async () => {
+  const controller = await read('api/controllers/IeosuiaAuthController.php');
+  assert.match(controller, /array_merge\(\$_GET,\$_POST\)/);
+  assert.match(controller, /provider_rejected/);
+  assert.match(controller, /flow_missing/);
+  assert.match(controller, /state_mismatch/);
+  assert.match(controller, /code_missing/);
+  assert.doesNotMatch(controller, /error_log\([^\n]*access_token/);
+});
+
+test('central customer identities remain isolated one-to-one workspaces', async () => {
+  const controller = await read('api/controllers/IeosuiaAuthController.php');
+  assert.doesNotMatch(controller, /user_identity_aliases|resolvedByAlias/);
+  assert.match(controller, /SELECT \* FROM users WHERE identity_uuid = \? LIMIT 1/);
+  assert.match(controller, /identity_conflict/);
 });

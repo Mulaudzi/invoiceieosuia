@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Mail, ArrowLeft, CheckCircle2 } from "@/lib/icons";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/api";
-import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
+import IEOSUIAInvoicesLogo from "@/components/branding/IEOSUIAInvoicesLogo";
 
 const ForgotPassword = () => {
   const { toast } = useToast();
@@ -36,11 +36,7 @@ const ForgotPassword = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 mb-8">
-          <img 
-            src={ieosuiaLogo} 
-            alt="IEOSUIA Invoices Logo" 
-            className="h-12 w-auto"
-          />
+          <IEOSUIAInvoicesLogo variant="standard" size="auth" />
         </Link>
 
         <div className="animate-fade-in">

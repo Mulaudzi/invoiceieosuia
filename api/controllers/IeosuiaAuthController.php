@@ -32,7 +32,9 @@ final class IeosuiaAuthController {
         if(($profile['account_type']??'')!==$type||($profile['application']??'')!=='invoice'||empty($profile['sub'])||empty($profile['email'])||empty($profile['email_verified'])) $this->fail('identity_not_allowed');
         $db=Database::getConnection(); $email=strtolower((string)$profile['email']);
         if($type==='admin'){$stmt=$db->prepare("SELECT * FROM admin_users WHERE identity_uuid=? AND LOWER(email)=? AND status='active' LIMIT 1");$stmt->execute([(string)$profile['sub'],$email]);$admin=$stmt->fetch();if(!$admin)$this->fail('local_access_missing');$token=bin2hex(random_bytes(32));$ip=$_SERVER['REMOTE_ADDR']??'0.0.0.0';$db->prepare("DELETE FROM admin_sessions WHERE admin_user_id=?")->execute([$admin['id']]);$db->prepare("INSERT INTO admin_sessions(session_token,ip_address,step,admin_user_id,last_activity,expires_at) VALUES(?,?,99,?,NOW(),DATE_ADD(NOW(),INTERVAL 24 HOUR))")->execute([$token,$ip,$admin['id']]);$db->prepare('UPDATE admin_users SET last_login_at=NOW() WHERE id=?')->execute([$admin['id']]);header('Location: '.$this->frontend().'/guymhan/auth/callback#ieosuia_admin_token='.rawurlencode($token),true,302);exit;}
-        $stmt=$db->prepare('SELECT * FROM users WHERE identity_uuid = ? LIMIT 1'); $stmt->execute([(string)$profile['sub']]); $user=$stmt->fetch();
+        // Central customer identities are intentionally one-to-one with local
+        // workspaces. Never infer shared ownership from similar names/emails.
+        $stmt=$db->prepare('SELECT * FROM users WHERE identity_uuid = ? LIMIT 1');$stmt->execute([(string)$profile['sub']]);$user=$stmt->fetch();
         $emailStmt=$db->prepare('SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1');$emailStmt->execute([$email]);$emailUser=$emailStmt->fetch();
         if($user&&$emailUser&&(int)$user['id']!==(int)$emailUser['id'])$this->fail('identity_conflict');
         if(!$user)$user=$emailUser;

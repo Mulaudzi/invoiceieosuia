@@ -49,20 +49,22 @@ import {
 import { ExportDropdown } from "@/components/exports/ExportDropdown";
 import { useExport } from "@/hooks/useExport";
 import { reportColumns } from "@/lib/exportUtils";
+import { analyticsDateRange } from "@/lib/reportDateRange";
 
 const Analytics = () => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const dateRange = analyticsDateRange(selectedPeriod, selectedYear);
 
-  const { data: stats, isLoading: statsLoading } = useExtendedStats();
-  const { data: monthlyStats = [], isLoading: monthlyLoading } = useMonthlyStats(12);
-  const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
-  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(10);
+  const { data: stats, isLoading: statsLoading } = useExtendedStats(dateRange);
+  const { data: monthlyStats = [], isLoading: monthlyLoading } = useMonthlyStats(dateRange);
+  const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus(dateRange);
+  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(10, dateRange);
   const { exportToCsv, exportToText, exportToPdf, formatCurrencyForExport } = useExport();
 
   const formatCurrency = (amount: number) =>
-    `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`;
+    `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const statusColors: Record<string, string> = {
     Paid: "hsl(var(--success))",
@@ -182,7 +184,7 @@ const Analytics = () => {
                       ) : (
                         <ArrowDownRight className="w-3 h-3" />
                       )}
-                      {revenueChange >= 0 ? '+' : ''}{revenueChange}% from last month
+                      {revenueChange >= 0 ? '+' : ''}{revenueChange}% vs previous period
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -198,10 +200,7 @@ const Analytics = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Collection Rate</p>
                     <p className="text-2xl font-bold text-foreground">{collectionRate}%</p>
-                    <p className="text-xs text-success flex items-center gap-1 mt-1">
-                      <ArrowUpRight className="w-3 h-3" />
-                      +3.2% improvement
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{paidInvoices} paid in selected period</p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
                     <Percent className="w-6 h-6 text-accent" />
@@ -222,10 +221,7 @@ const Analytics = () => {
                         {formatCurrency(avgInvoiceValue)}
                       </p>
                     )}
-                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                      <ArrowDownRight className="w-3 h-3" />
-                      -2.1% from last month
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{totalInvoices} invoices in selected period</p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                     <FileText className="w-6 h-6 text-primary" />

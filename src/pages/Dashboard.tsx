@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -16,12 +17,21 @@ import {
   TrendingUp,
 } from "@/lib/icons";
 import { useDashboardStats, useRecentInvoices, useTopClients } from "@/hooks/useReports";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { dashboardDateRange } from "@/lib/reportDateRange";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useDashboardStats();
-  const { data: recentInvoices = [], isLoading: invoicesLoading } = useRecentInvoices(5);
-  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(4);
+  // Start with the complete current-year workspace so a monthly slice cannot
+  // make existing records appear to have disappeared after sign-in.
+  const [period, setPeriod] = useState("this_year");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const dateRange = dashboardDateRange(period, customStart, customEnd);
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useDashboardStats(dateRange);
+  const { data: recentInvoices = [], isLoading: invoicesLoading } = useRecentInvoices(5, dateRange);
+  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(4, dateRange);
 
   const isInitialLoading = statsLoading || invoicesLoading || clientsLoading;
 
@@ -112,14 +122,28 @@ const Dashboard = () => {
         
         <main className="p-6">
           {/* Quick Actions */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <h2 className="text-lg font-semibold text-foreground">Overview</h2>
-            <Link to="/dashboard/invoices?new=document">
-              <Button variant="accent">
-                <Plus className="w-4 h-4" />
-                New / Document
-              </Button>
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-44" aria-label="Dashboard time period"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="this_month">This Month</SelectItem>
+                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="this_quarter">This Quarter</SelectItem>
+                  <SelectItem value="this_year">This Year</SelectItem>
+                  <SelectItem value="last_year">Last Year</SelectItem>
+                  <SelectItem value="custom">Custom Date Range</SelectItem>
+                </SelectContent>
+              </Select>
+              {period === "custom" && <>
+                <Input type="date" aria-label="Start date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36" />
+                <Input type="date" aria-label="End date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36" min={customStart} />
+              </>}
+              <Link to="/dashboard/invoices?new=document">
+                <Button variant="accent"><Plus className="w-4 h-4" />New / Document</Button>
+              </Link>
+            </div>
           </div>
 
           {/* Error State */}

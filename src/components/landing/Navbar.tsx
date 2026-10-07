@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "@/lib/icons";
-import ieosuiaLogo from "@/assets/ieosuia-invoices-logo.png";
-import ieosuiaLogoWhite from "@/assets/ieosuia-invoices-logo-white.png";
+import IEOSUIAInvoicesLogo from "@/components/branding/IEOSUIAInvoicesLogo";
 
 // Pages that have dark headers (PageHeader component with bg-primary)
 const DARK_HEADER_PAGES = [
@@ -15,7 +14,15 @@ const DARK_HEADER_PAGES = [
   '/terms-of-service',
   '/cookie-policy',
   '/contact',
-  '/popia-compliance'
+  '/popia-compliance',
+  '/features',
+  '/invoicing',
+  '/quotes',
+  '/payment-tracking',
+  '/client-management',
+  '/products-and-services',
+  '/reports',
+  '/accounting',
 ];
 
 const Navbar = () => {
@@ -43,9 +50,11 @@ const Navbar = () => {
   }, [hasDarkHeader]);
 
   const navLinks = [
-    { name: "Features", href: "/#features", isRoute: true },
-    { name: "How It Works", href: "/#how-it-works", isRoute: true },
-    { name: "Free", href: "/#free", isRoute: true },
+    { name: "Product", href: "/invoicing", isRoute: true },
+    { name: "Features", href: "/features", isRoute: true },
+    { name: "Quotes", href: "/quotes", isRoute: true },
+    { name: "Accounting", href: "/accounting", isRoute: true },
+    { name: "Support", href: "/support", isRoute: true },
     { name: "Contact", href: "/contact", isRoute: true },
   ];
 
@@ -53,7 +62,7 @@ const Navbar = () => {
   const useDarkStyling = !isScrolled;
 
   return (
-    <nav 
+    <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled 
           ? "bg-white/95 backdrop-blur-lg border-b border-border shadow-sm" 
@@ -62,19 +71,19 @@ const Navbar = () => {
             : "bg-transparent border-b border-white/10"
       }`}
     >
-      <div className="container mx-auto px-4">
+      <nav className="container mx-auto px-4" aria-label="Primary navigation">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <img 
-              src={useDarkStyling ? ieosuiaLogoWhite : ieosuiaLogo} 
-              alt="IEOSUIA Invoices Logo" 
-              className="h-10 w-auto transition-all duration-300"
+            <IEOSUIAInvoicesLogo
+              variant={useDarkStyling ? "light" : "standard"}
+              size="header"
+              className="transition-all duration-300"
             />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
               link.isRoute ? (
                 <Link
@@ -105,13 +114,13 @@ const Navbar = () => {
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             <Link to="/login">
               <Button 
                 variant="ghost" 
                 className={useDarkStyling ? "text-white hover:bg-white/10" : ""}
               >
-                Login
+                Sign In
               </Button>
             </Link>
             <Link to="/register">
@@ -123,8 +132,10 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className={`md:hidden p-2 transition-colors ${useDarkStyling ? "text-white" : "text-foreground"}`}
+            className={`lg:hidden p-2 transition-colors ${useDarkStyling ? "text-white" : "text-foreground"}`}
             onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={isOpen}
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -132,7 +143,7 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className={`md:hidden py-4 border-t animate-fade-in ${
+          <div className={`lg:hidden py-4 border-t animate-fade-in ${
             useDarkStyling ? "border-white/10 bg-primary/95 backdrop-blur-lg" : "border-border bg-white"
           }`}>
             <div className="flex flex-col gap-4">
@@ -168,7 +179,7 @@ const Navbar = () => {
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 <Link to="/login">
                   <Button variant="ghost" className={`w-full ${useDarkStyling ? "text-white" : ""}`}>
-                    Login
+                    Sign In
                   </Button>
                 </Link>
                 <Link to="/register">
@@ -178,8 +189,8 @@ const Navbar = () => {
             </div>
           </div>
         )}
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 };
 

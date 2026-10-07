@@ -22,14 +22,14 @@ const CookiePolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. What Are Cookies</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Cookies are small text files that are stored on your device when you visit a website. They help websites remember your preferences, keep you logged in, and provide a better user experience. This policy explains how IEOSUIA Invoices & Books uses cookies in compliance with South African law and the Protection of Personal Information Act (POPIA).
+                Cookies are small text files that are stored on your device when you visit a website. They help websites remember your preferences, keep you logged in, and provide a better user experience. This policy explains how IEOSUIA Invoices uses cookies in compliance with South African law and the Protection of Personal Information Act (POPIA).
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-4">2. How We Use Cookies</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                IEOSUIA Invoices & Books uses cookies for the following purposes:
+                IEOSUIA Invoices uses cookies for the following purposes:
               </p>
               
               <h3 className="text-xl font-medium mb-3">2.1 Essential Cookies</h3>

@@ -83,7 +83,7 @@ const ContactSection = () => {
 
       toast({
         title: "Message sent!",
-        description: response.message || "We'll respond within 24 hours.",
+        description: response.message || "Your message was sent to the IEOSUIA team.",
       });
 
       setFormData({ name: "", email: "", message: "", purpose: "general" });
@@ -108,8 +108,8 @@ const ContactSection = () => {
     {
       icon: Phone,
       label: "Phone (Calls)",
-      value: "+27 79 928 2775",
-      href: "tel:+27799282775",
+      value: "+27 63 808 2493",
+      href: "tel:+27638082493",
     },
     {
       icon: MapPin,
@@ -141,7 +141,7 @@ const ContactSection = () => {
             Get in <span className="text-accent">Touch</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Have questions? We're here to help. Reach out and we'll respond within 24 hours.
+            Have questions? Reach out to the IEOSUIA team for product and account support.
           </p>
         </div>
 
@@ -271,19 +271,6 @@ const ContactSection = () => {
                   )
                 ))}
                 
-                {/* Alternate phone */}
-                <a
-                  href="tel:+27631540696"
-                  className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-accent/50 transition-colors group"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:scale-110 transition-all shrink-0">
-                    <Phone className="w-5 h-5 text-accent group-hover:text-accent-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Alternate Phone</p>
-                    <p className="font-medium text-foreground break-words">+27 63 154 0696</p>
-                  </div>
-                </a>
               </div>
             </div>
 
@@ -308,15 +295,6 @@ const ContactSection = () => {
         </div>
       </div>
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hi! I have a question about IEOSUIA Invoices & Books.")}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-50"
-      >
-        <MessageCircle className="w-7 h-7 text-white fill-white" />
-      </a>
     </section>
   );
 };

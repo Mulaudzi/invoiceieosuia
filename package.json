@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run package:zip",
+    "build": "vite build && node scripts/generate-public-route-html.mjs && npm run package:zip",
     "package": "npm run build",
     "package:zip": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/create-build-zip.ps1",
     "build:dev": "vite build --mode development",

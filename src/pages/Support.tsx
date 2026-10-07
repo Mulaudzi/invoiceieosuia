@@ -17,7 +17,6 @@ import {
   HelpCircle, 
   BookOpen,
   Send,
-  Video,
   ArrowRight
 } from "@/lib/icons";
 
@@ -56,8 +55,8 @@ const Support = () => {
       icon: Phone,
       title: "Phone Support",
       description: "Call us (calls only)",
-      value: "+27 79 928 2775",
-      link: "tel:+27799282775"
+      value: "+27 63 808 2493",
+      link: "tel:+27638082493"
     },
     {
       icon: MessageCircle,
@@ -82,13 +81,6 @@ const Support = () => {
       description: "Detailed guides and tutorials",
       link: "/documentation",
       isRoute: true
-    },
-    {
-      icon: Video,
-      title: "Video Tutorials",
-      description: "Step-by-step video guides",
-      link: "https://www.youtube.com/@ieosuia",
-      isRoute: false
     }
   ];
 

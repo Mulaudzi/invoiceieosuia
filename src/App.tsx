@@ -9,8 +9,10 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieConsent from "./components/CookieConsent";
 import CentralAuthRedirect from "@/components/auth/CentralAuthRedirect";
+import IEOSUIAInvoicesLogo from "@/components/branding/IEOSUIAInvoicesLogo";
+import Index from "./pages/Index";
+import PublicFeaturePage from "./pages/PublicFeaturePage";
 
-const Index = lazy(() => import("./pages/Index"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const Clients = lazy(() => import("./pages/Clients"));
@@ -62,7 +64,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Suspense fallback={<div className="min-h-screen grid place-items-center" role="status">Loading…</div>}>
+            <Suspense fallback={<div className="min-h-screen grid place-items-center bg-background" role="status"><div className="space-y-5 text-center"><IEOSUIAInvoicesLogo variant="standard" size="auth" className="mx-auto" /><p className="text-sm text-muted-foreground">Loading…</p></div></div>}>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
@@ -82,6 +84,10 @@ const App = () => (
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/faq" element={<FAQ />} />
+              {[
+                "/features", "/invoicing", "/quotes", "/payment-tracking",
+                "/client-management", "/products-and-services", "/reports", "/accounting",
+              ].map(path => <Route key={path} path={path} element={<PublicFeaturePage />} />)}
               <Route path="/guymhan-setup" element={<AdminSetup />} />
               
               {/* Admin Routes */}

@@ -57,7 +57,7 @@ export function InvoiceStartWizard({ open, onOpenChange, onContinue }:Props) {
     const next=favourites.includes(slug) ? favourites.filter(x=>x!==slug) : [...favourites,slug];
     setFavourites(next); localStorage.setItem('invoice:favourites',JSON.stringify(next));
   };
-  const useTemplate=(slug:string) => {
+  const selectTemplate=(slug:string) => {
     localStorage.setItem('invoice:last-category',category); localStorage.setItem('invoice:last-document-type',documentType);
     localStorage.setItem('invoice:last-template',slug);
     const recent=[slug,...readList('invoice:recent').filter(x=>x!==slug)].slice(0,8);
@@ -95,11 +95,11 @@ export function InvoiceStartWizard({ open, onOpenChange, onContinue }:Props) {
               <Badge variant="secondary" className="absolute bottom-2 left-2 max-w-[85%] truncate">{getDocumentTitle(documentType)} · {selectedCategory.name}</Badge>
               <button aria-label="Favourite template" onClick={()=>toggleFavourite(template.slug)} className="absolute top-2 right-2 bg-background rounded-full p-2 shadow"><Heart className={cn('h-4 w-4',favourites.includes(template.slug)&&'fill-red-500 text-red-500')}/></button>
             </div>
-            <div className="p-4"><div className="flex items-center justify-between"><h3 className="font-semibold">{template.name}</h3>{template.recommended&&<Sparkles className="h-4 w-4 text-primary"/>}</div><p className="text-xs text-muted-foreground mt-1">{template.styleVariant} · {template.colorScheme} · v{template.version}</p><div className="flex gap-2 mt-4"><Button variant="outline" className="flex-1" onClick={()=>setPreview(template.slug)}><Eye className="h-4 w-4"/> Preview</Button><Button className="flex-1" onClick={()=>useTemplate(template.slug)}>Use Template</Button></div></div>
+            <div className="p-4"><div className="flex items-center justify-between"><h3 className="font-semibold">{template.name}</h3>{template.recommended&&<Sparkles className="h-4 w-4 text-primary"/>}</div><p className="text-xs text-muted-foreground mt-1">{template.styleVariant} · {template.colorScheme} · v{template.version}</p><div className="flex gap-2 mt-4"><Button variant="outline" className="flex-1" onClick={()=>setPreview(template.slug)}><Eye className="h-4 w-4"/> Preview</Button><Button className="flex-1" onClick={()=>selectTemplate(template.slug)}>Use Template</Button></div></div>
           </article>)}
         </div>
       </div>}
-      {preview && <div className="fixed inset-0 z-[80] bg-black/75 p-2 md:p-8" onClick={()=>setPreview(undefined)}><div className="bg-background max-w-5xl h-full mx-auto rounded-xl p-4 md:p-6 overflow-auto" onClick={e=>e.stopPropagation()}><div className="flex justify-between sticky top-0 z-10 bg-background pb-4"><div><Badge><Star className="h-3 w-3 mr-1"/>A4 live preview</Badge><h2 className="text-2xl font-bold mt-2">{invoiceTemplateRegistry.find(t=>t.slug===preview)?.name} · {getDocumentTitle(documentType)}</h2></div><Button variant="outline" onClick={()=>setPreview(undefined)}>Close</Button></div><div className="overflow-auto py-4"><InvoiceDocument templateSlug={preview} data={{...sampleInvoiceData,documentTitle:getDocumentTitle(documentType)}} scale={0.72}/></div><Button className="mt-6 w-full" onClick={()=>useTemplate(preview)}>Use this template</Button></div></div>}
+      {preview && <div className="fixed inset-0 z-[80] bg-black/75 p-2 md:p-8" onClick={()=>setPreview(undefined)}><div className="bg-background max-w-5xl h-full mx-auto rounded-xl p-4 md:p-6 overflow-auto" onClick={e=>e.stopPropagation()}><div className="flex justify-between sticky top-0 z-10 bg-background pb-4"><div><Badge><Star className="h-3 w-3 mr-1"/>A4 live preview</Badge><h2 className="text-2xl font-bold mt-2">{invoiceTemplateRegistry.find(t=>t.slug===preview)?.name} · {getDocumentTitle(documentType)}</h2></div><Button variant="outline" onClick={()=>setPreview(undefined)}>Close</Button></div><div className="overflow-auto py-4"><InvoiceDocument templateSlug={preview} data={{...sampleInvoiceData,documentTitle:getDocumentTitle(documentType)}} scale={0.72}/></div><Button className="mt-6 w-full" onClick={()=>selectTemplate(preview)}>Use this template</Button></div></div>}
     </DialogContent>
   </Dialog>;
 }

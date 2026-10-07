@@ -1,17 +1,57 @@
 <?php
 
 class ReportController {
+    private function dateRange(Request $request): array {
+        $start = trim((string) ($request->query('start_date') ?? ''));
+        $end = trim((string) ($request->query('end_date') ?? ''));
+        foreach ([$start, $end] as $value) {
+            if ($value !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) || date('Y-m-d', strtotime($value)) !== $value)) {
+                Response::error('Please choose a valid date range and try again.', 422);
+                exit;
+            }
+        }
+        if ($start !== '' && $end !== '' && $start > $end) {
+            Response::error('The start date must be before the end date.', 422);
+            exit;
+        }
+        return [$start ?: null, $end ?: null];
+    }
+
+    private function invoicesForRange(int $userId, Request $request): array {
+        [$start, $end] = $this->dateRange($request);
+        $query = Invoice::query()->where('user_id', $userId);
+        if ($start) $query->where('date', '>=', $start);
+        if ($end) $query->where('date', '<=', $end);
+        return $query->get();
+    }
+
+    private function isInvoiceDocument(array $invoice): bool {
+        return !in_array(($invoice['document_type'] ?? ''), ['receipt', 'credit_note', 'debit_note'], true);
+    }
+
+    private function monthBuckets(?string $start, ?string $end): array {
+        $startDate = new DateTime($start ?: date('Y-m-01', strtotime('-11 months')));
+        $endDate = new DateTime($end ?: date('Y-m-t'));
+        $startDate->modify('first day of this month');
+        $endDate->modify('first day of this month');
+        $data = [];
+        for ($cursor = clone $startDate; $cursor <= $endDate; $cursor->modify('+1 month')) {
+            $key = $cursor->format('Y-m');
+            $data[$key] = ['month' => $cursor->format('M Y'), 'revenue' => 0, 'invoices' => 0, 'avg_value' => 0];
+        }
+        return $data;
+    }
+
     public function dashboard(): void {
         $userId = Auth::id();
-        
-        // Get all invoices for the user
-        $invoices = Invoice::query()->where('user_id', $userId)->get();
+        $request = new Request();
+        $invoices = $this->invoicesForRange($userId, $request);
         
         $totalRevenue = 0;
         $outstanding = 0;
         $overdue = 0;
         $overdueCount = 0;
-        $totalInvoices = count($invoices);
+        $totalInvoices = 0;
         $paidInvoices = 0;
         $pendingInvoices = 0;
         $overdueInvoices = 0;
@@ -21,7 +61,8 @@ class ReportController {
         $invoiceModel = new Invoice();
         foreach ($invoices as $rawInvoice) {
             $inv = $invoiceModel->withRelations($rawInvoice);
-            if (in_array(($inv['document_type'] ?? ''), ['receipt', 'credit_note', 'debit_note'], true)) continue;
+            if (!$this->isInvoiceDocument($inv)) continue;
+            $totalInvoices++;
             if ($inv['status'] === 'Paid') {
                 $totalRevenue += (float) $inv['total'];
                 $paidInvoices++;
@@ -37,13 +78,9 @@ class ReportController {
             }
         }
         
-        // Get client counts
-        $allClients = Client::query()->where('user_id', $userId)->get();
-        $totalClients = count($allClients);
-        $activeClients = Client::query()
-            ->where('user_id', $userId)
-            ->where('status', 'Active')
-            ->count();
+        $clientIds = array_unique(array_filter(array_column($invoices, 'client_id')));
+        $totalClients = count($clientIds);
+        $activeClients = $totalClients;
         
         Response::json([
             'total_revenue' => $totalRevenue,
@@ -61,27 +98,14 @@ class ReportController {
     
     public function monthlyRevenue(): void {
         $request = new Request();
-        $months = (int) ($request->query('months') ?? 12);
         $userId = Auth::id();
-        
-        $invoices = Invoice::query()
-            ->where('user_id', $userId)
-            ->where('status', 'Paid')
-            ->get();
-        
-        $monthlyData = [];
-        
-        for ($i = $months - 1; $i >= 0; $i--) {
-            $date = date('Y-m', strtotime("-$i months"));
-            $monthlyData[$date] = [
-                'month' => date('M Y', strtotime("-$i months")),
-                'revenue' => 0
-            ];
-        }
+        [$start, $end] = $this->dateRange($request);
+        $invoices = $this->invoicesForRange($userId, $request);
+        $monthlyData = $this->monthBuckets($start, $end);
         
         foreach ($invoices as $inv) {
             $month = date('Y-m', strtotime($inv['date']));
-            if (isset($monthlyData[$month])) {
+            if (($inv['status'] ?? '') === 'Paid' && $this->isInvoiceDocument($inv) && isset($monthlyData[$month])) {
                 $monthlyData[$month]['revenue'] += (float) $inv['total'];
             }
         }
@@ -91,12 +115,14 @@ class ReportController {
     
     public function invoiceStatus(): void {
         $userId = Auth::id();
-        $invoices = Invoice::query()->where('user_id', $userId)->get();
+        $request = new Request();
+        $invoices = $this->invoicesForRange($userId, $request);
         
         $statusCounts = [];
         $invoiceModel = new Invoice();
         foreach ($invoices as $rawInvoice) {
             $inv = $invoiceModel->withRelations($rawInvoice);
+            if (!$this->isInvoiceDocument($inv)) continue;
             $status = $inv['status'];
             if (!isset($statusCounts[$status])) {
                 $statusCounts[$status] = ['status' => $status, 'count' => 0, 'amount' => 0];
@@ -114,17 +140,12 @@ class ReportController {
         $userId = Auth::id();
         
         $clients = Client::query()->where('user_id', $userId)->get();
+        $filteredInvoices = $this->invoicesForRange($userId, $request);
         
         $clientRevenues = [];
         foreach ($clients as $client) {
-            $invoices = Invoice::query()
-                ->where('client_id', $client['id'])
-                ->get();
-            
-            $paidInvoices = Invoice::query()
-                ->where('client_id', $client['id'])
-                ->where('status', 'Paid')
-                ->get();
+            $invoices = array_values(array_filter($filteredInvoices, fn($inv) => (int) ($inv['client_id'] ?? 0) === (int) $client['id'] && $this->isInvoiceDocument($inv)));
+            $paidInvoices = array_values(array_filter($invoices, fn($inv) => ($inv['status'] ?? '') === 'Paid'));
             
             $revenue = array_sum(array_column($paidInvoices, 'total'));
             
@@ -154,6 +175,7 @@ class ReportController {
         $request = new Request();
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
+        $this->dateRange($request);
         $userId = Auth::id();
         
         // Get invoices based on date range
@@ -209,11 +231,9 @@ class ReportController {
         $limit = (int) ($request->query('limit') ?? 5);
         $userId = Auth::id();
         
-        $invoices = Invoice::query()
-            ->where('user_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->limit($limit)
-            ->get();
+        $invoices = $this->invoicesForRange($userId, $request);
+        usort($invoices, fn($a, $b) => strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')));
+        $invoices = array_slice($invoices, 0, $limit);
         
         $invoiceModel = new Invoice();
         $invoices = array_map(function($inv) use ($invoiceModel) {
@@ -228,24 +248,28 @@ class ReportController {
      */
     public function extendedStats(): void {
         $userId = Auth::id();
-        
-        $invoices = Invoice::query()->where('user_id', $userId)->get();
+        $request = new Request();
+        [$start, $end] = $this->dateRange($request);
+        $invoices = $this->invoicesForRange($userId, $request);
         
         $totalRevenue = 0;
         $outstanding = 0;
         $paidCount = 0;
         $pendingCount = 0;
         $overdueCount = 0;
+        $documentCount = 0;
         
         $today = date('Y-m-d');
         
         $invoiceModel = new Invoice();
         foreach ($invoices as $rawInvoice) {
             $inv = $invoiceModel->withRelations($rawInvoice);
+            if (!$this->isInvoiceDocument($inv)) continue;
+            $documentCount++;
             if ($inv['status'] === 'Paid') {
                 $totalRevenue += (float) $inv['total'];
                 $paidCount++;
-            } elseif (in_array($inv['status'], ['Pending', 'Sent', 'Partially Paid'])) {
+            } elseif (in_array($inv['status'], ['Pending', 'Sent', 'Partially Paid', 'Overdue'])) {
                 $outstanding += (float) $inv['balance_due'];
                 $pendingCount++;
                 
@@ -255,20 +279,22 @@ class ReportController {
             }
         }
         
-        // Get counts for current month vs last month
-        $currentMonthStart = date('Y-m-01');
-        $lastMonthStart = date('Y-m-01', strtotime('-1 month'));
-        $lastMonthEnd = date('Y-m-t', strtotime('-1 month'));
+        $currentMonthStart = $start ?: date('Y-m-01');
+        $currentPeriodEnd = $end ?: date('Y-m-d');
+        $periodDays = max(1, (int) ((strtotime($currentPeriodEnd) - strtotime($currentMonthStart)) / 86400) + 1);
+        $lastMonthEnd = date('Y-m-d', strtotime($currentMonthStart . ' -1 day'));
+        $lastMonthStart = date('Y-m-d', strtotime($lastMonthEnd . ' -' . ($periodDays - 1) . ' days'));
         
         $currentMonthInvoices = 0;
         $lastMonthInvoices = 0;
         $currentMonthRevenue = 0;
         $lastMonthRevenue = 0;
         
-        foreach ($invoices as $inv) {
+        $comparisonInvoices = Invoice::query()->where('user_id', $userId)->where('date', '>=', $lastMonthStart)->where('date', '<=', $lastMonthEnd)->get();
+        foreach (array_merge($invoices, $comparisonInvoices) as $inv) {
             $invoiceDate = date('Y-m-d', strtotime($inv['date']));
             
-            if ($invoiceDate >= $currentMonthStart) {
+            if ($invoiceDate >= $currentMonthStart && $invoiceDate <= $currentPeriodEnd) {
                 $currentMonthInvoices++;
                 if ($inv['status'] === 'Paid') {
                     $currentMonthRevenue += (float) $inv['total'];
@@ -286,21 +312,15 @@ class ReportController {
             ? round((($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1) 
             : 0;
         
-        // Get new clients this month
-        $newClientsThisMonth = Client::query()
-            ->where('user_id', $userId)
-            ->where('created_at', '>=', $currentMonthStart)
-            ->count();
-        
-        $activeClients = Client::query()
-            ->where('user_id', $userId)
-            ->where('status', 'Active')
-            ->count();
+        $newClientsQuery = Client::query()->where('user_id', $userId)->where('created_at', '>=', $currentMonthStart);
+        if ($end) $newClientsQuery->where('created_at', '<=', $end . ' 23:59:59');
+        $newClientsThisMonth = $newClientsQuery->count();
+        $activeClients = count(array_unique(array_filter(array_column($invoices, 'client_id'))));
         
         Response::json([
             'total_revenue' => $totalRevenue,
             'outstanding' => $outstanding,
-            'total_invoices' => count($invoices),
+            'total_invoices' => $documentCount,
             'paid_invoices' => $paidCount,
             'pending_invoices' => $pendingCount,
             'overdue_count' => $overdueCount,
@@ -317,26 +337,14 @@ class ReportController {
      */
     public function monthlyStats(): void {
         $request = new Request();
-        $months = (int) ($request->query('months') ?? 12);
         $userId = Auth::id();
-        
-        $invoices = Invoice::query()->where('user_id', $userId)->get();
-        
-        $monthlyData = [];
-        
-        for ($i = $months - 1; $i >= 0; $i--) {
-            $date = date('Y-m', strtotime("-$i months"));
-            $monthlyData[$date] = [
-                'month' => date('M Y', strtotime("-$i months")),
-                'revenue' => 0,
-                'invoices' => 0,
-                'avg_value' => 0,
-            ];
-        }
+        [$start, $end] = $this->dateRange($request);
+        $invoices = $this->invoicesForRange($userId, $request);
+        $monthlyData = $this->monthBuckets($start, $end);
         
         foreach ($invoices as $inv) {
             $month = date('Y-m', strtotime($inv['date']));
-            if (isset($monthlyData[$month])) {
+            if ($this->isInvoiceDocument($inv) && isset($monthlyData[$month])) {
                 $monthlyData[$month]['invoices']++;
                 if ($inv['status'] === 'Paid') {
                     $monthlyData[$month]['revenue'] += (float) $inv['total'];
@@ -485,6 +493,7 @@ class ReportController {
         $contents = $pdf->Output('S');
         $filename = 'ieosuia-' . preg_replace('/[^a-z0-9-]+/', '-', $reportType) . '-report-' . date('Y-m-d') . '.pdf';
         header('Content-Type: application/pdf');
+        header('X-Robots-Tag: noindex, noarchive', true);
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($contents));
         echo $contents;

@@ -595,34 +595,37 @@ export interface MonthlyStats {
   avg_value: number;
 }
 
+type ReportDateRange = { startDate?: string; endDate?: string };
+const rangeParams = (range?: ReportDateRange) => ({ start_date: range?.startDate, end_date: range?.endDate });
+
 export const reportService = {
-  getDashboard: async (): Promise<DashboardStats> => {
-    const response = await api.get('/reports/dashboard');
+  getDashboard: async (range?: ReportDateRange): Promise<DashboardStats> => {
+    const response = await api.get('/reports/dashboard', { params: rangeParams(range) });
     return response.data;
   },
 
-  getExtendedStats: async (): Promise<ExtendedDashboardStats> => {
-    const response = await api.get('/reports/extended-stats');
+  getExtendedStats: async (range?: ReportDateRange): Promise<ExtendedDashboardStats> => {
+    const response = await api.get('/reports/extended-stats', { params: rangeParams(range) });
     return response.data;
   },
 
-  getMonthlyRevenue: async (year?: number): Promise<MonthlyRevenue[]> => {
-    const response = await api.get('/reports/monthly-revenue', { params: { year } });
+  getMonthlyRevenue: async (range?: ReportDateRange): Promise<MonthlyRevenue[]> => {
+    const response = await api.get('/reports/monthly-revenue', { params: rangeParams(range) });
     return response.data;
   },
 
-  getMonthlyStats: async (months?: number): Promise<MonthlyStats[]> => {
-    const response = await api.get('/reports/monthly-stats', { params: { months } });
+  getMonthlyStats: async (range?: ReportDateRange): Promise<MonthlyStats[]> => {
+    const response = await api.get('/reports/monthly-stats', { params: rangeParams(range) });
     return response.data;
   },
 
-  getInvoiceStatus: async (): Promise<{ status: string; count: number; amount: number }[]> => {
-    const response = await api.get('/reports/invoice-status');
+  getInvoiceStatus: async (range?: ReportDateRange): Promise<{ status: string; count: number; amount: number }[]> => {
+    const response = await api.get('/reports/invoice-status', { params: rangeParams(range) });
     return response.data;
   },
 
-  getTopClients: async (limit?: number): Promise<{ client: Client; total: number; invoices: number }[]> => {
-    const response = await api.get('/reports/top-clients', { params: { limit } });
+  getTopClients: async (limit?: number, range?: ReportDateRange): Promise<{ client: Client; total: number; invoices: number }[]> => {
+    const response = await api.get('/reports/top-clients', { params: { limit, ...rangeParams(range) } });
     return response.data;
   },
 
@@ -636,8 +639,8 @@ export const reportService = {
     return response.data;
   },
 
-  getRecentInvoices: async (limit?: number): Promise<Invoice[]> => {
-    const response = await api.get('/reports/recent-invoices', { params: { limit } });
+  getRecentInvoices: async (limit?: number, range?: ReportDateRange): Promise<Invoice[]> => {
+    const response = await api.get('/reports/recent-invoices', { params: { limit, ...rangeParams(range) } });
     return response.data;
   },
 

@@ -17,16 +17,24 @@ import { FileText, TrendingUp, Users, DollarSign, Calendar } from "@/lib/icons";
 import { ExportDropdown } from "@/components/exports/ExportDropdown";
 import { useExport } from "@/hooks/useExport";
 import { reportColumns } from "@/lib/exportUtils";
+import { Input } from "@/components/ui/input";
+import { reportsDateRange } from "@/lib/reportDateRange";
 
 const Reports = () => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [period, setPeriod] = useState("yearly");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedQuarter, setSelectedQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1);
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const dateRange = reportsDateRange(period, selectedYear, selectedMonth, selectedQuarter, customStart, customEnd);
   
-  const { data: stats, isLoading: statsLoading, error: statsError, refetch } = useDashboardStats();
-  const { data: monthlyRevenue = [], isLoading: revenueLoading } = useMonthlyRevenue(selectedYear);
-  const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus();
-  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(5);
-  const { data: incomeExpense, isLoading: incomeLoading } = useIncomeExpense();
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch } = useDashboardStats(dateRange);
+  const { data: monthlyRevenue = [], isLoading: revenueLoading } = useMonthlyRevenue(dateRange);
+  const { data: invoiceStatus = [], isLoading: statusLoading } = useInvoiceStatus(dateRange);
+  const { data: topClients = [], isLoading: clientsLoading } = useTopClients(5, dateRange);
+  const { data: incomeExpense, isLoading: incomeLoading } = useIncomeExpense(dateRange.startDate, dateRange.endDate);
   const { exportToCsv, exportToText, exportToPdf } = useExport();
 
   const isLoading = statsLoading && revenueLoading && statusLoading && clientsLoading && incomeLoading;
@@ -65,7 +73,7 @@ const Reports = () => {
   }
 
   const formatCurrency = (amount: number) =>
-    `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`;
+    `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Color mapping for invoice statuses
   const statusColors: Record<string, string> = {
@@ -103,8 +111,8 @@ const Reports = () => {
 
         <main className="p-6">
           {/* Filter Bar */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
@@ -120,6 +128,27 @@ const Reports = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                  <SelectItem value="custom">Custom Date Range</SelectItem>
+                </SelectContent>
+              </Select>
+              {period === "monthly" && <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>{Array.from({ length: 12 }, (_, i) => <SelectItem key={i} value={String(i)}>{new Date(2000, i, 1).toLocaleString("en", { month: "long" })}</SelectItem>)}</SelectContent>
+              </Select>}
+              {period === "quarterly" && <Select value={String(selectedQuarter)} onValueChange={(v) => setSelectedQuarter(Number(v))}>
+                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>{[1, 2, 3, 4].map((q) => <SelectItem key={q} value={String(q)}>Quarter {q}</SelectItem>)}</SelectContent>
+              </Select>}
+              {period === "custom" && <>
+                <Input type="date" aria-label="Report start date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36" />
+                <Input type="date" aria-label="Report end date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36" min={customStart} />
+              </>}
             </div>
             <ExportDropdown
               label="Export Report"

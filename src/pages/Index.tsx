@@ -4,11 +4,10 @@ import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
-import FreeForeverSection from "@/components/landing/FreeForeverSection";
-import TestimonialsSection from "@/components/landing/TestimonialsSection";
-import ContactSection from "@/components/landing/ContactSection";
+import AccountingComingSoonSection from "@/components/landing/AccountingComingSoonSection";
 import Footer from "@/components/landing/Footer";
-import ScrollToTop from "@/components/landing/ScrollToTop";
+import { EcosystemSection } from "@/components/landing/EcosystemSection";
+import { WhatsAppButton } from "@/components/landing/WhatsAppButton";
 
 const Index = () => {
   const location = useLocation();
@@ -26,16 +25,17 @@ const Index = () => {
   }, [location.hash]);
 
   return (
-    <div className="min-h-screen scroll-smooth">
+    <div className="min-h-screen overflow-x-hidden scroll-smooth">
       <Navbar />
-      <HeroSection />
-      <FeaturesSection />
-      <HowItWorksSection />
-      <FreeForeverSection />
-      <TestimonialsSection />
-      <ContactSection />
+      <main id="main-content">
+        <HeroSection />
+        <FeaturesSection />
+        <AccountingComingSoonSection />
+        <HowItWorksSection />
+      </main>
+      <EcosystemSection />
       <Footer />
-      <ScrollToTop />
+      <WhatsAppButton />
     </div>
   );
 };

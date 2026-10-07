@@ -5,6 +5,12 @@
   RewriteRule ^login/?$ /api/auth/ieosuia/start [R=302,L,NE]
   RewriteRule ^register/?$ /api/auth/ieosuia/start?screen_hint=signup [R=302,L,NE]
   RewriteRule ^guymhan/login/?$ /api/auth/ieosuia/start?account_type=admin [R=302,L,NE]
+  # Serve route-specific prerendered documents for true public pages. React
+  # still hydrates the same route after the meaningful initial HTML response.
+  # Canonical public URLs omit the trailing slash.
+  RewriteCond %{REQUEST_URI} ^/(privacy-policy|terms-of-service|cookie-policy|popia-compliance|contact|support|documentation|careers|faq|features|invoicing|quotes|payment-tracking|client-management|products-and-services|reports|accounting)/$ [NC]
+  RewriteRule ^(.+)/$ /$1 [R=301,END]
+  RewriteRule ^(privacy-policy|terms-of-service|cookie-policy|popia-compliance|contact|support|documentation|careers|faq|features|invoicing|quotes|payment-tracking|client-management|products-and-services|reports|accounting)$ /$1.html [END]
   RewriteCond %{REQUEST_URI} ^/assets/ [NC]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ - [R=404,L]
@@ -13,6 +19,12 @@
   RewriteRule ^ - [L]
   RewriteRule ^ index.html [L]
 </IfModule>
+<IfModule mod_mime.c>
+  AddType image/x-icon .ico
+  AddType image/svg+xml .svg
+  AddType application/manifest+json .webmanifest
+  AddType application/manifest+json .json
+</IfModule>
 <IfModule mod_headers.c>
   <FilesMatch "^(index\.html)?$">
     Header always set Cache-Control "no-cache, no-store, must-revalidate"
@@ -20,4 +32,15 @@
   <FilesMatch "\.(js|css|png|jpg|jpeg|webp|svg|woff2)$">
     Header always set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
+  <FilesMatch "^(favicon\.(ico|png|svg)|site\.webmanifest|manifest\.json|sw\.js|service-worker\.js)$">
+    Header always set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.pdf$">
+    Header always set X-Robots-Tag "noindex, noarchive"
+  </FilesMatch>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
 </IfModule>

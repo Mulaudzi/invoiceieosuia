@@ -25,8 +25,18 @@ abstract class Model {
         return $result ?: null;
     }
     
-    public function where(string $column, $value): static {
-        $this->conditions[] = [$column, '=', $value];
+    public function where(string $column, $operatorOrValue, $value = null): static {
+        if (func_num_args() === 2) {
+            $operator = '=';
+            $value = $operatorOrValue;
+        } else {
+            $operator = strtoupper(trim((string) $operatorOrValue));
+            $allowedOperators = ['=', '!=', '<>', '<', '<=', '>', '>='];
+            if (!in_array($operator, $allowedOperators, true)) {
+                throw new InvalidArgumentException('Unsupported query operator.');
+            }
+        }
+        $this->conditions[] = [$column, $operator, $value];
         return $this;
     }
     

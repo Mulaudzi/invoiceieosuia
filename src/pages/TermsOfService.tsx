@@ -22,7 +22,7 @@ const TermsOfService = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. Agreement to Terms</h2>
               <p className="text-muted-foreground leading-relaxed">
-                By accessing or using IEOSUIA Invoices & Books ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use our Service. These Terms are governed by the laws of the Republic of South Africa.
+                By accessing or using IEOSUIA Invoices ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use our Service. These Terms are governed by the laws of the Republic of South Africa.
               </p>
             </section>
 

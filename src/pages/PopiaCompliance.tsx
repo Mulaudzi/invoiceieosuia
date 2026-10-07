@@ -10,7 +10,7 @@ const PopiaCompliance = () => {
     {
       icon: Shield,
       title: "Our Commitment to POPIA",
-      content: `IEOSUIA Invoices & Books is fully committed to complying with the Protection of Personal Information Act (POPIA) of South Africa. We take the privacy and security of your personal information seriously and have implemented comprehensive measures to ensure your data is protected.`
+      content: `IEOSUIA Invoices is committed to complying with the Protection of Personal Information Act (POPIA) of South Africa. We take the privacy and security of personal information seriously and maintain measures intended to protect it.`
     },
     {
       icon: UserCheck,
@@ -147,7 +147,7 @@ Requests will be processed within 30 days as required by POPIA.`
               Your Privacy Matters
             </h2>
             <p className="text-muted-foreground">
-              At IEOSUIA Invoices & Books, protecting your personal information is a top priority. This document outlines how we comply with the Protection of Personal Information Act (POPIA) of South Africa and the measures we take to safeguard your data.
+              At IEOSUIA Invoices, protecting your personal information is a priority. This document outlines our approach to the Protection of Personal Information Act (POPIA) of South Africa and measures used to safeguard data.
             </p>
           </div>
 
@@ -192,8 +192,8 @@ Requests will be processed within 30 days as required by POPIA.`
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-accent" />
-                <a href="tel:+27799282775" className="text-foreground hover:text-accent">
-                  +27 79 928 2775
+                <a href="tel:+27638082493" className="text-foreground hover:text-accent">
+                  +27 63 808 2493
                 </a>
               </div>
               <div className="flex items-start gap-3">

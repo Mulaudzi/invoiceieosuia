@@ -605,6 +605,7 @@ class PdfController {
         $filename = $filePrefix . '-' . $invoice['invoice_number'] . '.pdf';
         
         header('Content-Type: application/pdf');
+        header('X-Robots-Tag: noindex, noarchive', true);
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Cache-Control: private, max-age=0, must-revalidate');
         
@@ -646,6 +647,7 @@ class PdfController {
         
         // Output inline (preview)
         header('Content-Type: application/pdf');
+        header('X-Robots-Tag: noindex, noarchive', true);
         header('Content-Disposition: inline; filename="preview.pdf"');
         
         echo $pdf->Output('S');

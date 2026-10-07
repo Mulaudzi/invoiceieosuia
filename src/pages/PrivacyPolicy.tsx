@@ -22,7 +22,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
               <p className="text-muted-foreground leading-relaxed">
-                IEOSUIA Invoices & Books ("we", "our", or "us") is committed to protecting your privacy and complying with the Protection of Personal Information Act (POPIA) of South Africa. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our invoicing and bookkeeping platform.
+                IEOSUIA Invoices ("we", "our", or "us") is committed to protecting your privacy and complying with the Protection of Personal Information Act (POPIA) of South Africa. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our invoicing platform.
               </p>
             </section>
 

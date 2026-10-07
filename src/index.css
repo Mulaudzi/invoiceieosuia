@@ -27,7 +27,7 @@
 
     /* Vibrant Emerald Accent */
     --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 220 60% 12%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
@@ -125,6 +125,14 @@
 }
 
 @layer components {
+  .landing-kicker { @apply text-sm font-bold uppercase tracking-[.2em] text-emerald-700; }
+  .landing-title { @apply mt-4 text-4xl font-bold tracking-[-.04em] text-slate-950 sm:text-5xl; }
+  .landing-copy { @apply mt-6 text-lg leading-8 text-slate-600; }
+  .landing-card-label { @apply text-xs font-bold uppercase tracking-wider text-slate-400; }
+  .landing-record-card { @apply rounded-3xl border border-slate-200 bg-white p-6 shadow-lg; }
+  .landing-records { @apply mt-7 space-y-4 text-sm; }
+  .landing-records p { @apply flex flex-col gap-1 font-medium; }
+  .landing-records span { @apply text-slate-400; }
   /* Hero Section Styles */
   .hero-gradient {
     background: var(--gradient-hero);

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { 
   BookOpen, 
   FileText, 
-  Video, 
   HelpCircle, 
   ArrowRight,
   Zap,
@@ -21,26 +20,26 @@ const Documentation = () => {
     {
       icon: Zap,
       title: "Quick Start Guide",
-      description: "Get up and running with IEOSUIA in under 5 minutes",
-      link: "/support"
+      description: "Set up your business profile, clients and first document",
+      link: "/features"
     },
     {
       icon: FileText,
       title: "Creating Your First Invoice",
       description: "Step-by-step guide to creating and downloading invoices",
-      link: "/support"
+      link: "/invoicing"
     },
     {
       icon: Users,
       title: "Managing Clients",
       description: "How to add, edit, and organize your client database",
-      link: "/support"
+      link: "/client-management"
     },
     {
       icon: CreditCard,
       title: "Invoice Status Tracking",
-      description: "Track draft, sent, overdue, and completed invoices",
-      link: "/support"
+      description: "Track draft, pending, partially paid, paid and overdue invoices",
+      link: "/payment-tracking"
     }
   ];
 
@@ -91,16 +90,6 @@ const Documentation = () => {
                   Visit Support Center
                 </Button>
               </Link>
-              <a 
-                href="https://www.youtube.com/@ieosuia" 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <Button size="lg" variant="outline">
-                  <Video className="w-4 h-4 mr-2" />
-                  Watch Tutorials
-                </Button>
-              </a>
             </div>
           </div>
         </section>
@@ -149,32 +138,6 @@ const Documentation = () => {
                   </CardHeader>
                 </Card>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Video Tutorials */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="bg-primary rounded-2xl p-8 md:p-12 text-center text-primary-foreground">
-              <Video className="w-12 h-12 mx-auto mb-6 text-accent" />
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                Prefer Video Tutorials?
-              </h2>
-              <p className="text-primary-foreground/80 mb-6 max-w-2xl mx-auto">
-                Visit our YouTube channel for step-by-step video guides, tips and tricks, 
-                and feature walkthroughs.
-              </p>
-              <a 
-                href="https://www.youtube.com/@ieosuia" 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <Button variant="accent" size="lg" className="group">
-                  Watch on YouTube
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </a>
             </div>
           </div>
         </section>

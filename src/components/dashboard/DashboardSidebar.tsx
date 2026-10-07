@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import logoWhite from "@/assets/ieosuia-invoices-logo-white.png";
+import IEOSUIAInvoicesLogo from "@/components/branding/IEOSUIAInvoicesLogo";
 
 const DashboardSidebar = () => {
   const location = useLocation();
@@ -65,11 +65,7 @@ const DashboardSidebar = () => {
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <Link to="/" className="flex items-center gap-2">
-            <img 
-              src={logoWhite} 
-              alt="IEOSUIA Invoices" 
-              className="h-8 w-auto"
-            />
+            <IEOSUIAInvoicesLogo variant="light" size="sidebar" />
           </Link>
         )}
         <Button
